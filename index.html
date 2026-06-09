@@ -557,6 +557,22 @@
       .seat-role { font-size: 9px; }
       .field-grid { grid-template-columns: 1fr; }
     }
+
+    /* ── Drag / move mode ───────────────────────────── */
+    .seat { user-select: none; }
+    .move-mode .seat         { cursor: grab; }
+    .move-mode .seat:active  { cursor: grabbing; }
+    .move-mode .seat:hover .seat-inner { border-color: var(--gold); transform: scale(1.04); }
+    .move-mode .seat.dragging .seat-inner {
+      border-color: var(--gold-light);
+      box-shadow: 0 0 0 4px rgba(201,151,58,0.3), 0 8px 28px rgba(0,0,0,0.6);
+      transform: scale(1.1);
+    }
+    .btn-sm.active-move {
+      background: rgba(201,151,58,0.18);
+      border-color: var(--gold);
+      color: var(--gold-light);
+    }
   </style>
 </head>
 <body>
@@ -594,6 +610,7 @@
       <button class="btn-sm" id="btn-round-plus">+</button>
     </div>
 
+    <button class="btn-sm" id="btn-move-mode" title="Drag seats to rearrange">⠿ Move seats</button>
     <button class="btn-sm" id="btn-reset" style="margin-left:auto;color:#e06060;border-color:rgba(139,26,26,0.4);">↺ Reset all</button>
   </div>
 
@@ -889,6 +906,8 @@
   let round = 1;
   let phase = 'day';
   let seats = [];
+  let seatPositions = []; // [{x,y}|null] per seat; null = use default
+  let moveMode = false;
   let selected = null;
   let comboRole, comboTrueRole;
 
@@ -898,13 +917,16 @@
 
   function initSeats(n) {
     const old = seats.slice();
+    const oldPos = seatPositions.slice();
     seats = Array.from({length: n}, (_, i) => old[i] || blankSeat());
+    // New seats always get default (null) position; existing custom positions preserved
+    seatPositions = Array.from({length: n}, (_, i) => (i < old.length ? (oldPos[i] || null) : null));
   }
 
   // ── Persistence ────────────────────────────────────
   function saveState() {
     try {
-      localStorage.setItem(LS_KEY, JSON.stringify({ seatCount, round, phase, seats }));
+      localStorage.setItem(LS_KEY, JSON.stringify({ seatCount, round, phase, seats, seatPositions }));
     } catch(e) {}
   }
 
@@ -916,7 +938,10 @@
       seatCount = Math.min(MAX, Math.max(MIN, s.seatCount || 8));
       round     = Math.max(1, s.round || 1);
       phase     = s.phase === 'night' ? 'night' : 'day';
-      seats     = Array.from({length: seatCount}, (_, i) => Object.assign(blankSeat(), s.seats?.[i] || {}));
+      seats         = Array.from({length: seatCount}, (_, i) => Object.assign(blankSeat(), s.seats?.[i] || {}));
+      seatPositions = Array.from({length: seatCount}, (_, i) =>
+        (s.seatPositions && s.seatPositions[i]) ? s.seatPositions[i] : null
+      );
       return true;
     } catch(e) { return false; }
   }
@@ -929,27 +954,32 @@
     return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   }
 
+  // ── Default seat position ──────────────────────────
+  function defaultPos(i, n, W, H) {
+    const cx = W / 2, cy = H / 2;
+    const maxR = Math.min(W, H) / 2;
+    const R = maxR * (n <= 7 ? 0.62 : n <= 10 ? 0.67 : n <= 13 ? 0.71 : 0.75);
+    const angle = (2 * Math.PI * i / n) - Math.PI / 2;
+    return { x: cx + R * Math.cos(angle), y: cy + R * Math.sin(angle) };
+  }
+
   // ── Render circle ──────────────────────────────────
   function renderCircle() {
     const container = document.getElementById('seats-container');
     const stage     = document.getElementById('circle-stage');
     const W = stage.offsetWidth  || 400;
     const H = stage.offsetHeight || W;
-    const cx = W / 2, cy = H / 2;
-    const n  = seatCount;
-    const maxR = Math.min(W, H) / 2;
-    const R = maxR * (n <= 7 ? 0.62 : n <= 10 ? 0.67 : n <= 13 ? 0.71 : 0.75);
+    const n = seatCount;
     container.innerHTML = '';
     seats.forEach((s, i) => {
-      const angle = (2 * Math.PI * i / n) - Math.PI / 2;
-      const x = cx + R * Math.cos(angle);
-      const y = cy + R * Math.sin(angle);
+      const def = defaultPos(i, n, W, H);
+      const pos = seatPositions[i] || def;
       const el = document.createElement('div');
       el.className = 'seat' +
-        (s.dead       ? ' dead'     : '') +
+        (s.dead         ? ' dead'     : '') +
         (selected === i ? ' selected' : '');
-      el.style.left = x + 'px';
-      el.style.top  = y + 'px';
+      el.style.left = pos.x + 'px';
+      el.style.top  = pos.y + 'px';
       el.dataset.idx = i;
 
       const roleData = s.role ? ROLES.find(r => r.name === s.role) : null;
@@ -970,11 +1000,63 @@
         <span class="seat-dot${dotClass}"></span>
       </div>`;
 
-      el.addEventListener('click', () => openSeat(i));
+      if (moveMode) {
+        attachDrag(el, i);
+      } else {
+        el.addEventListener('click', () => openSeat(i));
+      }
       container.appendChild(el);
     });
     updateMeta();
     renderList();
+  }
+
+  // ── Drag logic ─────────────────────────────────────
+  function attachDrag(el, idx) {
+    let startPx, startPy, startEx, startEy, dragged;
+
+    function onStart(e) {
+      e.preventDefault();
+      dragged = false;
+      const stage = document.getElementById('circle-stage');
+      const rect  = stage.getBoundingClientRect();
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      startPx = clientX;
+      startPy = clientY;
+      startEx = parseFloat(el.style.left);
+      startEy = parseFloat(el.style.top);
+      el.classList.add('dragging');
+      el.style.zIndex = 10;
+
+      function onMove(e2) {
+        const cx2 = e2.touches ? e2.touches[0].clientX : e2.clientX;
+        const cy2 = e2.touches ? e2.touches[0].clientY : e2.clientY;
+        const dx = cx2 - startPx, dy = cy2 - startPy;
+        if (Math.abs(dx) + Math.abs(dy) > 3) dragged = true;
+        el.style.left = (startEx + dx) + 'px';
+        el.style.top  = (startEy + dy) + 'px';
+        seatPositions[idx] = { x: startEx + dx, y: startEy + dy };
+      }
+
+      function onEnd() {
+        el.classList.remove('dragging');
+        el.style.zIndex = '';
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup',   onEnd);
+        document.removeEventListener('touchmove', onMove);
+        document.removeEventListener('touchend',  onEnd);
+        if (dragged) saveState();
+      }
+
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup',   onEnd);
+      document.addEventListener('touchmove', onMove, { passive: false });
+      document.addEventListener('touchend',  onEnd);
+    }
+
+    el.addEventListener('mousedown',  onStart);
+    el.addEventListener('touchstart', onStart, { passive: false });
   }
 
   function updateMeta() {
@@ -1125,16 +1207,36 @@
     if (e.key === 'Enter') saveSeat();
   });
 
+  // ── Move mode ──────────────────────────────────────
+  document.getElementById('btn-move-mode').addEventListener('click', () => {
+    moveMode = !moveMode;
+    const btn = document.getElementById('btn-move-mode');
+    btn.classList.toggle('active-move', moveMode);
+    btn.textContent = moveMode ? '✓ Done moving' : '⠿ Move seats';
+    document.getElementById('circle-inner').classList.toggle('move-mode', moveMode);
+    // Close edit panel while in move mode to avoid confusion
+    if (moveMode) {
+      document.getElementById('seat-panel').style.display = 'none';
+      selected = null;
+    }
+    renderCircle();
+  });
+
   // ── Reset ──────────────────────────────────────────
   document.getElementById('btn-reset').addEventListener('click', () => {
     if (!confirm('Reset all seats and start a fresh game? This will clear all saved data.')) return;
     clearStorage();
     seats = Array.from({length: seatCount}, () => blankSeat());
+    seatPositions = Array.from({length: seatCount}, () => null);
     selected = null;
+    moveMode = false;
+    document.getElementById('btn-move-mode').classList.remove('active-move');
+    document.getElementById('btn-move-mode').textContent = '⠿ Move seats';
+    document.getElementById('circle-inner').classList.remove('move-mode');
     round = 1;
     document.getElementById('seat-panel').style.display = 'none';
     setRound(1);
-    setPhase('day'); // setPhase calls saveState, which is fine — saves the clean slate
+    setPhase('day');
     renderCircle();
   });
 
@@ -1150,7 +1252,12 @@
   comboTrueRole = makeCombo('f-true-role', 'f-true-role-dropdown', 'f-true-role-clear');
 
   const restored = loadState();
-  if (!restored) initSeats(seatCount);
+  if (!restored) {
+    initSeats(seatCount);
+    seatPositions = Array.from({length: seatCount}, () => null);
+  }
+  // Ensure seatPositions array is always the right length
+  while (seatPositions.length < seatCount) seatPositions.push(null);
   document.getElementById('seat-count-display').textContent = seatCount;
   // setPhase/setRound without saveState side-effects on first paint
   (function applyPhase(p) {
