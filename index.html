@@ -1,0 +1,1172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Blood on the Clocktower — Town Square</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-page:        #1a120a;
+      --bg-surface:     #241910;
+      --bg-card:        #2e2015;
+      --bg-input:       #1e1510;
+      --border:         rgba(201,151,58,0.22);
+      --border-strong:  rgba(201,151,58,0.5);
+      --gold:           #c9973a;
+      --gold-light:     #e6b85a;
+      --blood:          #8b1a1a;
+      --blood-light:    #c0392b;
+      --text-primary:   #f5ead6;
+      --text-secondary: #a8916e;
+      --text-muted:     #6b5a3e;
+      --good-bg:        rgba(63,107,17,0.25);
+      --good-text:      #8fca4b;
+      --evil-bg:        rgba(139,26,26,0.3);
+      --evil-text:      #e06060;
+      --info-bg:        rgba(24,95,165,0.25);
+      --info-text:      #7ab8f5;
+      --seat-size:      90px;
+      --font-serif:     Georgia, 'Times New Roman', serif;
+      --font-sans:      -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      --radius-sm:      6px;
+      --radius-md:      10px;
+      --radius-lg:      14px;
+    }
+
+    html, body {
+      min-height: 100vh;
+      background: var(--bg-page);
+      color: var(--text-primary);
+      font-family: var(--font-sans);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    /* ── Layout ─────────────────────────────────────── */
+    #app {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 1.5rem 1rem 4rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    /* ── Header ─────────────────────────────────────── */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+      padding-bottom: 1rem;
+      border-bottom: 0.5px solid var(--border);
+    }
+    .header-title {
+      font-family: var(--font-serif);
+      font-size: 22px;
+      font-weight: normal;
+      letter-spacing: 0.04em;
+      color: var(--gold-light);
+    }
+    .header-title small {
+      display: block;
+      font-family: var(--font-sans);
+      font-size: 12px;
+      color: var(--text-secondary);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      margin-top: 2px;
+    }
+    .header-meta {
+      font-size: 12px;
+      color: var(--text-secondary);
+      text-align: right;
+      line-height: 1.7;
+    }
+    .header-meta strong { color: var(--text-primary); }
+
+    /* ── Toolbar ─────────────────────────────────────── */
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .count-controls {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--bg-surface);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 4px 10px;
+    }
+    .count-label { font-size: 12px; color: var(--text-secondary); }
+    .count-val   { min-width: 24px; text-align: center; font-weight: 600; color: var(--gold-light); }
+    .btn-icon {
+      width: 26px; height: 26px;
+      display: flex; align-items: center; justify-content: center;
+      background: none; border: none; cursor: pointer;
+      color: var(--gold); font-size: 18px; border-radius: 4px;
+      transition: background 0.12s;
+    }
+    .btn-icon:hover { background: rgba(201,151,58,0.12); }
+
+    .phase-toggle {
+      display: flex;
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+    }
+    .phase-btn {
+      padding: 6px 14px;
+      background: var(--bg-surface);
+      border: none;
+      cursor: pointer;
+      font-family: var(--font-sans);
+      font-size: 12px;
+      color: var(--text-secondary);
+      transition: background 0.12s, color 0.12s;
+    }
+    .phase-btn.active-day   { background: rgba(201,151,58,0.18); color: var(--gold-light); }
+    .phase-btn.active-night { background: rgba(24,95,165,0.2);   color: var(--info-text); }
+
+    .round-controls {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+    .round-controls span { color: var(--text-primary); font-weight: 500; }
+
+    .btn-sm {
+      padding: 5px 12px;
+      background: var(--bg-surface);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-family: var(--font-sans);
+      font-size: 12px;
+      color: var(--text-primary);
+      transition: background 0.12s;
+    }
+    .btn-sm:hover { background: rgba(201,151,58,0.1); border-color: var(--border-strong); }
+
+    /* ── Circle Stage ───────────────────────────────── */
+    #circle-stage {
+      position: relative;
+      width: 100%;
+      padding-bottom: min(92vw, 560px);
+      max-height: 560px;
+    }
+    #circle-inner {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    /* Faint decorative ring */
+    #circle-inner::before {
+      content: '';
+      position: absolute;
+      width: 46%;
+      height: 46%;
+      border-radius: 50%;
+      border: 0.5px solid var(--border);
+      pointer-events: none;
+    }
+    #circle-inner::after {
+      content: '';
+      position: absolute;
+      width: 8%;
+      height: 8%;
+      border-radius: 50%;
+      background: rgba(201,151,58,0.07);
+      border: 0.5px solid var(--border);
+      pointer-events: none;
+    }
+
+    .center-label {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      pointer-events: none;
+      z-index: 0;
+      user-select: none;
+    }
+    .center-label .phase-icon { font-size: 32px; opacity: 0.2; }
+    .center-label .round-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-top: 3px;
+    }
+
+    #seats-container { position: absolute; inset: 0; }
+
+    /* ── Seat ───────────────────────────────────────── */
+    .seat {
+      position: absolute;
+      transform: translate(-50%, -50%);
+      cursor: pointer;
+      z-index: 2;
+      width: var(--seat-size);
+      height: var(--seat-size);
+    }
+    .seat-inner {
+      width: 100%; height: 100%;
+      border-radius: 50%;
+      background: var(--bg-card);
+      border: 1.5px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transition: border-color 0.15s, transform 0.12s, box-shadow 0.15s;
+      position: relative;
+      overflow: hidden;
+    }
+    .seat:hover .seat-inner {
+      border-color: var(--gold);
+      transform: scale(1.06);
+    }
+    .seat.selected .seat-inner {
+      border: 2px solid var(--gold-light);
+      box-shadow: 0 0 0 3px rgba(201,151,58,0.18), inset 0 0 20px rgba(201,151,58,0.06);
+    }
+    .seat.dead .seat-inner {
+      background: rgba(26,18,10,0.7);
+      border-style: dashed;
+      border-color: var(--blood);
+      opacity: 0.6;
+    }
+    .seat.dead:hover .seat-inner { opacity: 0.85; }
+
+    .seat-num {
+      font-size: 9px;
+      color: var(--text-muted);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .seat-name {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-primary);
+      max-width: 80px;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      text-align: center;
+    }
+    .seat-name.empty { color: var(--text-muted); font-weight: 400; font-style: italic; }
+    .seat-role {
+      font-size: 10px;
+      color: var(--text-secondary);
+      max-width: 80px;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      text-align: center;
+    }
+    .seat-dot {
+      position: absolute;
+      bottom: 7px; right: 7px;
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #5a9e2f;
+      border: 1.5px solid var(--bg-card);
+    }
+    .seat.dead .seat-dot { background: var(--blood-light); }
+
+    .seat-badge {
+      position: absolute;
+      top: 4px; right: 4px;
+      font-size: 8px;
+      padding: 1px 4px;
+      border-radius: 3px;
+      font-family: var(--font-sans);
+      font-weight: 600;
+      letter-spacing: 0.04em;
+    }
+    .badge-good  { background: var(--good-bg);  color: var(--good-text); }
+    .badge-evil  { background: var(--evil-bg);  color: var(--evil-text); }
+
+    /* ── Edit Panel ─────────────────────────────────── */
+    .panel {
+      background: var(--bg-surface);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 1.25rem;
+    }
+    .panel-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 1rem;
+    }
+    .panel-title { font-size: 16px; font-weight: 500; color: var(--gold-light); font-family: var(--font-serif); }
+    .panel-sub   { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+
+    .field-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .field-grid.full { grid-template-columns: 1fr; }
+
+    .field label {
+      display: block;
+      font-size: 10px;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 4px;
+    }
+    .field input,
+    .field select,
+    .field textarea {
+      width: 100%;
+      background: var(--bg-input);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-primary);
+      font-family: var(--font-sans);
+      font-size: 13px;
+      padding: 6px 10px;
+      outline: none;
+      transition: border-color 0.12s, box-shadow 0.12s;
+    }
+    .field input:focus,
+    .field textarea:focus,
+    .field select:focus {
+      border-color: var(--gold);
+      box-shadow: 0 0 0 2px rgba(201,151,58,0.15);
+    }
+    .field textarea { resize: vertical; min-height: 64px; line-height: 1.5; }
+    .field select option { background: var(--bg-card); }
+
+    .status-section label {
+      display: block;
+      font-size: 10px;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 6px;
+    }
+    .toggles { display: flex; gap: 8px; flex-wrap: wrap; }
+    .tog {
+      padding: 5px 12px;
+      border-radius: 999px;
+      border: 0.5px solid var(--border);
+      background: var(--bg-input);
+      color: var(--text-secondary);
+      font-size: 12px;
+      cursor: pointer;
+      font-family: var(--font-sans);
+      transition: all 0.12s;
+    }
+    .tog:hover { border-color: var(--border-strong); }
+    .tog.on-dead       { background: var(--evil-bg);         color: var(--evil-text);  border-color: var(--blood); }
+    .tog.on-nominated  { background: rgba(186,117,23,0.2);   color: #e6b85a;           border-color: var(--gold); }
+    .tog.on-vote       { background: rgba(186,117,23,0.15);  color: var(--text-secondary); border-color: var(--border-strong); }
+
+    .btn-row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 1rem; flex-wrap: wrap; }
+    .btn {
+      padding: 6px 16px;
+      border-radius: var(--radius-sm);
+      border: 0.5px solid var(--border);
+      background: var(--bg-input);
+      color: var(--text-primary);
+      font-family: var(--font-sans);
+      font-size: 13px;
+      cursor: pointer;
+      transition: background 0.12s;
+    }
+    .btn:hover { background: rgba(201,151,58,0.1); border-color: var(--border-strong); }
+    .btn-primary { background: rgba(201,151,58,0.15); border-color: var(--gold); color: var(--gold-light); }
+    .btn-primary:hover { background: rgba(201,151,58,0.25); }
+    .btn-danger  { border-color: var(--blood); color: var(--evil-text); }
+    .btn-danger:hover { background: var(--evil-bg); }
+
+    /* ── Player List ────────────────────────────────── */
+    .player-list { display: flex; flex-direction: column; gap: 4px; }
+    .pli {
+      display: flex; align-items: center; gap: 10px;
+      padding: 7px 10px;
+      border-radius: var(--radius-sm);
+      border: 0.5px solid transparent;
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+    .pli:hover { background: rgba(201,151,58,0.07); }
+    .pli.selected { background: rgba(201,151,58,0.1); border-color: var(--border-strong); }
+    .pli-num  { font-size: 10px; color: var(--text-muted); min-width: 16px; text-align: right; }
+    .pli-dot  { width: 7px; height: 7px; border-radius: 50%; background: #5a9e2f; flex-shrink: 0; }
+    .pli-dot.dead { background: var(--blood-light); }
+    .pli-name { flex: 1; font-size: 13px; font-weight: 500; color: var(--text-primary); }
+    .pli-name.empty { color: var(--text-muted); font-style: italic; font-weight: 400; }
+    .pli-role { font-size: 12px; color: var(--text-secondary); }
+    .pli-badge {
+      font-size: 10px; padding: 1px 7px; border-radius: 999px;
+      font-weight: 500;
+    }
+    .no-players { text-align: center; padding: 1.5rem; color: var(--text-muted); font-style: italic; font-size: 13px; }
+
+    /* ── Misc ───────────────────────────────────────── */
+    details summary {
+      list-style: none;
+      cursor: pointer;
+      color: var(--text-secondary);
+      font-size: 12px;
+      letter-spacing: 0.04em;
+      padding: 4px 0;
+    }
+    details summary::-webkit-details-marker { display: none; }
+    details[open] summary { color: var(--gold-light); }
+
+    .divider {
+      height: 0.5px;
+      background: var(--border);
+      margin: 1rem 0;
+    }
+
+    /* ── Combobox ───────────────────────────────────── */
+    .combo-wrap {
+      position: relative;
+    }
+    .combo-input-row {
+      display: flex;
+      align-items: center;
+      background: var(--bg-input);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      transition: border-color 0.12s, box-shadow 0.12s;
+      overflow: hidden;
+    }
+    .combo-input-row:focus-within {
+      border-color: var(--gold);
+      box-shadow: 0 0 0 2px rgba(201,151,58,0.15);
+    }
+    .combo-tag {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 6px 2px 7px;
+      margin: 3px 0 3px 4px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 500;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .combo-tag-remove {
+      background: none; border: none; cursor: pointer;
+      color: inherit; opacity: 0.6; font-size: 13px;
+      padding: 0; line-height: 1; display: flex; align-items: center;
+    }
+    .combo-tag-remove:hover { opacity: 1; }
+    .combo-text {
+      flex: 1; min-width: 60px;
+      background: none; border: none; outline: none;
+      color: var(--text-primary);
+      font-family: var(--font-sans);
+      font-size: 13px;
+      padding: 6px 8px;
+    }
+    .combo-text::placeholder { color: var(--text-muted); }
+    .combo-clear {
+      background: none; border: none; cursor: pointer;
+      color: var(--text-muted); font-size: 14px; padding: 0 8px;
+      line-height: 1; display: none; align-items: center;
+    }
+    .combo-clear.visible { display: flex; }
+    .combo-clear:hover { color: var(--text-secondary); }
+
+    .combo-dropdown {
+      display: none;
+      position: absolute;
+      top: calc(100% + 4px); left: 0; right: 0;
+      background: var(--bg-card);
+      border: 0.5px solid var(--border-strong);
+      border-radius: var(--radius-md);
+      z-index: 100;
+      max-height: 260px;
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border-strong) transparent;
+    }
+    .combo-dropdown.open { display: block; }
+
+    .combo-group-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      padding: 8px 10px 4px;
+      color: var(--text-muted);
+      user-select: none;
+      position: sticky; top: 0;
+      background: var(--bg-card);
+    }
+    .combo-option {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 10px;
+      cursor: pointer;
+      font-size: 13px;
+      color: var(--text-primary);
+      transition: background 0.08s;
+    }
+    .combo-option:hover,
+    .combo-option.active { background: rgba(201,151,58,0.1); }
+    .combo-option.selected-opt { color: var(--gold-light); }
+    .combo-dot {
+      width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+    }
+    .combo-no-results {
+      padding: 10px 12px;
+      font-size: 13px;
+      color: var(--text-muted);
+      font-style: italic;
+    }
+
+    /* category dot colours */
+    .dot-townsfolk  { background: #5a9e2f; }
+    .dot-outsider   { background: #7ab8f5; }
+    .dot-minion     { background: #e06060; }
+    .dot-demon      { background: #c0392b; }
+    .dot-traveler   { background: #c9973a; }
+
+    /* tag colours (match dots) */
+    .tag-townsfolk  { background: rgba(63,107,17,0.3);  color: #8fca4b; }
+    .tag-outsider   { background: rgba(24,95,165,0.25); color: #7ab8f5; }
+    .tag-minion     { background: rgba(139,26,26,0.35); color: #e06060; }
+    .tag-demon      { background: rgba(192,57,43,0.4);  color: #ff8080; }
+    .tag-traveler   { background: rgba(186,117,23,0.25);color: #e6b85a; }
+
+    @media (max-width: 520px) {
+      :root { --seat-size: 74px; }
+      .seat-name { font-size: 10px; }
+      .seat-role { font-size: 9px; }
+      .field-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <header>
+    <div>
+      <div class="header-title">
+        Town Square
+        <small>Blood on the Clocktower</small>
+      </div>
+    </div>
+    <div class="header-meta">
+      <strong id="meta-alive">—</strong> alive &nbsp;·&nbsp; <strong id="meta-dead">—</strong> dead
+    </div>
+  </header>
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <div class="count-controls">
+      <span class="count-label">Players</span>
+      <button class="btn-icon" id="btn-minus" title="Remove seat">−</button>
+      <span class="count-val" id="seat-count-display">8</span>
+      <button class="btn-icon" id="btn-plus" title="Add seat">+</button>
+    </div>
+
+    <div class="phase-toggle" title="Toggle day/night">
+      <button class="phase-btn active-day" id="btn-day"  onclick="setPhase('day')">☀ Day</button>
+      <button class="phase-btn"            id="btn-night" onclick="setPhase('night')">🌙 Night</button>
+    </div>
+
+    <div class="round-controls">
+      <button class="btn-sm" id="btn-round-minus">−</button>
+      Round <span id="round-display">1</span>
+      <button class="btn-sm" id="btn-round-plus">+</button>
+    </div>
+
+    <button class="btn-sm" id="btn-reset" style="margin-left:auto;color:#e06060;border-color:rgba(139,26,26,0.4);">↺ Reset all</button>
+  </div>
+
+  <!-- Circle -->
+  <div id="circle-stage">
+    <div id="circle-inner">
+      <div class="center-label">
+        <div class="phase-icon" id="center-icon">☀️</div>
+        <div class="round-label" id="center-round">Day 1</div>
+      </div>
+      <div id="seats-container"></div>
+    </div>
+  </div>
+
+  <!-- Edit Panel -->
+  <div class="panel" id="seat-panel" style="display:none;">
+    <div class="panel-header">
+      <div>
+        <div class="panel-title" id="panel-title">Seat 1</div>
+        <div class="panel-sub"   id="panel-sub">No player assigned</div>
+      </div>
+      <button class="btn" id="btn-close-panel">✕</button>
+    </div>
+
+    <div class="field-grid">
+      <div class="field">
+        <label>Player name</label>
+        <input type="text" id="f-name" placeholder="e.g. Alice" autocomplete="off">
+      </div>
+      <div class="field">
+        <label>Role claimed</label>
+        <div class="combo-wrap" id="combo-role-wrap">
+          <div class="combo-input-row">
+            <input class="combo-text" id="f-role" placeholder="e.g. Washerwoman" autocomplete="off" role="combobox" aria-expanded="false" aria-haspopup="listbox">
+            <button class="combo-clear" id="f-role-clear" tabindex="-1" title="Clear">✕</button>
+          </div>
+          <div class="combo-dropdown" id="f-role-dropdown" role="listbox"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="field-grid">
+      <div class="field">
+        <label>Alignment</label>
+        <select id="f-alignment">
+          <option value="unknown">Unknown</option>
+          <option value="good">Good</option>
+          <option value="evil">Evil</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>True role (ST only)</label>
+        <div class="combo-wrap" id="combo-true-wrap">
+          <div class="combo-input-row">
+            <input class="combo-text" id="f-true-role" placeholder="Actual role..." autocomplete="off" role="combobox" aria-expanded="false" aria-haspopup="listbox">
+            <button class="combo-clear" id="f-true-role-clear" tabindex="-1" title="Clear">✕</button>
+          </div>
+          <div class="combo-dropdown" id="f-true-role-dropdown" role="listbox"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="field-grid full">
+      <div class="field">
+        <label>Notes</label>
+        <textarea id="f-notes" placeholder="Suspicions, night actions, claims…"></textarea>
+      </div>
+    </div>
+
+    <div class="status-section">
+      <label>Status</label>
+      <div class="toggles">
+        <button class="tog" id="tog-dead"      data-on="on-dead">      ☠ Dead</button>
+        <button class="tog" id="tog-nominated" data-on="on-nominated"> ⚖ Nominated</button>
+        <button class="tog" id="tog-vote"      data-on="on-vote">      🗳 Used ghost vote</button>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-danger" id="btn-clear">Clear seat</button>
+      <button class="btn btn-primary" id="btn-save">Save changes</button>
+    </div>
+  </div>
+
+  <!-- Player list -->
+  <div class="panel">
+    <details open>
+      <summary>▸ All seats</summary>
+      <div class="divider"></div>
+      <div class="player-list" id="player-list"></div>
+    </details>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ── Trouble Brewing role data ──────────────────────
+  const ROLES = [
+    { name:'Washerwoman',   cat:'townsfolk',  align:'good' },
+    { name:'Librarian',     cat:'townsfolk',  align:'good' },
+    { name:'Investigator',  cat:'townsfolk',  align:'good' },
+    { name:'Chef',          cat:'townsfolk',  align:'good' },
+    { name:'Empath',        cat:'townsfolk',  align:'good' },
+    { name:'Fortune Teller',cat:'townsfolk',  align:'good' },
+    { name:'Undertaker',    cat:'townsfolk',  align:'good' },
+    { name:'Monk',          cat:'townsfolk',  align:'good' },
+    { name:'Ravenkeeper',   cat:'townsfolk',  align:'good' },
+    { name:'Virgin',        cat:'townsfolk',  align:'good' },
+    { name:'Slayer',        cat:'townsfolk',  align:'good' },
+    { name:'Soldier',       cat:'townsfolk',  align:'good' },
+    { name:'Mayor',         cat:'townsfolk',  align:'good' },
+    { name:'Butler',        cat:'outsider',   align:'good' },
+    { name:'Drunk',         cat:'outsider',   align:'good' },
+    { name:'Recluse',       cat:'outsider',   align:'good' },
+    { name:'Saint',         cat:'outsider',   align:'good' },
+    { name:'Poisoner',      cat:'minion',     align:'evil' },
+    { name:'Spy',           cat:'minion',     align:'evil' },
+    { name:'Scarlet Woman', cat:'minion',     align:'evil' },
+    { name:'Baron',         cat:'minion',     align:'evil' },
+    { name:'Imp',           cat:'demon',      align:'evil' },
+    { name:'Apprentice',    cat:'traveler',   align:'good' },
+    { name:'Barista',       cat:'traveler',   align:'good' },
+    { name:'Beggar',        cat:'traveler',   align:'good' },
+    { name:'Bone Collector',cat:'traveler',   align:'good' },
+    { name:'Bureaucrat',    cat:'traveler',   align:'good' },
+    { name:'Butcher',       cat:'traveler',   align:'good' },
+    { name:'Deviant',       cat:'traveler',   align:'good' },
+    { name:'Gangster',      cat:'traveler',   align:'good' },
+    { name:'Harlot',        cat:'traveler',   align:'good' },
+    { name:'Judge',         cat:'traveler',   align:'good' },
+    { name:'Matron',        cat:'traveler',   align:'good' },
+    { name:'Scapegoat',     cat:'traveler',   align:'good' },
+    { name:'Thief',         cat:'traveler',   align:'evil' },
+  ];
+
+  const CAT_LABELS = {
+    townsfolk: 'Townsfolk',
+    outsider:  'Outsiders',
+    minion:    'Minions',
+    demon:     'Demon',
+    traveler:  'Travelers',
+  };
+  const CAT_ORDER = ['townsfolk','outsider','minion','demon','traveler'];
+
+  // ── Combobox factory ───────────────────────────────
+  // Returns { getValue, setValue, clear } for a combobox instance
+  function makeCombo(inputId, dropdownId, clearBtnId) {
+    const input    = document.getElementById(inputId);
+    const dropdown = document.getElementById(dropdownId);
+    const clearBtn = document.getElementById(clearBtnId);
+    let activeIdx  = -1;
+    let currentVal = '';   // the committed value (role name)
+
+    function getFilteredGroups(q) {
+      const ql = q.toLowerCase();
+      const groups = [];
+      CAT_ORDER.forEach(cat => {
+        const matches = ROLES.filter(r =>
+          r.cat === cat && r.name.toLowerCase().includes(ql)
+        );
+        if (matches.length) groups.push({ cat, matches });
+      });
+      return groups;
+    }
+
+    function buildDropdown(q) {
+      const groups = getFilteredGroups(q);
+      dropdown.innerHTML = '';
+      activeIdx = -1;
+      if (!groups.length) {
+        dropdown.innerHTML = '<div class="combo-no-results">No roles found</div>';
+        return;
+      }
+      let optIdx = 0;
+      groups.forEach(({ cat, matches }) => {
+        const grpLabel = document.createElement('div');
+        grpLabel.className = 'combo-group-label';
+        grpLabel.textContent = CAT_LABELS[cat];
+        dropdown.appendChild(grpLabel);
+        matches.forEach(role => {
+          const opt = document.createElement('div');
+          opt.className = 'combo-option' + (role.name === currentVal ? ' selected-opt' : '');
+          opt.dataset.role = role.name;
+          opt.dataset.cat  = role.cat;
+          opt.dataset.optIdx = optIdx++;
+          opt.setAttribute('role', 'option');
+          opt.innerHTML = `<span class="combo-dot dot-${role.cat}"></span>${esc(role.name)}`;
+          opt.addEventListener('mousedown', e => {
+            e.preventDefault();
+            selectRole(role.name, role.cat);
+          });
+          dropdown.appendChild(opt);
+        });
+      });
+    }
+
+    function open() {
+      buildDropdown(input.value);
+      dropdown.classList.add('open');
+      input.setAttribute('aria-expanded', 'true');
+    }
+
+    function close() {
+      dropdown.classList.remove('open');
+      input.setAttribute('aria-expanded', 'false');
+      activeIdx = -1;
+      // if typed text doesn't match a committed value, restore it
+      if (currentVal) {
+        input.value = currentVal;
+      } else {
+        // allow free text
+        currentVal = input.value.trim();
+      }
+      updateClearBtn();
+    }
+
+    function selectRole(name, cat) {
+      currentVal  = name;
+      input.value = name;
+      close();
+      // auto-set alignment for true-role combo only (inputId === 'f-true-role')
+      // For claimed role we leave alignment alone — player may be lying
+      updateClearBtn();
+    }
+
+    function updateClearBtn() {
+      clearBtn.classList.toggle('visible', !!(input.value));
+    }
+
+    function moveActive(dir) {
+      const opts = dropdown.querySelectorAll('.combo-option');
+      if (!opts.length) return;
+      opts[activeIdx]?.classList.remove('active');
+      activeIdx = Math.max(0, Math.min(opts.length - 1, activeIdx + dir));
+      const next = opts[activeIdx];
+      next.classList.add('active');
+      next.scrollIntoView({ block: 'nearest' });
+    }
+
+    input.addEventListener('focus', () => open());
+    input.addEventListener('input', () => {
+      currentVal = ''; // typing breaks committed value
+      buildDropdown(input.value);
+      dropdown.classList.add('open');
+      updateClearBtn();
+    });
+    input.addEventListener('blur', () => {
+      // small delay so mousedown on option fires first
+      setTimeout(close, 120);
+    });
+    input.addEventListener('keydown', e => {
+      if (!dropdown.classList.contains('open')) { open(); return; }
+      if (e.key === 'ArrowDown') { e.preventDefault(); moveActive(1); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); moveActive(-1); }
+      else if (e.key === 'Enter') {
+        e.preventDefault();
+        const active = dropdown.querySelector('.combo-option.active');
+        if (active) selectRole(active.dataset.role, active.dataset.cat);
+        else { currentVal = input.value.trim(); close(); }
+      }
+      else if (e.key === 'Escape') { currentVal = ''; input.value = ''; close(); }
+    });
+
+    clearBtn.addEventListener('click', () => {
+      currentVal  = '';
+      input.value = '';
+      updateClearBtn();
+      input.focus();
+    });
+
+    return {
+      getValue()      { return currentVal || input.value.trim(); },
+      setValue(v)     {
+        currentVal  = v;
+        input.value = v;
+        updateClearBtn();
+      },
+      clear()         {
+        currentVal  = '';
+        input.value = '';
+        updateClearBtn();
+      },
+    };
+  }
+
+  // ── App state ──────────────────────────────────────
+  const MIN = 5, MAX = 20;
+  const LS_KEY = 'botc_town_square_v1';
+  let seatCount = 8;
+  let round = 1;
+  let phase = 'day';
+  let seats = [];
+  let selected = null;
+  let comboRole, comboTrueRole;
+
+  function blankSeat() {
+    return { name:'', role:'', trueRole:'', alignment:'unknown', notes:'', dead:false, nominated:false, usedVote:false };
+  }
+
+  function initSeats(n) {
+    const old = seats.slice();
+    seats = Array.from({length: n}, (_, i) => old[i] || blankSeat());
+  }
+
+  // ── Persistence ────────────────────────────────────
+  function saveState() {
+    try {
+      localStorage.setItem(LS_KEY, JSON.stringify({ seatCount, round, phase, seats }));
+    } catch(e) {}
+  }
+
+  function loadState() {
+    try {
+      const raw = localStorage.getItem(LS_KEY);
+      if (!raw) return false;
+      const s = JSON.parse(raw);
+      seatCount = Math.min(MAX, Math.max(MIN, s.seatCount || 8));
+      round     = Math.max(1, s.round || 1);
+      phase     = s.phase === 'night' ? 'night' : 'day';
+      seats     = Array.from({length: seatCount}, (_, i) => Object.assign(blankSeat(), s.seats?.[i] || {}));
+      return true;
+    } catch(e) { return false; }
+  }
+
+  function clearStorage() {
+    try { localStorage.removeItem(LS_KEY); } catch(e) {}
+  }
+
+  function esc(str) {
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // ── Render circle ──────────────────────────────────
+  function renderCircle() {
+    const container = document.getElementById('seats-container');
+    const stage     = document.getElementById('circle-stage');
+    const W = stage.offsetWidth  || 400;
+    const H = stage.offsetHeight || W;
+    const cx = W / 2, cy = H / 2;
+    const n  = seatCount;
+    const maxR = Math.min(W, H) / 2;
+    const R = maxR * (n <= 7 ? 0.62 : n <= 10 ? 0.67 : n <= 13 ? 0.71 : 0.75);
+    container.innerHTML = '';
+    seats.forEach((s, i) => {
+      const angle = (2 * Math.PI * i / n) - Math.PI / 2;
+      const x = cx + R * Math.cos(angle);
+      const y = cy + R * Math.sin(angle);
+      const el = document.createElement('div');
+      el.className = 'seat' +
+        (s.dead       ? ' dead'     : '') +
+        (selected === i ? ' selected' : '');
+      el.style.left = x + 'px';
+      el.style.top  = y + 'px';
+      el.dataset.idx = i;
+
+      const roleData = s.role ? ROLES.find(r => r.name === s.role) : null;
+      const badgeHtml = s.alignment !== 'unknown'
+        ? `<span class="seat-badge badge-${s.alignment}">${s.alignment === 'good' ? 'G' : 'E'}</span>`
+        : '';
+      const nameHtml = s.name
+        ? `<span class="seat-name">${esc(s.name)}</span>`
+        : `<span class="seat-name empty">Empty</span>`;
+      const roleHtml = s.role ? `<span class="seat-role">${esc(s.role)}</span>` : '';
+      const dotClass = roleData ? ` dot-${roleData.cat}` : '';
+
+      el.innerHTML = `<div class="seat-inner">
+        ${badgeHtml}
+        <span class="seat-num">${i + 1}</span>
+        ${nameHtml}
+        ${roleHtml}
+        <span class="seat-dot${dotClass}"></span>
+      </div>`;
+
+      el.addEventListener('click', () => openSeat(i));
+      container.appendChild(el);
+    });
+    updateMeta();
+    renderList();
+  }
+
+  function updateMeta() {
+    const alive = seats.filter(s => !s.dead).length;
+    document.getElementById('meta-alive').textContent = alive;
+    document.getElementById('meta-dead').textContent  = seats.length - alive;
+  }
+
+  // ── Seat panel ─────────────────────────────────────
+  function openSeat(i) {
+    selected = i;
+    renderCircle();
+    const s = seats[i];
+    document.getElementById('seat-panel').style.display = '';
+    document.getElementById('panel-title').textContent = `Seat ${i + 1}`;
+    document.getElementById('panel-sub').textContent   = s.name ? `Editing ${s.name}` : 'No player assigned';
+    document.getElementById('f-name').value      = s.name;
+    comboRole.setValue(s.role);
+    comboTrueRole.setValue(s.trueRole);
+    document.getElementById('f-alignment').value = s.alignment;
+    document.getElementById('f-notes').value     = s.notes;
+    setTog('tog-dead',      s.dead,      'on-dead');
+    setTog('tog-nominated', s.nominated, 'on-nominated');
+    setTog('tog-vote',      s.usedVote,  'on-vote');
+    document.getElementById('f-name').focus();
+    document.getElementById('seat-panel').scrollIntoView({ behavior:'smooth', block:'nearest' });
+  }
+
+  function setTog(id, active, cls) {
+    const el = document.getElementById(id);
+    el._active = active;
+    el.className = 'tog' + (active ? ' ' + cls : '');
+  }
+
+  function saveSeat() {
+    if (selected === null) return;
+    const s = seats[selected];
+    s.name      = document.getElementById('f-name').value.trim();
+    s.role      = comboRole.getValue();
+    s.trueRole  = comboTrueRole.getValue();
+    s.alignment = document.getElementById('f-alignment').value;
+    s.notes     = document.getElementById('f-notes').value.trim();
+    s.dead      = !!document.getElementById('tog-dead')._active;
+    s.nominated = !!document.getElementById('tog-nominated')._active;
+    s.usedVote  = !!document.getElementById('tog-vote')._active;
+    closePanel();
+  }
+
+  function closePanel() {
+    document.getElementById('seat-panel').style.display = 'none';
+    selected = null;
+    renderCircle();
+    saveState();
+  }
+
+  function clearSeat() {
+    if (selected === null) return;
+    seats[selected] = blankSeat();
+    closePanel();
+  }
+
+  // ── Player list ────────────────────────────────────
+  function renderList() {
+    const list = document.getElementById('player-list');
+    const named = seats.filter(s => s.name);
+    if (!named.length) {
+      list.innerHTML = '<div class="no-players">No players assigned yet. Click a seat to add one.</div>';
+      return;
+    }
+    const roleData = name => ROLES.find(r => r.name === name);
+    list.innerHTML = seats.map((s, i) => {
+      const rd = s.role ? roleData(s.role) : null;
+      const roleBadge = rd
+        ? `<span class="pli-badge tag-${rd.cat}">${esc(s.role)}</span>`
+        : s.role ? `<span class="pli-role">${esc(s.role)}</span>` : '';
+      const alignBadge = s.alignment !== 'unknown'
+        ? `<span class="pli-badge badge-${s.alignment}">${s.alignment}</span>`
+        : '';
+      return `<div class="pli${selected===i?' selected':''}" data-idx="${i}">
+        <span class="pli-num">${i+1}</span>
+        <span class="pli-dot${s.dead?' dead':''}"></span>
+        <span class="pli-name${s.name?'':' empty'}">${s.name ? esc(s.name) : 'Empty'}</span>
+        ${roleBadge}
+        ${alignBadge}
+      </div>`;
+    }).join('');
+    list.querySelectorAll('.pli').forEach(el => {
+      el.addEventListener('click', () => openSeat(parseInt(el.dataset.idx)));
+    });
+  }
+
+  // ── Phase & round ──────────────────────────────────
+  function setPhase(p) {
+    phase = p;
+    document.getElementById('btn-day').className   = 'phase-btn' + (p === 'day'   ? ' active-day'   : '');
+    document.getElementById('btn-night').className = 'phase-btn' + (p === 'night' ? ' active-night' : '');
+    document.getElementById('center-icon').textContent  = p === 'day' ? '☀️' : '🌙';
+    document.getElementById('center-round').textContent = (p === 'day' ? 'Day ' : 'Night ') + round;
+    saveState();
+  }
+
+  function setRound(r) {
+    round = Math.max(1, r);
+    document.getElementById('round-display').textContent = round;
+    document.getElementById('center-round').textContent  = (phase === 'day' ? 'Day ' : 'Night ') + round;
+  }
+
+  // ── Toggle buttons ─────────────────────────────────
+  ['tog-dead','tog-nominated','tog-vote'].forEach(id => {
+    document.getElementById(id).addEventListener('click', function () {
+      this._active = !this._active;
+      this.className = 'tog' + (this._active ? ' ' + this.dataset.on : '');
+    });
+  });
+
+  // ── Seat count ─────────────────────────────────────
+  document.getElementById('btn-minus').addEventListener('click', () => {
+    if (seatCount <= MIN) return;
+    seatCount--;
+    document.getElementById('seat-count-display').textContent = seatCount;
+    initSeats(seatCount);
+    if (selected !== null && selected >= seatCount) {
+      selected = null;
+      document.getElementById('seat-panel').style.display = 'none';
+    }
+    renderCircle();
+    saveState();
+  });
+  document.getElementById('btn-plus').addEventListener('click', () => {
+    if (seatCount >= MAX) return;
+    seatCount++;
+    document.getElementById('seat-count-display').textContent = seatCount;
+    initSeats(seatCount);
+    renderCircle();
+    saveState();
+  });
+
+  // ── Round ──────────────────────────────────────────
+  document.getElementById('btn-round-minus').addEventListener('click', () => { setRound(round - 1); saveState(); });
+  document.getElementById('btn-round-plus').addEventListener('click',  () => { setRound(round + 1); saveState(); });
+
+  // ── Panel actions ──────────────────────────────────
+  document.getElementById('btn-save').addEventListener('click', saveSeat);
+  document.getElementById('btn-clear').addEventListener('click', clearSeat);
+  document.getElementById('btn-close-panel').addEventListener('click', closePanel);
+
+  document.getElementById('f-name').addEventListener('keydown', e => {
+    if (e.key === 'Enter') saveSeat();
+  });
+
+  // ── Reset ──────────────────────────────────────────
+  document.getElementById('btn-reset').addEventListener('click', () => {
+    if (!confirm('Reset all seats and start a fresh game? This will clear all saved data.')) return;
+    clearStorage();
+    seats = Array.from({length: seatCount}, () => blankSeat());
+    selected = null;
+    round = 1;
+    document.getElementById('seat-panel').style.display = 'none';
+    setRound(1);
+    setPhase('day'); // setPhase calls saveState, which is fine — saves the clean slate
+    renderCircle();
+  });
+
+  // ── Resize ─────────────────────────────────────────
+  let resizeTimer;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(renderCircle, 60);
+  });
+
+  // ── Init ───────────────────────────────────────────
+  comboRole     = makeCombo('f-role',      'f-role-dropdown',      'f-role-clear');
+  comboTrueRole = makeCombo('f-true-role', 'f-true-role-dropdown', 'f-true-role-clear');
+
+  const restored = loadState();
+  if (!restored) initSeats(seatCount);
+  document.getElementById('seat-count-display').textContent = seatCount;
+  // setPhase/setRound without saveState side-effects on first paint
+  (function applyPhase(p) {
+    document.getElementById('btn-day').className   = 'phase-btn' + (p === 'day'   ? ' active-day'   : '');
+    document.getElementById('btn-night').className = 'phase-btn' + (p === 'night' ? ' active-night' : '');
+    document.getElementById('center-icon').textContent  = p === 'day' ? '☀️' : '🌙';
+    document.getElementById('center-round').textContent = (p === 'day' ? 'Day ' : 'Night ') + round;
+  })(phase);
+  document.getElementById('round-display').textContent = round;
+  document.getElementById('center-round').textContent  = (phase === 'day' ? 'Day ' : 'Night ') + round;
+  // Defer renderCircle until the browser has finished layout so offsetWidth is valid
+  requestAnimationFrame(() => requestAnimationFrame(renderCircle));
+
+  // expose setPhase globally for inline onclick
+  window.setPhase = setPhase;
+})();
+</script>
+</body>
+</html>
