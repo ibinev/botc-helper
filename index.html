@@ -1172,6 +1172,8 @@
       return groups;
     }
 
+
+
     function buildDropdown(q) {
       const groups = getFilteredGroups(q);
       dropdown.innerHTML = '';
@@ -1195,11 +1197,18 @@
           opt.setAttribute('role', 'option');
           const iconSrc  = ROLE_ICONS[role.name];
           const iconHtml = iconSrc
-            ? `<img src="${esc(iconSrc)}" alt="" style="width:24px;height:24px;object-fit:contain;margin-left:auto;flex-shrink:0;">`
+            ? `<img src="${esc(iconSrc)}" alt="" style="width:20px;height:20px;object-fit:contain;margin-left:auto;flex-shrink:0;">`
             : '';
           opt.innerHTML = `<span class="combo-dot dot-${role.cat}"></span>${esc(role.name)}${iconHtml}`;
           opt.addEventListener('mousedown', e => { e.preventDefault(); selectRole(role.name); });
-          opt.addEventListener('touchend',  e => { e.preventDefault(); selectRole(role.name); });
+          // Per-option touch: measure Y displacement to tell tap from scroll.
+          // Never call preventDefault() — touchend may be non-cancelable during scroll.
+          let optTouchY = 0;
+          opt.addEventListener('touchstart', e => { optTouchY = e.touches[0].clientY; }, { passive: true });
+          opt.addEventListener('touchend', e => {
+            if (Math.abs(e.changedTouches[0].clientY - optTouchY) > 8) return; // scroll, not tap
+            selectRole(role.name);
+          });
           dropdown.appendChild(opt);
         });
       });
@@ -1210,8 +1219,16 @@
       if (!rect.width) return;
       const spaceBelow = window.innerHeight - rect.bottom - 8;
       const spaceAbove = rect.top - 8;
-      dropdown.style.width = rect.width + 'px';
-      dropdown.style.left  = rect.left + 'px';
+      // Width: at least the input width, at most the viewport minus 8px margins
+      const vw = window.innerWidth;
+      const desiredW = Math.max(rect.width, 220);
+      const clampedW = Math.min(desiredW, vw - 16);
+      // Left: align with input, but shift left if it would overflow the right edge
+      const rawLeft  = rect.left;
+      const clampedLeft = Math.max(8, Math.min(rawLeft, vw - clampedW - 8));
+      dropdown.style.minWidth = '';
+      dropdown.style.width = clampedW + 'px';
+      dropdown.style.left  = clampedLeft + 'px';
       if (spaceBelow >= 150 || spaceBelow >= spaceAbove) {
         dropdown.style.top       = (rect.bottom + 4) + 'px';
         dropdown.style.bottom    = 'auto';
@@ -1335,8 +1352,9 @@
       currentVal = '';
       input.value = '';
       updateClearBtn();
-      input.focus();
       open('');
+      // Re-position after layout settles (clear btn hides, affecting rect)
+      requestAnimationFrame(positionDropdown);
     });
     clearBtn.addEventListener('touchend', e => {
       e.preventDefault();
@@ -1344,7 +1362,8 @@
       input.value = '';
       updateClearBtn();
       open('');
-      input.focus();
+      // Re-position after layout settles; on mobile also after keyboard may shift
+      requestAnimationFrame(() => requestAnimationFrame(positionDropdown));
     });
 
     // ── Click outside: close dropdown ───────────────
