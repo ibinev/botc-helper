@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Blood on the Clocktower — Town Square</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -35,8 +35,64 @@
       --radius-lg:      14px;
     }
 
+    /* ── Day mode overrides ──────────────────────────── */
+    body.day-mode {
+      --bg-page:        #e8dcc8;
+      --bg-surface:     #f2e8d5;
+      --bg-card:        #fdf6e8;
+      --bg-input:       #fff9f0;
+      --border:         rgba(120,80,20,0.25);
+      --border-strong:  rgba(120,80,20,0.5);
+      --gold:           #8b5e0a;
+      --gold-light:     #6b4408;
+      --blood:          #8b1a1a;
+      --blood-light:    #c0392b;
+      --text-primary:   #1a0f00;
+      --text-secondary: #5c3d10;
+      --text-muted:     #8c6830;
+      --good-bg:        rgba(63,107,17,0.18);
+      --good-text:      #2d5c00;
+      --evil-bg:        rgba(139,26,26,0.15);
+      --evil-text:      #8b1a1a;
+      --info-bg:        rgba(24,95,165,0.15);
+      --info-text:      #0e5a9e;
+    }
+    body.day-mode #app { background: var(--bg-page); }
+    body.day-mode #topbar {
+      background: rgba(232,220,200,0.95);
+      border-bottom-color: var(--border);
+    }
+    body.day-mode .seat-inner {
+      border-color: rgba(0,0,0,0.2);
+      box-shadow:
+        0 0 0 1px rgba(120,80,20,0.3),
+        0 2px 10px rgba(100,60,0,0.2),
+        inset 0 1px 0 rgba(255,255,255,0.6);
+    }
+    body.day-mode .seat:hover .seat-inner,
+    body.day-mode .seat:active .seat-inner {
+      border-color: rgba(0,0,0,0.45);
+      box-shadow:
+        0 0 0 2px var(--gold),
+        0 4px 16px rgba(100,60,0,0.3),
+        inset 0 1px 0 rgba(255,255,255,0.7);
+    }
+    body.day-mode #circle-inner::before { border-color: rgba(120,80,20,0.15); }
+    body.day-mode #circle-inner::after  { background: rgba(120,80,20,0.06); border-color: rgba(120,80,20,0.15); }
+    body.day-mode .modal-sheet { box-shadow: 0 -4px 40px rgba(100,60,0,0.2); }
+    body.day-mode .combo-dropdown { box-shadow: 0 8px 32px rgba(100,60,0,0.25); }
+
+    .btn-theme {
+      width: 30px; height: 30px; padding: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px; border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    /* ── Base ──────────────────────────────────────── */
     html, body {
-      min-height: 100vh;
+      height: 100%; height: 100dvh;
+      overflow: hidden;
       background: var(--bg-page);
       color: var(--text-primary);
       font-family: var(--font-sans);
@@ -44,76 +100,85 @@
       line-height: 1.5;
     }
 
-    /* ── Layout ─────────────────────────────────────── */
+    /* ── App shell: full viewport, circle fills it all ─ */
     #app {
-      max-width: 960px;
-      margin: 0 auto;
-      padding: 1.5rem 1rem 4rem;
+      position: fixed;
+      inset: 0;
       display: flex;
       flex-direction: column;
-      gap: 1.5rem;
+      /* Rich layered background: deep radial glow + subtle vignette */
+      background:
+        radial-gradient(ellipse 80% 60% at 50% 60%, rgba(60,28,8,0.95) 0%, transparent 70%),
+        radial-gradient(ellipse 50% 40% at 50% 50%, rgba(100,45,10,0.4) 0%, transparent 60%),
+        radial-gradient(ellipse 120% 100% at 50% 100%, rgba(139,26,26,0.12) 0%, transparent 55%),
+        linear-gradient(170deg, #0e0905 0%, #1a0f06 35%, #140d08 65%, #0b0604 100%);
     }
+    /* Grain texture overlay */
+    #app::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      opacity: 0.035;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+      background-size: 200px 200px;
+    }
+    /* Everything inside sits above the grain */
+    #topbar, #circle-wrap, .modal-overlay { position: relative; z-index: 1; }
+    #topbar { z-index: 10; }
 
-    /* ── Header ─────────────────────────────────────── */
-    header {
+    /* Day mode background */
+    body.day-mode #app {
+      background:
+        radial-gradient(ellipse 70% 55% at 50% 55%, rgba(255,240,200,0.6) 0%, transparent 70%),
+        radial-gradient(ellipse 120% 100% at 50% 100%, rgba(201,151,58,0.08) 0%, transparent 55%),
+        linear-gradient(160deg, #f0e2c4 0%, #e8d5b0 40%, #ddc89a 100%);
+    }
+    body.day-mode #app::before { opacity: 0.025; }
+
+    /* ── Slim top bar ───────────────────────────────── */
+    #topbar {
+      flex-shrink: 0;
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 10px;
-      padding-bottom: 1rem;
+      gap: 8px;
+      padding: 8px 12px;
+      padding-top: max(8px, env(safe-area-inset-top));
+      background: rgba(26,18,10,0.92);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
       border-bottom: 0.5px solid var(--border);
-    }
-    .header-title {
-      font-family: var(--font-serif);
-      font-size: 22px;
-      font-weight: normal;
-      letter-spacing: 0.04em;
-      color: var(--gold-light);
-    }
-    .header-title small {
-      display: block;
-      font-family: var(--font-sans);
-      font-size: 12px;
-      color: var(--text-secondary);
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      margin-top: 2px;
-    }
-    .header-meta {
-      font-size: 12px;
-      color: var(--text-secondary);
-      text-align: right;
-      line-height: 1.7;
-    }
-    .header-meta strong { color: var(--text-primary); }
-
-    /* ── Toolbar ─────────────────────────────────────── */
-    .toolbar {
-      display: flex;
-      align-items: center;
-      gap: 10px;
       flex-wrap: wrap;
+      z-index: 10;
     }
+
+    .bar-title {
+      font-family: var(--font-serif);
+      font-size: 16px;
+      color: var(--gold-light);
+      letter-spacing: 0.03em;
+      margin-right: 4px;
+    }
+
     .count-controls {
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 2px;
       background: var(--bg-surface);
       border: 0.5px solid var(--border);
       border-radius: var(--radius-md);
-      padding: 4px 10px;
+      padding: 2px 6px;
     }
-    .count-label { font-size: 12px; color: var(--text-secondary); }
-    .count-val   { min-width: 24px; text-align: center; font-weight: 600; color: var(--gold-light); }
+    .count-label { font-size: 11px; color: var(--text-secondary); margin-right: 2px; }
+    .count-val   { min-width: 20px; text-align: center; font-weight: 600; color: var(--gold-light); font-size: 13px; }
     .btn-icon {
-      width: 26px; height: 26px;
+      width: 24px; height: 24px;
       display: flex; align-items: center; justify-content: center;
       background: none; border: none; cursor: pointer;
-      color: var(--gold); font-size: 18px; border-radius: 4px;
-      transition: background 0.12s;
+      color: var(--gold); font-size: 17px; border-radius: 4px;
+      -webkit-tap-highlight-color: transparent;
     }
-    .btn-icon:hover { background: rgba(201,151,58,0.12); }
 
     .phase-toggle {
       display: flex;
@@ -122,73 +187,90 @@
       overflow: hidden;
     }
     .phase-btn {
-      padding: 6px 14px;
+      padding: 5px 10px;
       background: var(--bg-surface);
       border: none;
       cursor: pointer;
       font-family: var(--font-sans);
-      font-size: 12px;
+      font-size: 11px;
       color: var(--text-secondary);
       transition: background 0.12s, color 0.12s;
+      -webkit-tap-highlight-color: transparent;
     }
-    .phase-btn.active-day   { background: rgba(201,151,58,0.18); color: var(--gold-light); }
-    .phase-btn.active-night { background: rgba(24,95,165,0.2);   color: var(--info-text); }
+    .phase-btn.active-day   { background: rgba(201,151,58,0.2); color: var(--gold-light); }
+    .phase-btn.active-night { background: rgba(24,95,165,0.22); color: var(--info-text); }
 
     .round-controls {
       display: flex;
       align-items: center;
-      gap: 6px;
-      font-size: 12px;
+      gap: 4px;
+      font-size: 11px;
       color: var(--text-secondary);
     }
-    .round-controls span { color: var(--text-primary); font-weight: 500; }
+    .round-controls span { color: var(--text-primary); font-weight: 600; }
 
     .btn-sm {
-      padding: 5px 12px;
+      padding: 5px 10px;
       background: var(--bg-surface);
       border: 0.5px solid var(--border);
       border-radius: var(--radius-sm);
       cursor: pointer;
       font-family: var(--font-sans);
-      font-size: 12px;
+      font-size: 11px;
       color: var(--text-primary);
-      transition: background 0.12s;
+      -webkit-tap-highlight-color: transparent;
+      white-space: nowrap;
     }
-    .btn-sm:hover { background: rgba(201,151,58,0.1); border-color: var(--border-strong); }
+    .btn-sm.active-move {
+      background: rgba(201,151,58,0.18);
+      border-color: var(--gold);
+      color: var(--gold-light);
+    }
 
-    /* ── Circle Stage ───────────────────────────────── */
-    #circle-stage {
+    .bar-meta {
+      font-size: 11px;
+      color: var(--text-secondary);
+      margin-left: auto;
+      white-space: nowrap;
+    }
+    .bar-meta strong { color: var(--text-primary); }
+
+    /* ── Circle: fills everything below the topbar ───── */
+    #circle-wrap {
+      flex: 1 1 0;
+      min-height: 0;
       position: relative;
-      width: 100%;
-      padding-bottom: min(92vw, 560px);
-      max-height: 560px;
+      overflow: hidden;
+    }
+    #circle-stage {
+      position: absolute;
+      inset: 0;
     }
     #circle-inner {
       position: absolute; inset: 0;
       display: flex; align-items: center; justify-content: center;
     }
-
-    /* Faint decorative ring */
+	
+	/* Binev: remove outer circle
     #circle-inner::before {
       content: '';
       position: absolute;
-      width: 46%;
-      height: 46%;
+      width: 46%; height: 46%;
       border-radius: 50%;
       border: 0.5px solid var(--border);
       pointer-events: none;
     }
+	*/
+	
     #circle-inner::after {
       content: '';
       position: absolute;
-      width: 8%;
-      height: 8%;
+      width: 8%; height: 8%;
       border-radius: 50%;
       background: rgba(201,151,58,0.07);
       border: 0.5px solid var(--border);
       pointer-events: none;
     }
-
     .center-label {
       position: absolute;
       top: 50%; left: 50%;
@@ -198,16 +280,46 @@
       z-index: 0;
       user-select: none;
     }
-    .center-label .phase-icon { font-size: 32px; opacity: 0.2; }
+    .center-label .phase-icon  { font-size: 30px; opacity: 0.18; }
     .center-label .round-label {
-      font-size: 11px;
+      font-size: 10px;
       color: var(--text-muted);
       letter-spacing: 0.1em;
       text-transform: uppercase;
-      margin-top: 3px;
+      margin-top: 2px;
     }
-
     #seats-container { position: absolute; inset: 0; }
+
+    /* ── Player list button (floating, bottom-right) ─── */
+    #btn-list {
+      position: absolute;
+      bottom: max(18px, env(safe-area-inset-bottom, 18px));
+      right: 16px;
+      z-index: 20;
+      background: var(--bg-surface);
+      border: 0.5px solid var(--border-strong);
+      border-radius: 999px;
+      padding: 9px 16px;
+      font-family: var(--font-sans);
+      font-size: 12px;
+      color: var(--gold-light);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+      -webkit-tap-highlight-color: transparent;
+      transition: background 0.12s, transform 0.1s;
+    }
+    #btn-list:active { transform: scale(0.96); }
+    #btn-list .list-count {
+      background: rgba(201,151,58,0.2);
+      border-radius: 999px;
+      padding: 1px 7px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--gold);
+    }
 
     /* ── Seat ───────────────────────────────────────── */
     .seat {
@@ -217,12 +329,18 @@
       z-index: 2;
       width: var(--seat-size);
       height: var(--seat-size);
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
     }
     .seat-inner {
       width: 100%; height: 100%;
       border-radius: 50%;
       background: var(--bg-card);
-      border: 1.5px solid var(--border);
+      border: 2px solid rgba(255,255,255,0.18);
+      box-shadow:
+        0 0 0 1px rgba(201,151,58,0.25),
+        0 2px 12px rgba(0,0,0,0.5),
+        inset 0 1px 0 rgba(255,255,255,0.08);
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -231,87 +349,147 @@
       position: relative;
       overflow: hidden;
     }
-    .seat:hover .seat-inner {
-      border-color: var(--gold);
+    .seat:active .seat-inner,
+    .seat:hover  .seat-inner {
+      border-color: rgba(255,255,255,0.45);
+      box-shadow:
+        0 0 0 2px var(--gold),
+        0 4px 18px rgba(0,0,0,0.6),
+        inset 0 1px 0 rgba(255,255,255,0.12);
       transform: scale(1.06);
     }
     .seat.selected .seat-inner {
-      border: 2px solid var(--gold-light);
-      box-shadow: 0 0 0 3px rgba(201,151,58,0.18), inset 0 0 20px rgba(201,151,58,0.06);
+      border-color: rgba(255,255,255,0.7);
+      box-shadow:
+        0 0 0 3px var(--gold-light),
+        0 4px 20px rgba(201,151,58,0.3),
+        inset 0 0 20px rgba(201,151,58,0.08);
     }
     .seat.dead .seat-inner {
       background: rgba(26,18,10,0.7);
-      border-style: dashed;
-      border-color: var(--blood);
+      border: 2px dashed var(--blood);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.4);
       opacity: 0.6;
     }
-    .seat.dead:hover .seat-inner { opacity: 0.85; }
+    .seat.dead:active .seat-inner,
+    .seat.dead:hover  .seat-inner { opacity: 0.85; }
 
-    .seat-num {
-      font-size: 9px;
-      color: var(--text-muted);
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
+    /* drag mode */
+    .move-mode .seat        { cursor: grab; }
+    .move-mode .seat:active { cursor: grabbing; }
+    .move-mode .seat.dragging .seat-inner {
+      border-color: var(--gold-light);
+      box-shadow: 0 0 0 4px rgba(201,151,58,0.3), 0 8px 28px rgba(0,0,0,0.6);
+      transform: scale(1.1);
     }
+
+    .seat-num  { font-size: 9px; color: var(--text-muted); letter-spacing: 0.08em; text-transform: uppercase; }
     .seat-name {
-      font-size: 12px;
-      font-weight: 500;
-      color: var(--text-primary);
-      max-width: 80px;
-      overflow: hidden;
-      white-space: nowrap;
-      text-overflow: ellipsis;
-      text-align: center;
+      font-size: 11px; font-weight: 500; color: var(--text-primary);
+      max-width: 78px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; text-align: center;
     }
     .seat-name.empty { color: var(--text-muted); font-weight: 400; font-style: italic; }
     .seat-role {
-      font-size: 10px;
-      color: var(--text-secondary);
-      max-width: 80px;
-      overflow: hidden;
-      white-space: nowrap;
-      text-overflow: ellipsis;
-      text-align: center;
+      font-size: 9px; color: var(--text-secondary);
+      max-width: 78px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; text-align: center;
     }
     .seat-dot {
-      position: absolute;
-      bottom: 7px; right: 7px;
-      width: 8px; height: 8px;
-      border-radius: 50%;
-      background: #5a9e2f;
-      border: 1.5px solid var(--bg-card);
+      position: absolute; bottom: 6px; right: 6px;
+      width: 7px; height: 7px; border-radius: 50%;
+      background: #5a9e2f; border: 1.5px solid var(--bg-card);
     }
     .seat.dead .seat-dot { background: var(--blood-light); }
-
     .seat-badge {
-      position: absolute;
-      top: 4px; right: 4px;
-      font-size: 8px;
-      padding: 1px 4px;
-      border-radius: 3px;
-      font-family: var(--font-sans);
-      font-weight: 600;
-      letter-spacing: 0.04em;
+      position: absolute; top: 4px; right: 4px;
+      font-size: 7px; padding: 1px 3px; border-radius: 3px;
+      font-family: var(--font-sans); font-weight: 600; letter-spacing: 0.04em;
     }
-    .badge-good  { background: var(--good-bg);  color: var(--good-text); }
-    .badge-evil  { background: var(--evil-bg);  color: var(--evil-text); }
+    .badge-good { background: var(--good-bg);  color: var(--good-text); }
+    .badge-evil { background: var(--evil-bg);  color: var(--evil-text); }
 
-    /* ── Edit Panel ─────────────────────────────────── */
-    .panel {
-      background: var(--bg-surface);
-      border: 0.5px solid var(--border);
-      border-radius: var(--radius-lg);
-      padding: 1.25rem;
-    }
-    .panel-header {
+    /* category dot / tag colours */
+    .dot-townsfolk { background: #5a9e2f; }
+    .dot-outsider  { background: #7ab8f5; }
+    .dot-minion    { background: #e06060; }
+    .dot-demon     { background: #c0392b; }
+    .dot-traveler  { background: #c9973a; }
+    .tag-townsfolk { background: rgba(63,107,17,0.3);  color: #8fca4b; }
+    .tag-outsider  { background: rgba(24,95,165,0.25); color: #7ab8f5; }
+    .tag-minion    { background: rgba(139,26,26,0.35); color: #e06060; }
+    .tag-demon     { background: rgba(192,57,43,0.4);  color: #ff8080; }
+    .tag-traveler  { background: rgba(186,117,23,0.25);color: #e6b85a; }
+
+    /* ── Modal overlay (edit + player list) ─────────── */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      background: rgba(10,7,4,0.7);
+      backdrop-filter: blur(3px);
+      -webkit-backdrop-filter: blur(3px);
       display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 10px;
-      margin-bottom: 1rem;
+      align-items: flex-end;      /* sheet slides from bottom */
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
     }
-    .panel-title { font-size: 16px; font-weight: 500; color: var(--gold-light); font-family: var(--font-serif); }
-    .panel-sub   { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+    .modal-overlay.visible {
+      opacity: 1;
+      pointer-events: all;
+    }
+    .modal-sheet {
+      width: 100%;
+      max-width: 560px;
+      max-height: 88dvh;
+      background: var(--bg-surface);
+      border-radius: 20px 20px 0 0;
+      border-top: 0.5px solid var(--border-strong);
+      display: flex;
+      flex-direction: column;
+      transform: translateY(40px);
+      transition: transform 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+      overflow: hidden;
+      padding-bottom: max(0px, env(safe-area-inset-bottom));
+    }
+    .modal-overlay.visible .modal-sheet {
+      transform: translateY(0);
+    }
+    .modal-drag-bar {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 0 6px;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .modal-drag-bar .pill {
+      width: 36px; height: 4px; border-radius: 2px;
+      background: var(--border-strong);
+    }
+    .modal-inner {
+      overflow-y: auto;
+      overflow-x: visible;   /* let combo dropdowns escape horizontally */
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
+      padding: 0 16px 24px;
+      flex: 1;
+    }
+    /* When a combo is open, temporarily allow overflow so dropdown shows */
+    .modal-inner.combo-open {
+      overflow-y: visible;
+      overflow-x: visible;
+    }
+    /* Extra scroll wrapper that keeps scrolling when combo-open */
+    .modal-inner.combo-open {
+      overflow: visible;
+    }
+
+    /* ── Modal: Edit form ────────────────────────────── */
+    .modal-title    { font-size: 17px; font-weight: 500; color: var(--gold-light); font-family: var(--font-serif); }
+    .modal-subtitle { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+    .modal-header   { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 14px; gap: 8px; }
 
     .field-grid {
       display: grid;
@@ -320,130 +498,90 @@
       margin-bottom: 10px;
     }
     .field-grid.full { grid-template-columns: 1fr; }
-
     .field label {
       display: block;
-      font-size: 10px;
-      color: var(--text-secondary);
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
+      font-size: 10px; color: var(--text-secondary);
+      text-transform: uppercase; letter-spacing: 0.08em;
       margin-bottom: 4px;
     }
-    .field input,
-    .field select,
-    .field textarea {
+    .field input, .field select, .field textarea {
       width: 100%;
       background: var(--bg-input);
       border: 0.5px solid var(--border);
       border-radius: var(--radius-sm);
       color: var(--text-primary);
       font-family: var(--font-sans);
-      font-size: 13px;
-      padding: 6px 10px;
+      font-size: 14px;           /* 16px prevents iOS zoom, keep ≥16 */
+      padding: 8px 10px;
       outline: none;
       transition: border-color 0.12s, box-shadow 0.12s;
+      -webkit-appearance: none;
     }
-    .field input:focus,
-    .field textarea:focus,
-    .field select:focus {
+    .field input:focus, .field textarea:focus, .field select:focus {
       border-color: var(--gold);
       box-shadow: 0 0 0 2px rgba(201,151,58,0.15);
     }
-    .field textarea { resize: vertical; min-height: 64px; line-height: 1.5; }
+    .field textarea { resize: none; height: 72px; line-height: 1.5; }
     .field select option { background: var(--bg-card); }
 
     .status-section label {
-      display: block;
-      font-size: 10px;
-      color: var(--text-secondary);
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      margin-bottom: 6px;
+      display: block; font-size: 10px; color: var(--text-secondary);
+      text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px;
     }
     .toggles { display: flex; gap: 8px; flex-wrap: wrap; }
     .tog {
-      padding: 5px 12px;
-      border-radius: 999px;
+      padding: 7px 14px; border-radius: 999px;
       border: 0.5px solid var(--border);
-      background: var(--bg-input);
-      color: var(--text-secondary);
-      font-size: 12px;
-      cursor: pointer;
-      font-family: var(--font-sans);
-      transition: all 0.12s;
+      background: var(--bg-input); color: var(--text-secondary);
+      font-size: 13px; cursor: pointer; font-family: var(--font-sans);
+      transition: all 0.12s; -webkit-tap-highlight-color: transparent;
     }
-    .tog:hover { border-color: var(--border-strong); }
-    .tog.on-dead       { background: var(--evil-bg);         color: var(--evil-text);  border-color: var(--blood); }
-    .tog.on-nominated  { background: rgba(186,117,23,0.2);   color: #e6b85a;           border-color: var(--gold); }
-    .tog.on-vote       { background: rgba(186,117,23,0.15);  color: var(--text-secondary); border-color: var(--border-strong); }
+    .tog.on-dead      { background: var(--evil-bg); color: var(--evil-text); border-color: var(--blood); }
+    .tog.on-nominated { background: rgba(186,117,23,0.2); color: #e6b85a; border-color: var(--gold); }
+    .tog.on-vote      { background: rgba(186,117,23,0.15); color: var(--text-secondary); border-color: var(--border-strong); }
 
-    .btn-row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 1rem; flex-wrap: wrap; }
+    .btn-row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; flex-wrap: wrap; }
     .btn {
-      padding: 6px 16px;
-      border-radius: var(--radius-sm);
+      padding: 9px 18px; border-radius: var(--radius-sm);
       border: 0.5px solid var(--border);
-      background: var(--bg-input);
-      color: var(--text-primary);
-      font-family: var(--font-sans);
-      font-size: 13px;
-      cursor: pointer;
-      transition: background 0.12s;
+      background: var(--bg-input); color: var(--text-primary);
+      font-family: var(--font-sans); font-size: 14px;
+      cursor: pointer; transition: background 0.12s;
+      -webkit-tap-highlight-color: transparent;
     }
-    .btn:hover { background: rgba(201,151,58,0.1); border-color: var(--border-strong); }
     .btn-primary { background: rgba(201,151,58,0.15); border-color: var(--gold); color: var(--gold-light); }
-    .btn-primary:hover { background: rgba(201,151,58,0.25); }
     .btn-danger  { border-color: var(--blood); color: var(--evil-text); }
-    .btn-danger:hover { background: var(--evil-bg); }
 
-    /* ── Player List ────────────────────────────────── */
-    .player-list { display: flex; flex-direction: column; gap: 4px; }
+    /* ── Modal: Player list ──────────────────────────── */
+    .list-section-title {
+      font-size: 10px; color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: 0.1em;
+      margin-bottom: 8px; margin-top: 4px;
+    }
+    .player-list { display: flex; flex-direction: column; gap: 2px; }
     .pli {
       display: flex; align-items: center; gap: 10px;
-      padding: 7px 10px;
-      border-radius: var(--radius-sm);
-      border: 0.5px solid transparent;
-      cursor: pointer;
+      padding: 10px 10px; border-radius: var(--radius-sm);
+      border: 0.5px solid transparent; cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
       transition: background 0.1s;
     }
-    .pli:hover { background: rgba(201,151,58,0.07); }
+    .pli:active  { background: rgba(201,151,58,0.1); }
     .pli.selected { background: rgba(201,151,58,0.1); border-color: var(--border-strong); }
     .pli-num  { font-size: 10px; color: var(--text-muted); min-width: 16px; text-align: right; }
-    .pli-dot  { width: 7px; height: 7px; border-radius: 50%; background: #5a9e2f; flex-shrink: 0; }
+    .pli-dot  { width: 8px; height: 8px; border-radius: 50%; background: #5a9e2f; flex-shrink: 0; }
     .pli-dot.dead { background: var(--blood-light); }
-    .pli-name { flex: 1; font-size: 13px; font-weight: 500; color: var(--text-primary); }
+    .pli-name { flex: 1; font-size: 14px; font-weight: 500; color: var(--text-primary); }
     .pli-name.empty { color: var(--text-muted); font-style: italic; font-weight: 400; }
     .pli-role { font-size: 12px; color: var(--text-secondary); }
-    .pli-badge {
-      font-size: 10px; padding: 1px 7px; border-radius: 999px;
-      font-weight: 500;
-    }
-    .no-players { text-align: center; padding: 1.5rem; color: var(--text-muted); font-style: italic; font-size: 13px; }
-
-    /* ── Misc ───────────────────────────────────────── */
-    details summary {
-      list-style: none;
-      cursor: pointer;
-      color: var(--text-secondary);
-      font-size: 12px;
-      letter-spacing: 0.04em;
-      padding: 4px 0;
-    }
-    details summary::-webkit-details-marker { display: none; }
-    details[open] summary { color: var(--gold-light); }
-
-    .divider {
-      height: 0.5px;
-      background: var(--border);
-      margin: 1rem 0;
-    }
+    .pli-badge { font-size: 10px; padding: 2px 8px; border-radius: 999px; font-weight: 500; }
+    .no-players { text-align: center; padding: 2rem; color: var(--text-muted); font-style: italic; font-size: 13px; }
+    .divider { height: 0.5px; background: var(--border); margin: 14px 0; }
 
     /* ── Combobox ───────────────────────────────────── */
-    .combo-wrap {
-      position: relative;
-    }
+    .combo-wrap { position: relative; }
     .combo-input-row {
-      display: flex;
-      align-items: center;
+      display: flex; align-items: center;
       background: var(--bg-input);
       border: 0.5px solid var(--border);
       border-radius: var(--radius-sm);
@@ -454,31 +592,13 @@
       border-color: var(--gold);
       box-shadow: 0 0 0 2px rgba(201,151,58,0.15);
     }
-    .combo-tag {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      padding: 2px 6px 2px 7px;
-      margin: 3px 0 3px 4px;
-      border-radius: 4px;
-      font-size: 11px;
-      font-weight: 500;
-      white-space: nowrap;
-      flex-shrink: 0;
-    }
-    .combo-tag-remove {
-      background: none; border: none; cursor: pointer;
-      color: inherit; opacity: 0.6; font-size: 13px;
-      padding: 0; line-height: 1; display: flex; align-items: center;
-    }
-    .combo-tag-remove:hover { opacity: 1; }
     .combo-text {
       flex: 1; min-width: 60px;
       background: none; border: none; outline: none;
       color: var(--text-primary);
       font-family: var(--font-sans);
-      font-size: 13px;
-      padding: 6px 8px;
+      font-size: 16px;   /* ≥16px prevents iOS zoom */
+      padding: 8px 8px;
     }
     .combo-text::placeholder { color: var(--text-muted); }
     .combo-clear {
@@ -487,8 +607,6 @@
       line-height: 1; display: none; align-items: center;
     }
     .combo-clear.visible { display: flex; }
-    .combo-clear:hover { color: var(--text-secondary); }
-
     .combo-dropdown {
       display: none;
       position: absolute;
@@ -496,212 +614,192 @@
       background: var(--bg-card);
       border: 0.5px solid var(--border-strong);
       border-radius: var(--radius-md);
-      z-index: 100;
-      max-height: 260px;
+      z-index: 999;
+      max-height: 46vh;
       overflow-y: auto;
+      overflow-x: hidden;
       scrollbar-width: thin;
       scrollbar-color: var(--border-strong) transparent;
+      -webkit-overflow-scrolling: touch;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.6);
     }
     .combo-dropdown.open { display: block; }
-
     .combo-group-label {
-      font-size: 10px;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      padding: 8px 10px 4px;
-      color: var(--text-muted);
-      user-select: none;
-      position: sticky; top: 0;
-      background: var(--bg-card);
+      font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em;
+      padding: 8px 10px 4px; color: var(--text-muted); user-select: none;
+      position: sticky; top: 0; background: var(--bg-card);
     }
     .combo-option {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 7px 10px;
-      cursor: pointer;
-      font-size: 13px;
-      color: var(--text-primary);
+      display: flex; align-items: center; gap: 8px;
+      padding: 9px 10px; cursor: pointer;
+      font-size: 14px; color: var(--text-primary);
       transition: background 0.08s;
+      -webkit-tap-highlight-color: transparent;
     }
-    .combo-option:hover,
+    .combo-option:active,
     .combo-option.active { background: rgba(201,151,58,0.1); }
     .combo-option.selected-opt { color: var(--gold-light); }
-    .combo-dot {
-      width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
-    }
-    .combo-no-results {
-      padding: 10px 12px;
-      font-size: 13px;
-      color: var(--text-muted);
-      font-style: italic;
-    }
+    .combo-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .combo-no-results { padding: 10px 12px; font-size: 13px; color: var(--text-muted); font-style: italic; }
+    .combo-tag { display:none; } /* unused but kept for compat */
 
-    /* category dot colours */
-    .dot-townsfolk  { background: #5a9e2f; }
-    .dot-outsider   { background: #7ab8f5; }
-    .dot-minion     { background: #e06060; }
-    .dot-demon      { background: #c0392b; }
-    .dot-traveler   { background: #c9973a; }
-
-    /* tag colours (match dots) */
-    .tag-townsfolk  { background: rgba(63,107,17,0.3);  color: #8fca4b; }
-    .tag-outsider   { background: rgba(24,95,165,0.25); color: #7ab8f5; }
-    .tag-minion     { background: rgba(139,26,26,0.35); color: #e06060; }
-    .tag-demon      { background: rgba(192,57,43,0.4);  color: #ff8080; }
-    .tag-traveler   { background: rgba(186,117,23,0.25);color: #e6b85a; }
-
-    @media (max-width: 520px) {
-      :root { --seat-size: 74px; }
-      .seat-name { font-size: 10px; }
-      .seat-role { font-size: 9px; }
-      .field-grid { grid-template-columns: 1fr; }
-    }
-
-    /* ── Drag / move mode ───────────────────────────── */
-    .seat { user-select: none; }
-    .move-mode .seat         { cursor: grab; }
-    .move-mode .seat:active  { cursor: grabbing; }
-    .move-mode .seat:hover .seat-inner { border-color: var(--gold); transform: scale(1.04); }
-    .move-mode .seat.dragging .seat-inner {
-      border-color: var(--gold-light);
-      box-shadow: 0 0 0 4px rgba(201,151,58,0.3), 0 8px 28px rgba(0,0,0,0.6);
-      transform: scale(1.1);
-    }
-    .btn-sm.active-move {
-      background: rgba(201,151,58,0.18);
-      border-color: var(--gold);
-      color: var(--gold-light);
+    @media (min-width: 520px) {
+      :root { --seat-size: 96px; }
+      .seat-name { font-size: 12px; }
+      .seat-role { font-size: 10px; }
+      .modal-sheet { border-radius: 20px; margin-bottom: 24px; }
+      .modal-overlay { align-items: center; }
     }
   </style>
 </head>
 <body>
 <div id="app">
 
-  <header>
-    <div>
-      <div class="header-title">
-        Town Square
-        <small>Blood on the Clocktower</small>
-      </div>
-    </div>
-    <div class="header-meta">
-      <strong id="meta-alive">—</strong> alive &nbsp;·&nbsp; <strong id="meta-dead">—</strong> dead
-    </div>
-  </header>
+  <!-- Top bar -->
+  <div id="topbar">
+    <span class="bar-title">Town Square</span>
 
-  <!-- Toolbar -->
-  <div class="toolbar">
     <div class="count-controls">
       <span class="count-label">Players</span>
-      <button class="btn-icon" id="btn-minus" title="Remove seat">−</button>
+      <button class="btn-icon" id="btn-minus">−</button>
       <span class="count-val" id="seat-count-display">8</span>
-      <button class="btn-icon" id="btn-plus" title="Add seat">+</button>
+      <button class="btn-icon" id="btn-plus">+</button>
     </div>
 
-    <div class="phase-toggle" title="Toggle day/night">
-      <button class="phase-btn active-day" id="btn-day"  onclick="setPhase('day')">☀ Day</button>
+    <div class="phase-toggle">
+      <button class="phase-btn active-day" id="btn-day"   onclick="setPhase('day')">☀ Day</button>
       <button class="phase-btn"            id="btn-night" onclick="setPhase('night')">🌙 Night</button>
     </div>
 
     <div class="round-controls">
       <button class="btn-sm" id="btn-round-minus">−</button>
-      Round <span id="round-display">1</span>
+      R<span id="round-display">1</span>
       <button class="btn-sm" id="btn-round-plus">+</button>
     </div>
 
-    <button class="btn-sm" id="btn-move-mode" title="Drag seats to rearrange">⠿ Move seats</button>
-    <button class="btn-sm" id="btn-reset" style="margin-left:auto;color:#e06060;border-color:rgba(139,26,26,0.4);">↺ Reset all</button>
+    <button class="btn-sm" id="btn-move-mode">⠿ Move</button>
+    <button class="btn-sm" id="btn-reset" style="color:#e06060;border-color:rgba(139,26,26,0.4);">↺ Reset</button>
+    <button class="btn-sm btn-theme" id="btn-theme" title="Toggle day/night mode">☀️</button>
+
+    <span class="bar-meta"><strong id="meta-alive">—</strong> alive · <strong id="meta-dead">—</strong> dead</span>
   </div>
 
-  <!-- Circle -->
-  <div id="circle-stage">
-    <div id="circle-inner">
-      <div class="center-label">
-        <div class="phase-icon" id="center-icon">☀️</div>
-        <div class="round-label" id="center-round">Day 1</div>
+  <!-- Circle (fills remaining space) -->
+  <div id="circle-wrap">
+    <div id="circle-stage">
+      <div id="circle-inner">
+        <div class="center-label">
+          <div class="phase-icon" id="center-icon">☀️</div>
+          <div class="round-label" id="center-round">Day 1</div>
+        </div>
+        <div id="seats-container"></div>
       </div>
-      <div id="seats-container"></div>
     </div>
+
+    <!-- Floating player list button -->
+    <button id="btn-list">
+      👥 Players <span class="list-count" id="list-count">0</span>
+    </button>
   </div>
 
-  <!-- Edit Panel -->
-  <div class="panel" id="seat-panel" style="display:none;">
-    <div class="panel-header">
-      <div>
-        <div class="panel-title" id="panel-title">Seat 1</div>
-        <div class="panel-sub"   id="panel-sub">No player assigned</div>
-      </div>
-      <button class="btn" id="btn-close-panel">✕</button>
-    </div>
-
-    <div class="field-grid">
-      <div class="field">
-        <label>Player name</label>
-        <input type="text" id="f-name" placeholder="e.g. Alice" autocomplete="off">
-      </div>
-      <div class="field">
-        <label>Role claimed</label>
-        <div class="combo-wrap" id="combo-role-wrap">
-          <div class="combo-input-row">
-            <input class="combo-text" id="f-role" placeholder="e.g. Washerwoman" autocomplete="off" role="combobox" aria-expanded="false" aria-haspopup="listbox">
-            <button class="combo-clear" id="f-role-clear" tabindex="-1" title="Clear">✕</button>
+  <!-- MODAL: Edit seat -->
+  <div class="modal-overlay" id="modal-edit">
+    <div class="modal-sheet">
+      <div class="modal-drag-bar" id="modal-edit-dragbar"><div class="pill"></div></div>
+      <div class="modal-inner">
+        <div class="modal-header">
+          <div>
+            <div class="modal-title"  id="panel-title">Seat 1</div>
+            <div class="modal-subtitle" id="panel-sub">No player assigned</div>
           </div>
-          <div class="combo-dropdown" id="f-role-dropdown" role="listbox"></div>
+          <button class="btn" id="btn-close-panel" style="padding:6px 12px;">✕</button>
+        </div>
+
+        <div class="field-grid">
+          <div class="field">
+            <label>Player name</label>
+            <input type="text" id="f-name" placeholder="e.g. Alice" autocomplete="off">
+          </div>
+          <div class="field">
+            <label>Role claimed</label>
+            <div class="combo-wrap">
+              <div class="combo-input-row">
+                <input class="combo-text" id="f-role" placeholder="Washerwoman…" autocomplete="off" role="combobox">
+                <button class="combo-clear" id="f-role-clear" tabindex="-1">✕</button>
+              </div>
+              <div class="combo-dropdown" id="f-role-dropdown" role="listbox"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="field-grid">
+          <div class="field">
+            <label>Alignment</label>
+            <select id="f-alignment">
+              <option value="unknown">Unknown</option>
+              <option value="good">Good</option>
+              <option value="evil">Evil</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>True role (ST only)</label>
+            <div class="combo-wrap">
+              <div class="combo-input-row">
+                <input class="combo-text" id="f-true-role" placeholder="Actual role…" autocomplete="off" role="combobox">
+                <button class="combo-clear" id="f-true-role-clear" tabindex="-1">✕</button>
+              </div>
+              <div class="combo-dropdown" id="f-true-role-dropdown" role="listbox"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="field-grid full">
+          <div class="field">
+            <label>Notes</label>
+            <textarea id="f-notes" placeholder="Suspicions, night actions, claims…"></textarea>
+          </div>
+        </div>
+
+        <div class="status-section">
+          <label>Status</label>
+          <div class="toggles">
+            <button class="tog" id="tog-dead"      data-on="on-dead">☠ Dead</button>
+            <button class="tog" id="tog-nominated" data-on="on-nominated">⚖ Nominated</button>
+            <button class="tog" id="tog-vote"      data-on="on-vote">🗳 Ghost vote</button>
+          </div>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn btn-danger" id="btn-clear">Clear seat</button>
+          <button class="btn btn-primary" id="btn-save">Save</button>
         </div>
       </div>
     </div>
+  </div>
 
-    <div class="field-grid">
-      <div class="field">
-        <label>Alignment</label>
-        <select id="f-alignment">
-          <option value="unknown">Unknown</option>
-          <option value="good">Good</option>
-          <option value="evil">Evil</option>
-        </select>
-      </div>
-      <div class="field">
-        <label>True role (ST only)</label>
-        <div class="combo-wrap" id="combo-true-wrap">
-          <div class="combo-input-row">
-            <input class="combo-text" id="f-true-role" placeholder="Actual role..." autocomplete="off" role="combobox" aria-expanded="false" aria-haspopup="listbox">
-            <button class="combo-clear" id="f-true-role-clear" tabindex="-1" title="Clear">✕</button>
-          </div>
-          <div class="combo-dropdown" id="f-true-role-dropdown" role="listbox"></div>
+  <!-- MODAL: Confirm reset -->
+  <div class="modal-overlay" id="modal-confirm">
+    <div class="modal-sheet" style="max-height:auto;">
+      <div class="modal-inner" style="padding:20px 20px 24px;">
+        <div style="font-size:16px;font-weight:500;color:var(--evil-text);font-family:var(--font-serif);margin-bottom:8px;">↺ Reset game?</div>
+        <div style="font-size:13px;color:var(--text-secondary);margin-bottom:20px;line-height:1.6;">This will clear all player data, roles, notes, and custom seat positions. This cannot be undone.</div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;">
+          <button class="btn" id="btn-confirm-cancel">Cancel</button>
+          <button class="btn btn-danger" id="btn-confirm-ok" style="font-weight:600;">Reset everything</button>
         </div>
       </div>
     </div>
-
-    <div class="field-grid full">
-      <div class="field">
-        <label>Notes</label>
-        <textarea id="f-notes" placeholder="Suspicions, night actions, claims…"></textarea>
-      </div>
-    </div>
-
-    <div class="status-section">
-      <label>Status</label>
-      <div class="toggles">
-        <button class="tog" id="tog-dead"      data-on="on-dead">      ☠ Dead</button>
-        <button class="tog" id="tog-nominated" data-on="on-nominated"> ⚖ Nominated</button>
-        <button class="tog" id="tog-vote"      data-on="on-vote">      🗳 Used ghost vote</button>
-      </div>
-    </div>
-
-    <div class="btn-row">
-      <button class="btn btn-danger" id="btn-clear">Clear seat</button>
-      <button class="btn btn-primary" id="btn-save">Save changes</button>
-    </div>
   </div>
 
-  <!-- Player list -->
-  <div class="panel">
-    <details open>
-      <summary>▸ All seats</summary>
-      <div class="divider"></div>
-      <div class="player-list" id="player-list"></div>
-    </details>
+  <!-- MODAL: Player list -->
+  <div class="modal-overlay" id="modal-list">
+    <div class="modal-sheet">
+      <div class="modal-drag-bar" id="modal-list-dragbar"><div class="pill"></div></div>
+      <div class="modal-inner">
+        <div class="list-section-title">All seats</div>
+        <div class="player-list" id="player-list"></div>
+      </div>
+    </div>
   </div>
 
 </div>
@@ -814,17 +912,20 @@
       buildDropdown(input.value);
       dropdown.classList.add('open');
       input.setAttribute('aria-expanded', 'true');
+      // Allow the modal scroll container to show the dropdown
+      const modalInner = input.closest('.modal-inner');
+      if (modalInner) modalInner.classList.add('combo-open');
     }
 
     function close() {
       dropdown.classList.remove('open');
       input.setAttribute('aria-expanded', 'false');
       activeIdx = -1;
-      // if typed text doesn't match a committed value, restore it
+      const modalInner = input.closest('.modal-inner');
+      if (modalInner) modalInner.classList.remove('combo-open');
       if (currentVal) {
         input.value = currentVal;
       } else {
-        // allow free text
         currentVal = input.value.trim();
       }
       updateClearBtn();
@@ -951,7 +1052,7 @@
   }
 
   function esc(str) {
-    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    return str.replace(/[&<>]/g, c => ({'&':'\u0026','<':'\u003c','>':'\u003e'}[c]));
   }
 
   // ── Default seat position ──────────────────────────
@@ -1070,7 +1171,7 @@
     selected = i;
     renderCircle();
     const s = seats[i];
-    document.getElementById('seat-panel').style.display = '';
+    /* seat-panel shown via modal */
     document.getElementById('panel-title').textContent = `Seat ${i + 1}`;
     document.getElementById('panel-sub').textContent   = s.name ? `Editing ${s.name}` : 'No player assigned';
     document.getElementById('f-name').value      = s.name;
@@ -1082,7 +1183,7 @@
     setTog('tog-nominated', s.nominated, 'on-nominated');
     setTog('tog-vote',      s.usedVote,  'on-vote');
     document.getElementById('f-name').focus();
-    document.getElementById('seat-panel').scrollIntoView({ behavior:'smooth', block:'nearest' });
+    openModal('edit');
   }
 
   function setTog(id, active, cls) {
@@ -1106,10 +1207,10 @@
   }
 
   function closePanel() {
-    document.getElementById('seat-panel').style.display = 'none';
     selected = null;
     renderCircle();
     saveState();
+    closeModal('edit');
   }
 
   function clearSeat() {
@@ -1122,6 +1223,8 @@
   function renderList() {
     const list = document.getElementById('player-list');
     const named = seats.filter(s => s.name);
+    const lcEl = document.getElementById('list-count');
+    if (lcEl) lcEl.textContent = named.length;
     if (!named.length) {
       list.innerHTML = '<div class="no-players">No players assigned yet. Click a seat to add one.</div>';
       return;
@@ -1144,7 +1247,7 @@
       </div>`;
     }).join('');
     list.querySelectorAll('.pli').forEach(el => {
-      el.addEventListener('click', () => openSeat(parseInt(el.dataset.idx)));
+      el.addEventListener('click', () => { closeModal('list'); openSeat(parseInt(el.dataset.idx)); });
     });
   }
 
@@ -1180,7 +1283,7 @@
     initSeats(seatCount);
     if (selected !== null && selected >= seatCount) {
       selected = null;
-      document.getElementById('seat-panel').style.display = 'none';
+      closeModal('edit');
     }
     renderCircle();
     saveState();
@@ -1207,38 +1310,122 @@
     if (e.key === 'Enter') saveSeat();
   });
 
-  // ── Move mode ──────────────────────────────────────
+
+  // ── Modals ────────────────────────────────────────
+  function openModal(name) {
+    // Close other modal first
+    ['edit','list'].forEach(n => { if (n !== name) closeModal(n); });
+    const overlay = document.getElementById('modal-' + name);
+    if (!overlay) return;
+    overlay.classList.add('visible');
+  }
+
+  function closeModal(name) {
+    const overlay = document.getElementById('modal-' + name);
+    if (overlay) overlay.classList.remove('visible');
+  }
+
+  // Tap backdrop to close
+  ['edit','list','confirm'].forEach(name => {
+    const overlay = document.getElementById('modal-' + name);
+    if (!overlay) return;
+    overlay.addEventListener('click', e => {
+      if (e.target === overlay) {
+        if (name === 'edit') { selected = null; renderCircle(); saveState(); }
+        closeModal(name);
+      }
+    });
+  });
+
+  // Swipe-down pill to close each modal
+  function attachModalSwipe(name, dragbarId) {
+    const overlay = document.getElementById('modal-' + name);
+    const sheet   = overlay ? overlay.querySelector('.modal-sheet') : null;
+    const dragbar = document.getElementById(dragbarId);
+    const inner   = overlay ? overlay.querySelector('.modal-inner') : null;
+    if (!overlay || !sheet || !dragbar) return;
+    let ty0 = 0, dragging = false, startedNearTop = false;
+
+    // Tapping the pill bar always closes
+    dragbar.addEventListener('click', () => {
+      if (name === 'edit') { selected = null; renderCircle(); saveState(); }
+      closeModal(name);
+    });
+
+    overlay.addEventListener('touchstart', e => {
+      startedNearTop = dragbar.contains(e.target) || (inner && inner.scrollTop <= 4);
+      ty0 = e.touches[0].clientY;
+      dragging = false;
+    }, { passive: true });
+
+    overlay.addEventListener('touchmove', e => {
+      if (!startedNearTop) return;
+      const dy = e.touches[0].clientY - ty0;
+      if (dy > 6) dragging = true;
+      if (dragging && dy > 0) {
+        sheet.style.transition = 'none';
+        sheet.style.transform = 'translateY(' + dy + 'px)';
+      }
+    }, { passive: true });
+
+    overlay.addEventListener('touchend', e => {
+      sheet.style.transition = '';
+      sheet.style.transform  = '';
+      if (dragging && (e.changedTouches[0].clientY - ty0) > 72) {
+        if (name === 'edit') { selected = null; renderCircle(); saveState(); }
+        closeModal(name);
+      }
+      dragging = false;
+    });
+  }
+
+  attachModalSwipe('edit', 'modal-edit-dragbar');
+  attachModalSwipe('list', 'modal-list-dragbar');
+
+  // Floating player-list button
+  document.getElementById('btn-list').addEventListener('click', () => openModal('list'));
+
+  // ── Move mode ──────────────────────────────────────────────────
   document.getElementById('btn-move-mode').addEventListener('click', () => {
     moveMode = !moveMode;
     const btn = document.getElementById('btn-move-mode');
     btn.classList.toggle('active-move', moveMode);
-    btn.textContent = moveMode ? '✓ Done moving' : '⠿ Move seats';
+    btn.textContent = moveMode ? '✓ Done' : '⠿ Move';
     document.getElementById('circle-inner').classList.toggle('move-mode', moveMode);
     // Close edit panel while in move mode to avoid confusion
     if (moveMode) {
-      document.getElementById('seat-panel').style.display = 'none';
+      closeModal('edit');
       selected = null;
     }
     renderCircle();
   });
 
   // ── Reset ──────────────────────────────────────────
-  document.getElementById('btn-reset').addEventListener('click', () => {
-    if (!confirm('Reset all seats and start a fresh game? This will clear all saved data.')) return;
+  function doReset() {
     clearStorage();
     seats = Array.from({length: seatCount}, () => blankSeat());
     seatPositions = Array.from({length: seatCount}, () => null);
     selected = null;
     moveMode = false;
     document.getElementById('btn-move-mode').classList.remove('active-move');
-    document.getElementById('btn-move-mode').textContent = '⠿ Move seats';
+    document.getElementById('btn-move-mode').textContent = '⠿ Move';
     document.getElementById('circle-inner').classList.remove('move-mode');
+    closeModal('edit');
+    closeModal('list');
+    closeModal('confirm');
     round = 1;
-    document.getElementById('seat-panel').style.display = 'none';
     setRound(1);
     setPhase('day');
     renderCircle();
+  }
+
+  document.getElementById('btn-reset').addEventListener('click', () => {
+    openModal('confirm');
   });
+  document.getElementById('btn-confirm-cancel').addEventListener('click', () => {
+    closeModal('confirm');
+  });
+  document.getElementById('btn-confirm-ok').addEventListener('click', doReset);
 
   // ── Resize ─────────────────────────────────────────
   let resizeTimer;
@@ -1248,6 +1435,18 @@
   });
 
   // ── Init ───────────────────────────────────────────
+  // ── Theme toggle ──────────────────────────────────
+  const themeBtn = document.getElementById('btn-theme');
+  let dayMode = localStorage.getItem('botc_theme') === 'day';
+  function applyTheme() {
+    document.body.classList.toggle('day-mode', dayMode);
+    themeBtn.textContent = dayMode ? '🌙' : '☀️';
+    themeBtn.title = dayMode ? 'Switch to dark mode' : 'Switch to day mode';
+    try { localStorage.setItem('botc_theme', dayMode ? 'day' : 'dark'); } catch(e) {}
+  }
+  themeBtn.addEventListener('click', () => { dayMode = !dayMode; applyTheme(); });
+  applyTheme();
+
   comboRole     = makeCombo('f-role',      'f-role-dropdown',      'f-role-clear');
   comboTrueRole = makeCombo('f-true-role', 'f-true-role-dropdown', 'f-true-role-clear');
 
