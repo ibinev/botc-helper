@@ -62,13 +62,17 @@
       background: rgba(232,220,200,0.95);
       border-bottom-color: var(--border);
     }
-    body.day-mode .seat-inner {
-      border-color: rgba(0,0,0,0.2);
+    body.day-mode .seat-inner { border-color: rgba(0,0,0,0.2);
       box-shadow:
         0 0 0 1px rgba(120,80,20,0.3),
         0 2px 10px rgba(100,60,0,0.2),
         inset 0 1px 0 rgba(255,255,255,0.6);
     }
+    /* Day mode: dark colors that stand out on the light circle background */
+    body.day-mode .seat-num  { color: #5c3d10; text-shadow: 0 1px 1px rgba(255,240,200,0.8); }
+    body.day-mode .seat-name { color: #1a0f00; text-shadow: 0 1px 2px rgba(255,240,200,0.7); }
+    body.day-mode .seat-name.empty { color: #8c6830; }
+    body.day-mode .seat-role { color: #3d1e00; text-shadow: 0 1px 1px rgba(255,240,200,0.8); }
     body.day-mode .seat:active .seat-inner {
       border-color: rgba(0,0,0,0.45);
       box-shadow:
@@ -396,15 +400,18 @@
       transform: scale(1.1);
     }
 
-    .seat-num  { font-size: 9px; color: var(--text-muted); letter-spacing: 0.08em; text-transform: uppercase; }
+    .seat-num  { font-size: 10px; color: #c4aa80; letter-spacing: 0.08em; text-transform: uppercase;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.9); }
     .seat-name {
-      font-size: 11px; font-weight: 500; color: var(--text-primary);
+      font-size: 13px; font-weight: 600; color: #ffffff;
       max-width: 78px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; text-align: center;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.9);
     }
-    .seat-name.empty { color: var(--text-muted); font-weight: 400; font-style: italic; }
+    .seat-name.empty { color: #a08866; font-weight: 400; font-style: italic; }
     .seat-role {
-      font-size: 9px; color: var(--text-secondary);
+      font-size: 11px; color: #e0c880;
       max-width: 78px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; text-align: center;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.9);
     }
     .seat-dot {
       position: absolute; bottom: 6px; right: 6px;
@@ -660,6 +667,14 @@
       padding: 8px 8px;
     }
     .combo-text::placeholder { color: var(--text-muted); }
+    .combo-toggle {
+      background: none; border: none; cursor: pointer;
+      color: var(--text-muted); font-size: 14px; padding: 0 8px;
+      line-height: 1; display: flex; align-items: center;
+      flex-shrink: 0; transition: color 0.12s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .combo-toggle:hover { color: var(--gold); }
     .combo-clear {
       background: none; border: none; cursor: pointer;
       color: var(--text-muted); font-size: 14px; padding: 0 8px;
@@ -702,9 +717,9 @@
 
       /* Mobile phones: seats 15% smaller, role stays visible */
     @media (max-width: 479px) {
-      :root { --seat-size: 68px; }   /* default 80px × 0.85 ≈ 68 */
-      .seat-name { font-size: 9px; }
-      .seat-role { font-size: 8px; }
+      :root { --seat-size: 68px; }
+      .seat-name { font-size: 10px; }
+      .seat-role { font-size: 9px; }
       .seat-num  { font-size: 8px; }
       .seat-status-icon { font-size: 7px; padding: 1px 2px; }
     }
@@ -712,8 +727,8 @@
     /* Tablet / large phone / desktop */
     @media (min-width: 520px) {
       :root { --seat-size: 96px; }
-      .seat-name { font-size: 12px; }
-      .seat-role { font-size: 10px; }
+      .seat-name { font-size: 14px; }
+      .seat-role { font-size: 12px; }
     }
 
     /* Centered modal on tablet/desktop, full-width bottom sheet on small mobile */
@@ -867,6 +882,7 @@
               <div class="combo-input-row">
                 <input class="combo-text" id="f-role" placeholder="Washerwoman…" autocomplete="off" role="combobox">
                 <button class="combo-clear" id="f-role-clear" tabindex="-1">✕</button>
+                <button class="combo-toggle" id="f-role-toggle" tabindex="-1">▾</button>
               </div>
               <div class="combo-dropdown" id="f-role-dropdown" role="listbox"></div>
             </div>
@@ -888,6 +904,7 @@
               <div class="combo-input-row">
                 <input class="combo-text" id="f-true-role" placeholder="Actual role…" autocomplete="off" role="combobox">
                 <button class="combo-clear" id="f-true-role-clear" tabindex="-1">✕</button>
+                <button class="combo-toggle" id="f-true-role-toggle" tabindex="-1">▾</button>
               </div>
               <div class="combo-dropdown" id="f-true-role-dropdown" role="listbox"></div>
             </div>
@@ -1128,16 +1145,20 @@
   const CAT_ORDER = ['townsfolk','outsider','minion','demon','traveler'];
 
   // ── Combobox factory ───────────────────────────────
-  // Returns { getValue, setValue, clear } for a combobox instance
-  function makeCombo(inputId, dropdownId, clearBtnId) {
-    const input    = document.getElementById(inputId);
-    const dropdown = document.getElementById(dropdownId);
-    const clearBtn = document.getElementById(clearBtnId);
-    // Move dropdown to body so CSS transforms on the modal don't create a
-    // new stacking/containing block that clips position:fixed children
+  // Returns { getValue, setValue, clear } for a combobox instance.
+  // Input is a plain (non-readonly) text field; the toggle button opens the
+  // list without focusing the input (so mobile keyboard doesn't appear on
+  // toggle — only when the user taps the text field directly).
+  function makeCombo(inputId, dropdownId, clearBtnId, toggleBtnId) {
+    const input     = document.getElementById(inputId);
+    const dropdown  = document.getElementById(dropdownId);
+    const clearBtn  = document.getElementById(clearBtnId);
+    const toggleBtn = toggleBtnId ? document.getElementById(toggleBtnId) : null;
+    // Move dropdown to body so CSS transforms on the modal don't clip it
     document.body.appendChild(dropdown);
     let activeIdx  = -1;
-    let currentVal = '';   // the committed value (role name)
+    let currentVal = '';   // committed role name
+    let isOpen     = false;
 
     function getFilteredGroups(q) {
       const ql = q.toLowerCase();
@@ -1168,17 +1189,17 @@
         matches.forEach(role => {
           const opt = document.createElement('div');
           opt.className = 'combo-option' + (role.name === currentVal ? ' selected-opt' : '');
-          opt.dataset.role = role.name;
-          opt.dataset.cat  = role.cat;
-          opt.dataset.optIdx = optIdx++;
+          opt.dataset.role    = role.name;
+          opt.dataset.cat     = role.cat;
+          opt.dataset.optIdx  = optIdx++;
           opt.setAttribute('role', 'option');
-          const iconSrc = ROLE_ICONS[role.name];
-          const iconHtml = iconSrc ? `<img src="${esc(iconSrc)}" alt="" style="width:24px;height:24px;object-fit:contain;margin-left:auto;flex-shrink:0;">` : '';
+          const iconSrc  = ROLE_ICONS[role.name];
+          const iconHtml = iconSrc
+            ? `<img src="${esc(iconSrc)}" alt="" style="width:24px;height:24px;object-fit:contain;margin-left:auto;flex-shrink:0;">`
+            : '';
           opt.innerHTML = `<span class="combo-dot dot-${role.cat}"></span>${esc(role.name)}${iconHtml}`;
-          opt.addEventListener('mousedown', e => {
-            e.preventDefault();
-            selectRole(role.name, role.cat);
-          });
+          opt.addEventListener('mousedown', e => { e.preventDefault(); selectRole(role.name); });
+          opt.addEventListener('touchend',  e => { e.preventDefault(); selectRole(role.name); });
           dropdown.appendChild(opt);
         });
       });
@@ -1186,6 +1207,7 @@
 
     function positionDropdown() {
       const rect = input.getBoundingClientRect();
+      if (!rect.width) return;
       const spaceBelow = window.innerHeight - rect.bottom - 8;
       const spaceAbove = rect.top - 8;
       dropdown.style.width = rect.width + 'px';
@@ -1193,18 +1215,21 @@
       if (spaceBelow >= 150 || spaceBelow >= spaceAbove) {
         dropdown.style.top       = (rect.bottom + 4) + 'px';
         dropdown.style.bottom    = 'auto';
-        dropdown.style.maxHeight = Math.min(spaceBelow, window.innerHeight * 0.5) + 'px';
+        dropdown.style.maxHeight = Math.min(spaceBelow, window.innerHeight * 0.45) + 'px';
       } else {
         dropdown.style.top       = 'auto';
         dropdown.style.bottom    = (window.innerHeight - rect.top + 4) + 'px';
-        dropdown.style.maxHeight = Math.min(spaceAbove, window.innerHeight * 0.5) + 'px';
+        dropdown.style.maxHeight = Math.min(spaceAbove, window.innerHeight * 0.45) + 'px';
       }
     }
 
-    function open() {
-      buildDropdown(input.value);
+    // q = filter string; omit/undefined → smart default (full list if value committed)
+    function open(q) {
+      const filter = (q !== undefined) ? q : (currentVal ? '' : input.value);
+      buildDropdown(filter);
       dropdown.classList.add('open');
       input.setAttribute('aria-expanded', 'true');
+      isOpen = true;
       positionDropdown();
     }
 
@@ -1212,25 +1237,23 @@
       dropdown.classList.remove('open');
       input.setAttribute('aria-expanded', 'false');
       activeIdx = -1;
-      if (currentVal) {
-        input.value = currentVal;
-      } else {
-        currentVal = input.value.trim();
-      }
+      isOpen    = false;
+      input.value = currentVal; // restore committed display value
       updateClearBtn();
     }
 
-    function selectRole(name, cat) {
-      currentVal  = name;
+    function selectRole(name) {
+      currentVal = name;
       input.value = name;
-      close();
-      // auto-set alignment for true-role combo only (inputId === 'f-true-role')
-      // For claimed role we leave alignment alone — player may be lying
+      isOpen = false;
+      dropdown.classList.remove('open');
+      input.setAttribute('aria-expanded', 'false');
       updateClearBtn();
+      input.blur(); // dismiss keyboard after selection
     }
 
     function updateClearBtn() {
-      clearBtn.classList.toggle('visible', !!(input.value));
+      clearBtn.classList.toggle('visible', !!currentVal);
     }
 
     function moveActive(dir) {
@@ -1238,54 +1261,105 @@
       if (!opts.length) return;
       opts[activeIdx]?.classList.remove('active');
       activeIdx = Math.max(0, Math.min(opts.length - 1, activeIdx + dir));
-      const next = opts[activeIdx];
-      next.classList.add('active');
-      next.scrollIntoView({ block: 'nearest' });
+      opts[activeIdx].classList.add('active');
+      opts[activeIdx].scrollIntoView({ block: 'nearest' });
     }
 
-    input.addEventListener('focus', () => open());
-    input.addEventListener('input', () => {
-      currentVal = ''; // typing breaks committed value
-      buildDropdown(input.value);
-      dropdown.classList.add('open');
-      updateClearBtn();
-    });
-    input.addEventListener('blur', () => {
-      // small delay so mousedown on option fires first
-      setTimeout(close, 120);
-    });
-    input.addEventListener('keydown', e => {
-      if (!dropdown.classList.contains('open')) { open(); return; }
-      if (e.key === 'ArrowDown') { e.preventDefault(); moveActive(1); }
-      else if (e.key === 'ArrowUp') { e.preventDefault(); moveActive(-1); }
-      else if (e.key === 'Enter') {
-        e.preventDefault();
-        const active = dropdown.querySelector('.combo-option.active');
-        if (active) selectRole(active.dataset.role, active.dataset.cat);
-        else { currentVal = input.value.trim(); close(); }
-      }
-      else if (e.key === 'Escape') { currentVal = ''; input.value = ''; close(); }
+    // ── Toggle button ────────────────────────────────
+    // mousedown: keep input focused (e.preventDefault prevents focus shift to button)
+    // click: actually toggle (fires reliably after mousedown on desktop)
+    // touchend: handle mobile tap; e.preventDefault() stops synthesised mouse events
+    if (toggleBtn) {
+      let togTouchMoved = false;
+      toggleBtn.addEventListener('mousedown', e => e.preventDefault());
+      toggleBtn.addEventListener('click', () => {
+        if (isOpen) { close(); } else { open(''); }
+      });
+      toggleBtn.addEventListener('touchstart', () => { togTouchMoved = false; }, { passive: true });
+      toggleBtn.addEventListener('touchmove',  () => { togTouchMoved = true;  }, { passive: true });
+      toggleBtn.addEventListener('touchend', e => {
+        if (togTouchMoved) return;        // was a scroll, not a tap
+        e.preventDefault();              // stop synthesised mousedown / click
+        if (isOpen) { close(); } else { open(''); }
+      });
+    }
+
+    // ── Input: focus opens dropdown (keyboard appears naturally) ─
+    input.addEventListener('focus', () => {
+      if (!isOpen) open(); // smart default: full list if val committed, filtered otherwise
     });
 
+    // ── Typing filters the list ──────────────────────
+    input.addEventListener('input', () => {
+      currentVal = '';
+      buildDropdown(input.value);
+      if (!isOpen) {
+        dropdown.classList.add('open');
+        input.setAttribute('aria-expanded', 'true');
+        isOpen = true;
+      }
+      positionDropdown();
+      updateClearBtn();
+    });
+
+    // ── Blur: close after a delay so option clicks can register ─
+    input.addEventListener('blur', () => {
+      setTimeout(() => {
+        const af = document.activeElement;
+        // Don't close if focus went to another part of this combo
+        if (af === toggleBtn || af === clearBtn || (af && dropdown.contains(af))) return;
+        close();
+      }, 200);
+    });
+
+    // ── Keyboard navigation ──────────────────────────
+    input.addEventListener('keydown', e => {
+      switch (e.key) {
+        case 'ArrowDown': e.preventDefault(); isOpen ? moveActive(1)  : open(''); break;
+        case 'ArrowUp':   e.preventDefault(); isOpen ? moveActive(-1) : open(''); break;
+        case 'Enter':
+          e.preventDefault();
+          if (isOpen) {
+            const active = dropdown.querySelector('.combo-option.active');
+            active ? selectRole(active.dataset.role) : close();
+          }
+          break;
+        case 'Escape': currentVal = ''; input.value = ''; close(); break;
+      }
+    });
+
+    // ── Clear button ────────────────────────────────
+    // mousedown: keep input focused (prevent focus-loss race with blur handler)
+    clearBtn.addEventListener('mousedown', e => e.preventDefault());
     clearBtn.addEventListener('click', () => {
-      currentVal  = '';
+      currentVal = '';
       input.value = '';
       updateClearBtn();
       input.focus();
+      open('');
+    });
+    clearBtn.addEventListener('touchend', e => {
+      e.preventDefault();
+      currentVal = '';
+      input.value = '';
+      updateClearBtn();
+      open('');
+      input.focus();
+    });
+
+    // ── Click outside: close dropdown ───────────────
+    document.addEventListener('click', e => {
+      if (!isOpen) return;
+      const wrap = input.closest('.combo-wrap');
+      // dropdown is appended to body, so check it separately
+      if ((wrap && wrap.contains(e.target)) || dropdown.contains(e.target)) return;
+      close();
     });
 
     return {
-      getValue()      { return currentVal || input.value.trim(); },
-      setValue(v)     {
-        currentVal  = v;
-        input.value = v;
-        updateClearBtn();
-      },
-      clear()         {
-        currentVal  = '';
-        input.value = '';
-        updateClearBtn();
-      },
+      getValue()  { return currentVal || input.value.trim(); },
+      setValue(v) { currentVal = v; input.value = v; updateClearBtn(); },
+      clear()     { currentVal = ''; input.value = ''; updateClearBtn(); },
     };
   }
 
@@ -1882,8 +1956,8 @@
   themeBtn.addEventListener('click', () => { dayMode = !dayMode; applyTheme(); });
   applyTheme();
 
-  comboRole     = makeCombo('f-role',      'f-role-dropdown',      'f-role-clear');
-  comboTrueRole = makeCombo('f-true-role', 'f-true-role-dropdown', 'f-true-role-clear');
+  comboRole     = makeCombo('f-role',      'f-role-dropdown',      'f-role-clear',      'f-role-toggle');
+  comboTrueRole = makeCombo('f-true-role', 'f-true-role-dropdown', 'f-true-role-clear', 'f-true-role-toggle');
 
   loadNightNotes();
   const restored = loadState();
