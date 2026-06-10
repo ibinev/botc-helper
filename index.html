@@ -667,24 +667,67 @@
     .combo-no-results { padding: 10px 12px; font-size: 13px; color: var(--text-muted); font-style: italic; }
     .combo-tag { display:none; } /* unused but kept for compat */
 
-    /* Seats 20% smaller on mobile phones (iPhone 13 Pro = 390px wide) */
-    @media (max-width: 430px) {
-      :root { --seat-size: 58px; }
-      .seat-name { font-size: 9px; }
-      .seat-role { display: none; }
-      .seat-num  { font-size: 8px; }
-      .seat-dot  { width: 5px; height: 5px; bottom: 4px; right: 4px; }
-      .seat-status-icon { font-size: 7px; padding: 1px 2px; }
-      .seat-badge { font-size: 6px; padding: 1px 2px; top: 3px; right: 3px; }
-    }
-
-    @media (min-width: 520px) {
+      @media (min-width: 520px) {
       :root { --seat-size: 96px; }
       .seat-name { font-size: 12px; }
       .seat-role { font-size: 10px; }
       .modal-sheet { border-radius: 20px; margin-bottom: 24px; }
       .modal-overlay { align-items: center; }
     }
+
+    /* ── Night Notes modal specifics ───────────────── */
+    .notes-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 4px;
+    }
+    .notes-round-nav {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 13px; color: var(--text-secondary);
+    }
+    .notes-round-nav strong { color: var(--text-primary); min-width: 20px; text-align: center; }
+    .notes-textarea {
+      width: 100%; background: var(--bg-input);
+      border: 0.5px solid var(--border); border-radius: var(--radius-sm);
+      color: var(--text-primary); font-family: var(--font-sans);
+      font-size: 15px; padding: 10px 12px; outline: none;
+      resize: none; min-height: 180px; line-height: 1.6;
+      transition: border-color 0.12s;
+      -webkit-appearance: none;
+    }
+    .notes-textarea:focus { border-color: var(--gold); box-shadow: 0 0 0 2px rgba(201,151,58,0.15); }
+    .notes-prev-list { margin-top: 14px; display: flex; flex-direction: column; gap: 8px; }
+    .notes-prev-item {
+      background: var(--bg-input); border: 0.5px solid var(--border);
+      border-radius: var(--radius-sm); padding: 10px 12px;
+    }
+    .notes-prev-label {
+      font-size: 10px; text-transform: uppercase; letter-spacing: .08em;
+      color: var(--text-muted); margin-bottom: 4px;
+    }
+    .notes-prev-text { font-size: 13px; color: var(--text-secondary); line-height: 1.5; white-space: pre-wrap; }
+
+    /* ── Settings modal specifics ───────────────────── */
+    .settings-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 0; border-bottom: 0.5px solid var(--border);
+      gap: 12px;
+    }
+    .settings-row:last-child { border-bottom: none; }
+    .settings-label { font-size: 14px; color: var(--text-primary); }
+    .settings-sub   { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+    .settings-control { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+
+    /* ── Topbar icon-only buttons ───────────────────── */
+    .topbar-icon-btn {
+      width: 34px; height: 34px; padding: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 17px; border-radius: var(--radius-sm);
+      background: var(--bg-surface); border: 0.5px solid var(--border);
+      cursor: pointer; flex-shrink: 0;
+      -webkit-tap-highlight-color: transparent;
+      transition: background 0.12s, border-color 0.12s;
+    }
+    .topbar-icon-btn:active { background: rgba(201,151,58,0.12); border-color: var(--border-strong); }
   </style>
 </head>
 <body>
@@ -694,29 +737,28 @@
   <div id="topbar">
     <span class="bar-title">Town Square</span>
 
-    <div class="count-controls">
-      <span class="count-label">Players</span>
-      <button class="btn-icon" id="btn-minus">−</button>
-      <span class="count-val" id="seat-count-display">8</span>
-      <button class="btn-icon" id="btn-plus">+</button>
-    </div>
-
+    <!-- Day/Night toggle -->
     <div class="phase-toggle">
-      <button class="phase-btn active-day" id="btn-day"   onclick="setPhase('day')">☀ Day</button>
-      <button class="phase-btn"            id="btn-night" onclick="setPhase('night')">🌙 Night</button>
+      <button class="phase-btn active-day" id="btn-day">☀ Day</button>
+      <button class="phase-btn"            id="btn-night">🌙 Night</button>
     </div>
 
+    <!-- Round counter -->
     <div class="round-controls">
       <button class="btn-sm" id="btn-round-minus">−</button>
       R<span id="round-display">1</span>
       <button class="btn-sm" id="btn-round-plus">+</button>
     </div>
 
+    <!-- Move seats -->
     <button class="btn-sm" id="btn-move-mode">⠿ Move</button>
-    <button class="btn-sm" id="btn-reset" style="color:#e06060;border-color:rgba(139,26,26,0.4);">↺ Reset</button>
-    <button class="btn-sm btn-theme" id="btn-theme" title="Day mode">🔆</button>
 
-    <span class="bar-meta"><strong id="meta-alive">—</strong> alive · <strong id="meta-dead">—</strong> dead</span>
+    <!-- Right-side: alive/dead + icon buttons pushed to far right -->
+    <div style="display:flex;align-items:center;gap:8px;margin-left:auto;flex-shrink:0;">
+      <span class="bar-meta"><strong id="meta-alive">—</strong> alive · <strong id="meta-dead">—</strong> dead</span>
+      <button class="topbar-icon-btn" id="btn-open-notes"    title="Night notes">📜</button>
+      <button class="topbar-icon-btn" id="btn-open-settings" title="Settings">⚙️</button>
+    </div>
   </div>
 
   <!-- Circle (fills remaining space) -->
@@ -808,6 +850,69 @@
           <button class="btn btn-danger" id="btn-clear">Clear seat</button>
           <button class="btn btn-primary" id="btn-save">Save</button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Night Notes -->
+  <div class="modal-overlay" id="modal-notes">
+    <div class="modal-sheet">
+      <div class="modal-drag-bar" id="modal-notes-dragbar"><div class="pill"></div></div>
+      <div class="modal-inner">
+        <div class="notes-header">
+          <div class="modal-title" style="font-size:16px;">📜 Night Notes</div>
+          <div class="notes-round-nav">
+            <button class="btn-sm" id="notes-prev-round">−</button>
+            Night <strong id="notes-round-display">1</strong>
+            <button class="btn-sm" id="notes-next-round">+</button>
+          </div>
+        </div>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;">General notes for this night — kills, info tokens, whispers…</div>
+        <textarea class="notes-textarea" id="notes-textarea" placeholder="What happened tonight…"></textarea>
+        <div class="notes-prev-list" id="notes-prev-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Settings -->
+  <div class="modal-overlay" id="modal-settings">
+    <div class="modal-sheet">
+      <div class="modal-drag-bar" id="modal-settings-dragbar"><div class="pill"></div></div>
+      <div class="modal-inner">
+        <div class="modal-title" style="margin-bottom:16px;">⚙️ Settings</div>
+
+        <div class="settings-row">
+          <div>
+            <div class="settings-label">Players</div>
+            <div class="settings-sub">Number of seats in the circle</div>
+          </div>
+          <div class="settings-control">
+            <button class="btn-sm" id="settings-minus">−</button>
+            <span id="settings-count-display" style="min-width:24px;text-align:center;font-weight:600;color:var(--gold-light);font-size:15px;">8</span>
+            <button class="btn-sm" id="settings-plus">+</button>
+          </div>
+        </div>
+
+        <div class="settings-row">
+          <div>
+            <div class="settings-label">Appearance</div>
+            <div class="settings-sub">Switch between dark and day mode</div>
+          </div>
+          <div class="settings-control">
+            <button class="btn-sm btn-theme" id="btn-theme" title="Day mode" style="font-size:18px;padding:4px 8px;min-width:36px;">🔆</button>
+          </div>
+        </div>
+
+        <div class="settings-row">
+          <div>
+            <div class="settings-label" style="color:var(--evil-text);">Reset game</div>
+            <div class="settings-sub">Clear all players, roles, notes and positions</div>
+          </div>
+          <div class="settings-control">
+            <button class="btn btn-danger" id="btn-reset" style="font-size:13px;padding:7px 14px;">↺ Reset</button>
+          </div>
+        </div>
+
       </div>
     </div>
   </div>
@@ -1319,30 +1424,13 @@
   });
 
   // ── Seat count ─────────────────────────────────────
-  document.getElementById('btn-minus').addEventListener('click', () => {
-    if (seatCount <= MIN) return;
-    seatCount--;
-    document.getElementById('seat-count-display').textContent = seatCount;
-    initSeats(seatCount);
-    if (selected !== null && selected >= seatCount) {
-      selected = null;
-      closeModal('edit');
-    }
-    renderCircle();
-    saveState();
-  });
-  document.getElementById('btn-plus').addEventListener('click', () => {
-    if (seatCount >= MAX) return;
-    seatCount++;
-    document.getElementById('seat-count-display').textContent = seatCount;
-    initSeats(seatCount);
-    renderCircle();
-    saveState();
-  });
+  // Player count controls moved to Settings modal
 
   // ── Round ──────────────────────────────────────────
   document.getElementById('btn-round-minus').addEventListener('click', () => { setRound(round - 1); saveState(); });
   document.getElementById('btn-round-plus').addEventListener('click',  () => { setRound(round + 1); saveState(); });
+  document.getElementById('btn-day').addEventListener('click',   () => setPhase('day'));
+  document.getElementById('btn-night').addEventListener('click', () => setPhase('night'));
 
   // ── Panel actions ──────────────────────────────────
   document.getElementById('btn-save').addEventListener('click', saveSeat);
@@ -1446,6 +1534,8 @@
   // ── Reset ──────────────────────────────────────────
   function doReset() {
     clearStorage();
+    nightNotes = {};
+    try { localStorage.removeItem('botc_night_notes'); } catch(e) {}
     seats = Array.from({length: seatCount}, () => blankSeat());
     seatPositions = Array.from({length: seatCount}, () => null);
     selected = null;
@@ -1478,6 +1568,109 @@
   });
 
   // ── Init ───────────────────────────────────────────
+  // ── Night Notes ───────────────────────────────────
+  let nightNotes = {};   // { roundNum: "text" }
+  let notesRound = 1;
+
+  function saveNightNotes() {
+    try { localStorage.setItem('botc_night_notes', JSON.stringify(nightNotes)); } catch(e) {}
+  }
+
+  function loadNightNotes() {
+    try {
+      const raw = localStorage.getItem('botc_night_notes');
+      if (raw) nightNotes = JSON.parse(raw);
+    } catch(e) {}
+  }
+
+  function renderNotesModal() {
+    document.getElementById('notes-round-display').textContent = notesRound;
+    const ta = document.getElementById('notes-textarea');
+    ta.value = nightNotes[notesRound] || '';
+
+    // Show previous nights' notes below
+    const list = document.getElementById('notes-prev-list');
+    const prevEntries = Object.entries(nightNotes)
+      .filter(([n]) => parseInt(n) !== notesRound && nightNotes[n].trim())
+      .sort(([a],[b]) => parseInt(b) - parseInt(a));
+
+    if (!prevEntries.length) { list.innerHTML = ''; return; }
+    list.innerHTML = '<div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted);margin-bottom:6px;">Previous nights</div>' +
+      prevEntries.map(([n, txt]) =>
+        `<div class="notes-prev-item">
+          <div class="notes-prev-label">Night ${n}</div>
+          <div class="notes-prev-text">${txt.replace(/</g,'\u003c').replace(/>/g,'\u003e')}</div>
+        </div>`
+      ).join('');
+  }
+
+  document.getElementById('notes-textarea').addEventListener('input', function() {
+    nightNotes[notesRound] = this.value;
+    saveNightNotes();
+  });
+
+  document.getElementById('notes-prev-round').addEventListener('click', () => {
+    if (notesRound <= 1) return;
+    notesRound--;
+    renderNotesModal();
+  });
+
+  document.getElementById('notes-next-round').addEventListener('click', () => {
+    notesRound++;
+    renderNotesModal();
+  });
+
+  document.getElementById('btn-open-notes').addEventListener('click', () => {
+    notesRound = round; // sync to current game round
+    renderNotesModal();
+    openModal('notes');
+  });
+
+  attachModalSwipe('notes', 'modal-notes-dragbar');
+
+  // ── Settings ───────────────────────────────────────
+  function syncSettingsCount() {
+    const el = document.getElementById('settings-count-display');
+    if (el) el.textContent = seatCount;
+  }
+
+  document.getElementById('btn-open-settings').addEventListener('click', () => {
+    syncSettingsCount();
+    openModal('settings');
+  });
+
+  // Player count inside settings panel
+  document.getElementById('settings-minus').addEventListener('click', () => {
+    if (seatCount <= MIN) return;
+    seatCount--;
+    document.getElementById('seat-count-display') && (document.getElementById('seat-count-display').textContent = seatCount);
+    syncSettingsCount();
+    initSeats(seatCount);
+    if (selected !== null && selected >= seatCount) {
+      selected = null; closeModal('edit');
+    }
+    renderCircle(); saveState();
+  });
+  document.getElementById('settings-plus').addEventListener('click', () => {
+    if (seatCount >= MAX) return;
+    seatCount++;
+    document.getElementById('seat-count-display') && (document.getElementById('seat-count-display').textContent = seatCount);
+    syncSettingsCount();
+    initSeats(seatCount);
+    renderCircle(); saveState();
+  });
+
+  attachModalSwipe('settings', 'modal-settings-dragbar');
+
+  // Also register 'notes' and 'settings' in backdrop-close forEach
+  ['notes','settings'].forEach(name => {
+    const overlay = document.getElementById('modal-' + name);
+    if (!overlay) return;
+    overlay.addEventListener('click', e => {
+      if (e.target === overlay) closeModal(name);
+    });
+  });
+
   // ── Theme toggle ──────────────────────────────────
   const themeBtn = document.getElementById('btn-theme');
   let dayMode = localStorage.getItem('botc_theme') === 'day';
@@ -1493,6 +1686,7 @@
   comboRole     = makeCombo('f-role',      'f-role-dropdown',      'f-role-clear');
   comboTrueRole = makeCombo('f-true-role', 'f-true-role-dropdown', 'f-true-role-clear');
 
+  loadNightNotes();
   const restored = loadState();
   if (!restored) {
     initSeats(seatCount);
@@ -1500,7 +1694,6 @@
   }
   // Ensure seatPositions array is always the right length
   while (seatPositions.length < seatCount) seatPositions.push(null);
-  document.getElementById('seat-count-display').textContent = seatCount;
   // setPhase/setRound without saveState side-effects on first paint
   (function applyPhase(p) {
     document.getElementById('btn-day').className   = 'phase-btn' + (p === 'day'   ? ' active-day'   : '');
@@ -1513,8 +1706,6 @@
   // Defer renderCircle until the browser has finished layout so offsetWidth is valid
   requestAnimationFrame(() => requestAnimationFrame(renderCircle));
 
-  // expose setPhase globally for inline onclick
-  window.setPhase = setPhase;
 })();
 </script>
 </body>
