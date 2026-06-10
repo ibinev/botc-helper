@@ -667,12 +667,37 @@
     .combo-no-results { padding: 10px 12px; font-size: 13px; color: var(--text-muted); font-style: italic; }
     .combo-tag { display:none; } /* unused but kept for compat */
 
-      @media (min-width: 520px) {
+      /* Mobile phones: seats 15% smaller, role stays visible */
+    @media (max-width: 479px) {
+      :root { --seat-size: 68px; }   /* default 80px × 0.85 ≈ 68 */
+      .seat-name { font-size: 9px; }
+      .seat-role { font-size: 8px; }
+      .seat-num  { font-size: 8px; }
+      .seat-status-icon { font-size: 7px; padding: 1px 2px; }
+    }
+
+    /* Tablet / large phone / desktop */
+    @media (min-width: 520px) {
       :root { --seat-size: 96px; }
       .seat-name { font-size: 12px; }
       .seat-role { font-size: 10px; }
-      .modal-sheet { border-radius: 20px; margin-bottom: 24px; }
+    }
+
+    /* Centered modal on tablet/desktop, full-width bottom sheet on small mobile */
+    @media (min-width: 600px) {
+      .modal-sheet {
+        border-radius: 20px;
+        margin-bottom: 32px;
+      }
       .modal-overlay { align-items: center; }
+    }
+
+    /* On small phones: modal sheet takes full width/height */
+    @media (max-width: 479px) {
+      .modal-sheet {
+        max-height: 96dvh;
+        border-radius: 18px 18px 0 0;
+      }
     }
 
     /* ── Night Notes modal specifics ───────────────── */
@@ -755,7 +780,10 @@
 
     <!-- Right-side: alive/dead + icon buttons pushed to far right -->
     <div style="display:flex;align-items:center;gap:8px;margin-left:auto;flex-shrink:0;">
-      <span class="bar-meta"><strong id="meta-alive">—</strong> alive · <strong id="meta-dead">—</strong> dead</span>
+      <span class="bar-meta">
+        <span class="meta-line"><strong id="meta-alive">—</strong> alive · <strong id="meta-dead">—</strong> dead</span>
+        <span class="meta-line meta-sub"><span class="meta-good" id="meta-alive-good">—</span>/<span class="meta-evil" id="meta-alive-evil">—</span> · <span class="meta-good" id="meta-dead-good">—</span>/<span class="meta-evil" id="meta-dead-evil">—</span></span>
+      </span>
       <button class="topbar-icon-btn" id="btn-open-notes"    title="Night notes">📜</button>
       <button class="topbar-icon-btn" id="btn-open-settings" title="Settings">⚙️</button>
     </div>
@@ -905,14 +933,38 @@
 
         <div class="settings-row">
           <div>
-            <div class="settings-label" style="color:var(--evil-text);">Reset game</div>
-            <div class="settings-sub">Clear all players, roles, notes and positions</div>
+            <div class="settings-label">Clear round</div>
+            <div class="settings-sub">Reset round, notes, names &amp; roles — keeps seat positions</div>
           </div>
           <div class="settings-control">
-            <button class="btn btn-danger" id="btn-reset" style="font-size:13px;padding:7px 14px;">↺ Reset</button>
+            <button class="btn" id="btn-clear-soft" style="font-size:13px;padding:7px 14px;border-color:var(--gold);color:var(--gold-light);">⟳ Clear</button>
           </div>
         </div>
 
+        <div class="settings-row">
+          <div>
+            <div class="settings-label" style="color:var(--evil-text);">Reset everything</div>
+            <div class="settings-sub">Clear all data including seat positions</div>
+          </div>
+          <div class="settings-control">
+            <button class="btn btn-danger" id="btn-reset" style="font-size:13px;padding:7px 14px;">↺ Reset all</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Confirm soft reset (clear) -->
+  <div class="modal-overlay" id="modal-confirm-soft">
+    <div class="modal-sheet" style="max-height:auto;">
+      <div class="modal-inner" style="padding:20px 20px 24px;">
+        <div style="font-size:16px;font-weight:500;color:var(--gold-light);font-family:var(--font-serif);margin-bottom:8px;">⟳ Clear round?</div>
+        <div style="font-size:13px;color:var(--text-secondary);margin-bottom:20px;line-height:1.6;">This will reset the round counter, all night notes, and all player names and roles. Seat positions will be kept.</div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;">
+          <button class="btn" id="btn-confirm-soft-cancel">Cancel</button>
+          <button class="btn" id="btn-confirm-soft-ok" style="border-color:var(--gold);color:var(--gold-light);font-weight:600;">Clear round</button>
+        </div>
       </div>
     </div>
   </div>
@@ -1309,9 +1361,19 @@
   }
 
   function updateMeta() {
-    const alive = seats.filter(s => !s.dead).length;
-    document.getElementById('meta-alive').textContent = alive;
-    document.getElementById('meta-dead').textContent  = seats.length - alive;
+    const isEvil = s => s.alignment === 'evil';
+    const alive     = seats.filter(s => !s.dead);
+    const dead      = seats.filter(s =>  s.dead);
+    const aliveGood = alive.filter(s => !isEvil(s)).length;
+    const aliveEvil = alive.filter(isEvil).length;
+    const deadGood  = dead.filter(s => !isEvil(s)).length;
+    const deadEvil  = dead.filter(isEvil).length;
+    document.getElementById('meta-alive').textContent      = alive.length;
+    document.getElementById('meta-dead').textContent       = dead.length;
+    document.getElementById('meta-alive-good').textContent = aliveGood;
+    document.getElementById('meta-alive-evil').textContent = aliveEvil;
+    document.getElementById('meta-dead-good').textContent  = deadGood;
+    document.getElementById('meta-dead-evil').textContent  = deadEvil;
   }
 
   // ── Seat panel ─────────────────────────────────────
@@ -1559,6 +1621,36 @@
     closeModal('confirm');
   });
   document.getElementById('btn-confirm-ok').addEventListener('click', doReset);
+
+  // Soft reset (clear round: keep positions)
+  function doSoftReset() {
+    seats = Array.from({length: seatCount}, () => blankSeat());
+    nightNotes = {};
+    try { localStorage.removeItem('botc_night_notes'); } catch(e) {}
+    selected = null;
+    round = 1;
+    closeModal('edit');
+    closeModal('confirm-soft');
+    closeModal('settings');
+    setRound(1);
+    setPhase('day');
+    renderCircle();
+    saveState();
+  }
+
+  document.getElementById('btn-clear-soft').addEventListener('click', () => {
+    closeModal('settings');
+    openModal('confirm-soft');
+  });
+  document.getElementById('btn-confirm-soft-cancel').addEventListener('click', () => closeModal('confirm-soft'));
+  document.getElementById('btn-confirm-soft-ok').addEventListener('click', doSoftReset);
+
+  // Register confirm-soft in backdrop-close
+  (['confirm-soft']).forEach(name => {
+    const overlay = document.getElementById('modal-' + name);
+    if (!overlay) return;
+    overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(name); });
+  });
 
   // ── Resize ─────────────────────────────────────────
   let resizeTimer;
