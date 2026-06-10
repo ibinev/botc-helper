@@ -69,13 +69,21 @@
         0 2px 10px rgba(100,60,0,0.2),
         inset 0 1px 0 rgba(255,255,255,0.6);
     }
-    body.day-mode .seat:hover .seat-inner,
     body.day-mode .seat:active .seat-inner {
       border-color: rgba(0,0,0,0.45);
       box-shadow:
         0 0 0 2px var(--gold),
         0 4px 16px rgba(100,60,0,0.3),
         inset 0 1px 0 rgba(255,255,255,0.7);
+    }
+    @media (hover: hover) and (pointer: fine) {
+      body.day-mode .seat:hover .seat-inner {
+        border-color: rgba(0,0,0,0.45);
+        box-shadow:
+          0 0 0 2px var(--gold),
+          0 4px 16px rgba(100,60,0,0.3),
+          inset 0 1px 0 rgba(255,255,255,0.7);
+      }
     }
     body.day-mode #circle-inner::after  { background: rgba(120,80,20,0.06); border-color: rgba(120,80,20,0.15); }
     body.day-mode .modal-sheet { box-shadow: 0 -4px 40px rgba(100,60,0,0.2); }
@@ -237,6 +245,8 @@
       white-space: nowrap;
     }
     .bar-meta strong { color: var(--text-primary); }
+    .meta-good { color: var(--good-text); }
+    .meta-evil { color: var(--evil-text); }
 
     /* ── Circle: fills everything below the topbar ───── */
     #circle-wrap {
@@ -322,6 +332,7 @@
       height: var(--seat-size);
       user-select: none;
       -webkit-tap-highlight-color: transparent;
+      overflow: visible;
     }
     .seat-inner {
       width: 100%; height: 100%;
@@ -340,14 +351,23 @@
       position: relative;
       overflow: hidden;
     }
-    .seat:active .seat-inner,
-    .seat:hover  .seat-inner {
+    .seat:active .seat-inner {
       border-color: rgba(255,255,255,0.45);
       box-shadow:
         0 0 0 2px var(--gold),
         0 4px 18px rgba(0,0,0,0.6),
         inset 0 1px 0 rgba(255,255,255,0.12);
       transform: scale(1.06);
+    }
+    @media (hover: hover) and (pointer: fine) {
+      .seat:hover .seat-inner {
+        border-color: rgba(255,255,255,0.45);
+        box-shadow:
+          0 0 0 2px var(--gold),
+          0 4px 18px rgba(0,0,0,0.6),
+          inset 0 1px 0 rgba(255,255,255,0.12);
+        transform: scale(1.06);
+      }
     }
     .seat.selected .seat-inner {
       border-color: rgba(255,255,255,0.7);
@@ -362,8 +382,10 @@
       box-shadow: 0 2px 8px rgba(0,0,0,0.4);
       opacity: 0.6;
     }
-    .seat.dead:active .seat-inner,
-    .seat.dead:hover  .seat-inner { opacity: 0.85; }
+    .seat.dead:active .seat-inner { opacity: 0.85; }
+    @media (hover: hover) and (pointer: fine) {
+      .seat.dead:hover .seat-inner { opacity: 0.85; }
+    }
 
     /* drag mode */
     .move-mode .seat        { cursor: grab; }
@@ -404,24 +426,38 @@
     .seat-status-icon {
       font-size: 9px;
       line-height: 1;
-      background: rgba(0,0,0,0.55);
+    }
+
+    /* Role icon — centered on the NW point of the circle edge (halfway in, halfway out).
+       For seat-size 90px: r=45, NW edge ≈ (13,13) from bounding-box corner.
+       Icon 55px → center offset = 27.5px → top/left = 13-27.5 ≈ -14px          */
+    .seat-role-icon {
+      position: absolute;
+      top: -14px; left: -14px;
+      width: 55px; height: 55px;
+      object-fit: contain;
+      pointer-events: none;
+      filter: drop-shadow(0 1px 4px rgba(0,0,0,0.9));
+      z-index: 3;
+    }
+    /* seat-size 68px: r=34, NW≈10px, icon 45px → 10-22.5 ≈ -13px */
+    @media (max-width: 479px) {
+      .seat-role-icon { width: 45px; height: 45px; top: -13px; left: -13px; }
+    }
+    /* seat-size 96px: r=48, NW≈14px, icon 60px → 14-30 = -16px */
+    @media (min-width: 520px) {
+      .seat-role-icon { width: 60px; height: 60px; top: -16px; left: -16px; }
+    }
+
+    /* Role icon in player list */
+    .pli-role-icon {
+      width: 26px; height: 26px;
+      object-fit: contain;
       border-radius: 3px;
-      padding: 1px 3px;
-      backdrop-filter: blur(2px);
-      border: 0.5px solid rgba(255,255,255,0.1);
+      flex-shrink: 0;
     }
-    .seat-status-icon.nominated {
-      background: rgba(186,117,23,0.7);
-      border-color: rgba(230,184,90,0.5);
-    }
-    .seat-status-icon.ghost-vote {
-      background: rgba(80,80,120,0.7);
-      border-color: rgba(160,160,200,0.4);
-    }
-    /* Day mode tweaks */
-    body.day-mode .seat-status-icon { background: rgba(255,255,255,0.75); border-color: rgba(0,0,0,0.15); }
-    body.day-mode .seat-status-icon.nominated { background: rgba(201,151,58,0.5); }
-    body.day-mode .seat-status-icon.ghost-vote { background: rgba(100,100,160,0.4); }
+    /* Status icon in player list */
+    .pli-status-icon { font-size: 13px; line-height: 1; }
 
     .seat-badge {
       position: absolute; top: 4px; right: 4px;
@@ -474,7 +510,6 @@
       transform: translateY(40px);
       transition: transform 0.28s cubic-bezier(0.32, 0.72, 0, 1);
       overflow: hidden;
-      padding-bottom: max(0px, env(safe-area-inset-bottom));
     }
     .modal-overlay.visible .modal-sheet {
       transform: translateY(0);
@@ -497,7 +532,7 @@
       overflow-x: visible;   /* let combo dropdowns escape horizontally */
       overscroll-behavior: contain;
       -webkit-overflow-scrolling: touch;
-      padding: 0 16px 24px;
+      padding: 0 16px calc(24px + max(0px, env(safe-area-inset-bottom)));
       flex: 1;
     }
     /* When a combo is open, temporarily allow overflow so dropdown shows */
@@ -535,7 +570,7 @@
       border-radius: var(--radius-sm);
       color: var(--text-primary);
       font-family: var(--font-sans);
-      font-size: 14px;           /* 16px prevents iOS zoom, keep ≥16 */
+      font-size: 16px;           /* ≥16px prevents iOS zoom */
       padding: 8px 10px;
       outline: none;
       transition: border-color 0.12s, box-shadow 0.12s;
@@ -545,7 +580,7 @@
       border-color: var(--gold);
       box-shadow: 0 0 0 2px rgba(201,151,58,0.15);
     }
-    .field textarea { resize: none; height: 72px; line-height: 1.5; }
+    .field textarea { resize: none; height: 92px; line-height: 1.5; }
     .field select option { background: var(--bg-card); }
 
     .status-section label {
@@ -633,13 +668,11 @@
     .combo-clear.visible { display: flex; }
     .combo-dropdown {
       display: none;
-      position: absolute;
-      top: calc(100% + 4px); left: 0; right: 0;
+      position: fixed;
       background: var(--bg-card);
       border: 0.5px solid var(--border-strong);
       border-radius: var(--radius-md);
-      z-index: 999;
-      max-height: 46vh;
+      z-index: 9999;
       overflow-y: auto;
       overflow-x: hidden;
       scrollbar-width: thin;
@@ -688,6 +721,7 @@
       .modal-sheet {
         border-radius: 20px;
         margin-bottom: 32px;
+        max-height: calc(100dvh - 64px); /* 32px top + 32px bottom margin */
       }
       .modal-overlay { align-items: center; }
     }
@@ -696,6 +730,8 @@
     @media (max-width: 479px) {
       .modal-sheet {
         max-height: 96dvh;
+        max-width: 100%;
+        width: 100%;
         border-radius: 18px 18px 0 0;
       }
     }
@@ -714,7 +750,7 @@
       width: 100%; background: var(--bg-input);
       border: 0.5px solid var(--border); border-radius: var(--radius-sm);
       color: var(--text-primary); font-family: var(--font-sans);
-      font-size: 15px; padding: 10px 12px; outline: none;
+      font-size: 16px; padding: 10px 12px; outline: none;
       resize: none; min-height: 180px; line-height: 1.6;
       transition: border-color 0.12s;
       -webkit-appearance: none;
@@ -1032,12 +1068,55 @@
     { name:'Butcher',       cat:'traveler',   align:'good' },
     { name:'Deviant',       cat:'traveler',   align:'good' },
     { name:'Gangster',      cat:'traveler',   align:'good' },
+    { name:'Gunslinger',    cat:'traveler',   align:'good' },
     { name:'Harlot',        cat:'traveler',   align:'good' },
     { name:'Judge',         cat:'traveler',   align:'good' },
     { name:'Matron',        cat:'traveler',   align:'good' },
     { name:'Scapegoat',     cat:'traveler',   align:'good' },
-    { name:'Thief',         cat:'traveler',   align:'evil' },
+    { name:'Thief',         cat:'traveler',   align:'good' },
   ];
+
+  // ── Role icons — replace URLs with your own image resources ─────────────
+  // Format: 'path/to/image.png' or a full URL.
+  // Find this block by searching for ROLE_ICONS in the source.
+  const ROLE_ICONS = {
+    'Washerwoman':    'https://wiki.bloodontheclocktower.com/images/8/85/Icon_washerwoman.png',
+    'Librarian':      'https://wiki.bloodontheclocktower.com/images/e/e0/Icon_librarian.png',
+    'Investigator':   'https://wiki.bloodontheclocktower.com/images/a/ad/Icon_investigator.png',
+    'Chef':           'https://wiki.bloodontheclocktower.com/images/d/d5/Icon_chef.png',
+    'Empath':         'https://wiki.bloodontheclocktower.com/images/1/13/Icon_empath.png',
+    'Fortune Teller': 'https://wiki.bloodontheclocktower.com/images/9/97/Icon_fortuneteller.png',
+    'Undertaker':     'https://wiki.bloodontheclocktower.com/images/0/05/Icon_undertaker.png',
+    'Monk':           'https://wiki.bloodontheclocktower.com/images/7/7c/Icon_monk.png',
+    'Ravenkeeper':    'https://wiki.bloodontheclocktower.com/images/e/ef/Icon_ravenkeeper.png',
+    'Virgin':         'https://wiki.bloodontheclocktower.com/images/d/d3/Icon_virgin.png',
+    'Slayer':         'https://wiki.bloodontheclocktower.com/images/d/d3/Icon_slayer.png',
+    'Soldier':        'https://wiki.bloodontheclocktower.com/images/c/c3/Icon_soldier.png',
+    'Mayor':          'https://wiki.bloodontheclocktower.com/images/a/a1/Icon_mayor.png',
+    'Butler':         'https://wiki.bloodontheclocktower.com/images/1/19/Icon_butler.png',
+    'Drunk':          'https://wiki.bloodontheclocktower.com/images/4/4a/Icon_drunk.png',
+    'Recluse':        'https://wiki.bloodontheclocktower.com/images/6/60/Icon_recluse.png',
+    'Saint':          'https://wiki.bloodontheclocktower.com/images/c/c9/Icon_saint.png',
+    'Poisoner':       'https://wiki.bloodontheclocktower.com/images/b/b1/Icon_poisoner.png',
+    'Spy':            'https://wiki.bloodontheclocktower.com/images/5/54/Icon_spy.png',
+    'Scarlet Woman':  'https://wiki.bloodontheclocktower.com/images/1/13/Icon_scarletwoman.png',
+    'Baron':          'https://wiki.bloodontheclocktower.com/images/6/6d/Icon_baron.png',
+    'Imp':            'https://wiki.bloodontheclocktower.com/images/5/5c/Icon_imp.png',
+    'Apprentice':     'https://wiki.bloodontheclocktower.com/images/0/03/Icon_apprentice.png',
+    'Barista':        'https://wiki.bloodontheclocktower.com/images/2/24/Icon_barista.png',
+    'Beggar':         'https://wiki.bloodontheclocktower.com/images/e/e3/Icon_beggar.png',
+    'Bone Collector': 'https://wiki.bloodontheclocktower.com/images/9/9e/Icon_bonecollector.png',
+    'Bureaucrat':     'https://wiki.bloodontheclocktower.com/images/b/b1/Icon_bureaucrat.png',
+    'Butcher':        'https://wiki.bloodontheclocktower.com/images/e/e3/Icon_butcher.png',
+    'Deviant':        'https://wiki.bloodontheclocktower.com/images/a/a5/Icon_deviant.png',
+    'Gangster':       'https://wiki.bloodontheclocktower.com/images/a/a5/Icon_gangster.png',
+    'Gunslinger':     'https://wiki.bloodontheclocktower.com/images/1/1c/Icon_gunslinger.png',
+    'Harlot':         'https://wiki.bloodontheclocktower.com/images/6/60/Icon_harlot.png',
+    'Judge':          'https://wiki.bloodontheclocktower.com/images/5/59/Icon_judge.png',
+    'Matron':         'https://wiki.bloodontheclocktower.com/images/2/21/Icon_matron.png',
+    'Scapegoat':      'https://wiki.bloodontheclocktower.com/images/3/3a/Icon_scapegoat.png',
+    'Thief':          'https://wiki.bloodontheclocktower.com/images/7/77/Icon_thief.png',
+  };
 
   const CAT_LABELS = {
     townsfolk: 'Townsfolk',
@@ -1054,6 +1133,9 @@
     const input    = document.getElementById(inputId);
     const dropdown = document.getElementById(dropdownId);
     const clearBtn = document.getElementById(clearBtnId);
+    // Move dropdown to body so CSS transforms on the modal don't create a
+    // new stacking/containing block that clips position:fixed children
+    document.body.appendChild(dropdown);
     let activeIdx  = -1;
     let currentVal = '';   // the committed value (role name)
 
@@ -1090,7 +1172,9 @@
           opt.dataset.cat  = role.cat;
           opt.dataset.optIdx = optIdx++;
           opt.setAttribute('role', 'option');
-          opt.innerHTML = `<span class="combo-dot dot-${role.cat}"></span>${esc(role.name)}`;
+          const iconSrc = ROLE_ICONS[role.name];
+          const iconHtml = iconSrc ? `<img src="${esc(iconSrc)}" alt="" style="width:24px;height:24px;object-fit:contain;margin-left:auto;flex-shrink:0;">` : '';
+          opt.innerHTML = `<span class="combo-dot dot-${role.cat}"></span>${esc(role.name)}${iconHtml}`;
           opt.addEventListener('mousedown', e => {
             e.preventDefault();
             selectRole(role.name, role.cat);
@@ -1100,21 +1184,34 @@
       });
     }
 
+    function positionDropdown() {
+      const rect = input.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom - 8;
+      const spaceAbove = rect.top - 8;
+      dropdown.style.width = rect.width + 'px';
+      dropdown.style.left  = rect.left + 'px';
+      if (spaceBelow >= 150 || spaceBelow >= spaceAbove) {
+        dropdown.style.top       = (rect.bottom + 4) + 'px';
+        dropdown.style.bottom    = 'auto';
+        dropdown.style.maxHeight = Math.min(spaceBelow, window.innerHeight * 0.5) + 'px';
+      } else {
+        dropdown.style.top       = 'auto';
+        dropdown.style.bottom    = (window.innerHeight - rect.top + 4) + 'px';
+        dropdown.style.maxHeight = Math.min(spaceAbove, window.innerHeight * 0.5) + 'px';
+      }
+    }
+
     function open() {
       buildDropdown(input.value);
       dropdown.classList.add('open');
       input.setAttribute('aria-expanded', 'true');
-      // Allow the modal scroll container to show the dropdown
-      const modalInner = input.closest('.modal-inner');
-      if (modalInner) modalInner.classList.add('combo-open');
+      positionDropdown();
     }
 
     function close() {
       dropdown.classList.remove('open');
       input.setAttribute('aria-expanded', 'false');
       activeIdx = -1;
-      const modalInner = input.closest('.modal-inner');
-      if (modalInner) modalInner.classList.remove('combo-open');
       if (currentVal) {
         input.value = currentVal;
       } else {
@@ -1282,6 +1379,10 @@
       const nameHtml = s.name
         ? `<span class="seat-name">${esc(s.name)}</span>`
         : `<span class="seat-name empty">Empty</span>`;
+      const iconSrc = s.role && ROLE_ICONS[s.role] ? ROLE_ICONS[s.role] : null;
+      const roleIconHtml = iconSrc
+        ? `<img class="seat-role-icon" src="${esc(iconSrc)}" alt="${esc(s.role)}" title="${esc(s.role)}">`
+        : '';
       const roleHtml = s.role ? `<span class="seat-role">${esc(s.role)}</span>` : '';
       const dotClass = roleData ? ` dot-${roleData.cat}` : '';
 
@@ -1292,7 +1393,7 @@
       const statusStrip = statusIcons
         ? `<span class="seat-status-strip">${statusIcons}</span>` : '';
 
-      el.innerHTML = `<div class="seat-inner">
+      el.innerHTML = `${roleIconHtml}<div class="seat-inner">
         ${badgeHtml}
         <span class="seat-num">${i + 1}</span>
         ${nameHtml}
@@ -1392,7 +1493,6 @@
     setTog('tog-dead',      s.dead,      'on-dead');
     setTog('tog-nominated', s.nominated, 'on-nominated');
     setTog('tog-vote',      s.usedVote,  'on-vote');
-    document.getElementById('f-name').focus();
     openModal('edit');
   }
 
@@ -1442,17 +1542,24 @@
     const roleData = name => ROLES.find(r => r.name === name);
     list.innerHTML = seats.map((s, i) => {
       const rd = s.role ? roleData(s.role) : null;
+      const roleIconSrc = s.role && ROLE_ICONS[s.role] ? ROLE_ICONS[s.role] : null;
+      const roleIconHtml = roleIconSrc ? `<img class="pli-role-icon" src="${esc(roleIconSrc)}" alt="">` : '';
       const roleBadge = rd
         ? `<span class="pli-badge tag-${rd.cat}">${esc(s.role)}</span>`
         : s.role ? `<span class="pli-role">${esc(s.role)}</span>` : '';
       const alignBadge = s.alignment !== 'unknown'
         ? `<span class="pli-badge badge-${s.alignment}">${s.alignment}</span>`
         : '';
+      const statusIcons = [
+        s.nominated ? '<span class="pli-status-icon">⚖</span>' : '',
+        s.usedVote  ? '<span class="pli-status-icon">👻</span>' : '',
+      ].join('');
       return `<div class="pli${selected===i?' selected':''}" data-idx="${i}">
         <span class="pli-num">${i+1}</span>
         <span class="pli-dot${s.dead?' dead':''}"></span>
         <span class="pli-name${s.name?'':' empty'}">${s.name ? esc(s.name) : 'Empty'}</span>
-        ${roleBadge}
+        ${statusIcons}
+        ${roleIconHtml}${roleBadge}
         ${alignBadge}
       </div>`;
     }).join('');
