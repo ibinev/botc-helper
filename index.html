@@ -875,7 +875,7 @@
         <span class="meta-line"><strong id="meta-alive">—</strong> alive · <strong id="meta-dead">—</strong> dead</span>
         <span class="meta-line meta-sub"><span class="meta-good" id="meta-alive-good">—</span>/<span class="meta-evil" id="meta-alive-evil">—</span> · <span class="meta-good" id="meta-dead-good">—</span>/<span class="meta-evil" id="meta-dead-evil">—</span></span>
       </span>
-      <button class="topbar-icon-btn" id="btn-open-notes"    title="Night notes">📜</button>
+      <button class="topbar-icon-btn" id="btn-open-notes"    title="Notes">📜</button>
       <button class="topbar-icon-btn" id="btn-open-roles-pdf" title="Role reference" style="display:none">📖</button>
       <button class="topbar-icon-btn" id="btn-open-settings" title="Settings">⚙️</button>
     </div>
@@ -976,20 +976,20 @@
     </div>
   </div>
 
-  <!-- MODAL: Night Notes -->
+  <!-- MODAL: Notes (Day & Night) -->
   <div class="modal-overlay" id="modal-notes">
     <div class="modal-sheet">
       <div class="modal-drag-bar" id="modal-notes-dragbar"><div class="pill"></div></div>
       <div class="modal-inner">
         <div class="notes-header">
-          <div class="modal-title" style="font-size:16px;">📜 Night Notes</div>
+          <div class="modal-title" style="font-size:16px;">📜 Notes</div>
           <div class="notes-round-nav">
             <button class="btn-sm" id="notes-prev-round">−</button>
-            Night <strong id="notes-round-display">1</strong>
+            <span id="notes-phase-display">Night</span> <strong id="notes-round-display">1</strong>
             <button class="btn-sm" id="notes-next-round">+</button>
           </div>
         </div>
-        <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;">General notes for this night — kills, info tokens, whispers…</div>
+        <div id="notes-desc" style="font-size:12px;color:var(--text-muted);margin-bottom:10px;">General notes for this night — kills, info tokens, whispers…</div>
         <textarea class="notes-textarea" id="notes-textarea" placeholder="What happened tonight…"></textarea>
         <div class="notes-prev-list" id="notes-prev-list"></div>
       </div>
@@ -1858,7 +1858,8 @@
   // ── Reset ──────────────────────────────────────────
   function doReset() {
     clearStorage();
-    nightNotes = {};
+    gameNotes = {};
+    try { localStorage.removeItem('botc_game_notes'); } catch(e) {}
     try { localStorage.removeItem('botc_night_notes'); } catch(e) {}
     seats = Array.from({length: seatCount}, () => blankSeat());
     seatPositions = Array.from({length: seatCount}, () => null);
@@ -1887,7 +1888,8 @@
   // Soft reset (clear round: keep positions and player names)
   function doSoftReset() {
     seats = seats.map(s => Object.assign(blankSeat(), { name: s.name }));
-    nightNotes = {};
+    gameNotes = {};
+    try { localStorage.removeItem('botc_game_notes'); } catch(e) {}
     try { localStorage.removeItem('botc_night_notes'); } catch(e) {}
     selected = null;
     round = 1;
@@ -1922,60 +1924,98 @@
   });
 
   // ── Init ───────────────────────────────────────────
-  // ── Night Notes ───────────────────────────────────
-  let nightNotes = {};   // { roundNum: "text" }
+  // ── Game Notes (Day & Night) ──────────────────────
+  let gameNotes = {};   // { "day-1": "text", "night-1": "text", … }
   let notesRound = 1;
+  let notesPhase = 'night';
 
-  function saveNightNotes() {
-    try { localStorage.setItem('botc_night_notes', JSON.stringify(nightNotes)); } catch(e) {}
+  function notesKey(ph, rn) { return ph + '-' + rn; }
+
+  function saveGameNotes() {
+    try { localStorage.setItem('botc_game_notes', JSON.stringify(gameNotes)); } catch(e) {}
   }
 
-  function loadNightNotes() {
+  function loadGameNotes() {
     try {
-      const raw = localStorage.getItem('botc_night_notes');
-      if (raw) nightNotes = JSON.parse(raw);
+      const raw = localStorage.getItem('botc_game_notes');
+      if (raw) { gameNotes = JSON.parse(raw); return; }
+      // Migrate legacy night-only notes
+      const old = localStorage.getItem('botc_night_notes');
+      if (old) {
+        const oldData = JSON.parse(old);
+        Object.entries(oldData).forEach(([n, txt]) => { if (txt) gameNotes['night-' + n] = txt; });
+      }
     } catch(e) {}
   }
 
   function renderNotesModal() {
+    const phaseLabel = notesPhase === 'day' ? 'Day' : 'Night';
+    document.getElementById('notes-phase-display').textContent = phaseLabel;
     document.getElementById('notes-round-display').textContent = notesRound;
     const ta = document.getElementById('notes-textarea');
-    ta.value = nightNotes[notesRound] || '';
+    ta.value = gameNotes[notesKey(notesPhase, notesRound)] || '';
+    ta.placeholder = notesPhase === 'day'
+      ? 'What happened today — executions, nominations, revelations…'
+      : 'What happened tonight — kills, info tokens, whispers…';
+    const descEl = document.getElementById('notes-desc');
+    if (descEl) descEl.textContent = notesPhase === 'day'
+      ? 'General notes for this day — executions, nominations, revelations…'
+      : 'General notes for this night — kills, info tokens, whispers…';
 
-    // Show previous nights' notes below
+    // Show all other notes in reverse-chronological order
     const list = document.getElementById('notes-prev-list');
-    const prevEntries = Object.entries(nightNotes)
-      .filter(([n]) => parseInt(n) !== notesRound && nightNotes[n].trim())
-      .sort(([a],[b]) => parseInt(b) - parseInt(a));
+    const currentKey = notesKey(notesPhase, notesRound);
+    function entryOrder(k) {
+      const m = k.match(/^(day|night)-(\d+)$/);
+      if (!m) return 99999;
+      return parseInt(m[2]) * 2 + (m[1] === 'night' ? 1 : 0);
+    }
+    const prevEntries = Object.entries(gameNotes)
+      .filter(([k, txt]) => k !== currentKey && txt && txt.trim())
+      .sort(([a], [b]) => entryOrder(b) - entryOrder(a));
 
     if (!prevEntries.length) { list.innerHTML = ''; return; }
-    list.innerHTML = '<div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted);margin-bottom:6px;">Previous nights</div>' +
-      prevEntries.map(([n, txt]) =>
-        `<div class="notes-prev-item">
-          <div class="notes-prev-label">Night ${n}</div>
+    list.innerHTML = '<div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted);margin-bottom:6px;">Previous notes</div>' +
+      prevEntries.map(([k, txt]) => {
+        const m = k.match(/^(day|night)-(\d+)$/);
+        const label = m ? (m[1] === 'day' ? 'Day ' : 'Night ') + m[2] : k;
+        return `<div class="notes-prev-item">
+          <div class="notes-prev-label">${label}</div>
           <div class="notes-prev-text">${txt.replace(/</g,'\u003c').replace(/>/g,'\u003e')}</div>
-        </div>`
-      ).join('');
+        </div>`;
+      }).join('');
   }
 
   document.getElementById('notes-textarea').addEventListener('input', function() {
-    nightNotes[notesRound] = this.value;
-    saveNightNotes();
+    gameNotes[notesKey(notesPhase, notesRound)] = this.value;
+    saveGameNotes();
   });
 
+  // Navigation: Day 1 → Night 1 → Day 2 → Night 2 → …
   document.getElementById('notes-prev-round').addEventListener('click', () => {
-    if (notesRound <= 1) return;
-    notesRound--;
+    if (notesPhase === 'night') {
+      notesPhase = 'day';
+    } else {
+      if (notesRound <= 1) return;
+      notesRound--;
+      notesPhase = 'night';
+    }
     renderNotesModal();
   });
 
   document.getElementById('notes-next-round').addEventListener('click', () => {
-    notesRound++;
+    if (notesPhase === 'day') {
+      notesPhase = 'night';
+    } else {
+      notesRound++;
+      notesPhase = 'day';
+    }
     renderNotesModal();
   });
 
   document.getElementById('btn-open-notes').addEventListener('click', () => {
-    notesRound = round; // sync to current game round
+    notesRound = round;  // sync to current game round
+    notesPhase = phase;  // sync to current game phase
     renderNotesModal();
     openModal('notes');
   });
@@ -2155,7 +2195,7 @@
   comboRole     = makeCombo('f-role',      'f-role-dropdown',      'f-role-clear',      'f-role-toggle');
   comboTrueRole = makeCombo('f-true-role', 'f-true-role-dropdown', 'f-true-role-clear', 'f-true-role-toggle');
 
-  loadNightNotes();
+  loadGameNotes();
   const restored = loadState();
   if (!restored) {
     initSeats(seatCount);
