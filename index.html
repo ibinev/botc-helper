@@ -1130,6 +1130,16 @@
 
         <div class="settings-row">
           <div>
+            <div class="settings-label">Autoname</div>
+            <div class="settings-sub">Populates empty seats with random Bulgarian names</div>
+          </div>
+          <div class="settings-control">
+            <button class="btn" id="btn-auto-names" style="font-size:13px;padding:7px 14px;border-color:var(--gold);color:var(--gold-light);">Populate</button>
+          </div>
+        </div>
+
+        <div class="settings-row">
+          <div>
             <div class="settings-label">Appearance</div>
             <div class="settings-sub">Switch between dark and day mode</div>
           </div>
@@ -2404,6 +2414,31 @@
   });
 
   attachModalSwipe('settings', 'modal-settings-dragbar');
+
+  // ── Auto Bulgarian names ───────────────────────────
+  const BG_NAMES = [
+    'Александър','Ангела','Андрей','Антония','Бойко',
+    'Борислав','Валентина','Васил','Георги','Даниела',
+    'Денис','Димитър','Елена','Иван','Иванка',
+    'Илиян','Илияна','Ирина','Калина','Красимир',
+    'Кристина','Любомир','Мария','Мартин','Милена',
+    'Михаил','Надя','Николай','Павел','Петър',
+    'Пламена','Радослав','Росица','Симеон','Снежана',
+    'Станислав','Стефан','Стефка','Тодор','Теодора',
+    'Цветан','Цветелина','Христо','Христина','Ивайло',
+    'Йордан','Златка','Веселин','Драгомир','Асен',
+    'Галина','Деляна','Николета','Пламен','Радостина',
+  ];
+
+  document.getElementById('btn-auto-names').addEventListener('click', () => {
+    const pool = BG_NAMES.slice().sort(() => Math.random() - 0.5);
+    let pi = 0;
+    seats.forEach(s => {
+      if (!s.name && pi < pool.length) { s.name = pool[pi++]; }
+    });
+    renderCircle();
+    saveState();
+  });
 
   // Also register 'notes' and 'settings' in backdrop-close forEach
   ['notes','settings'].forEach(name => {
