@@ -923,6 +923,31 @@
     .nom-del { background: none; border: none; cursor: pointer; color: var(--text-muted); font-size: 16px; padding: 0 4px; flex-shrink: 0; -webkit-tap-highlight-color: transparent; line-height: 1; }
     .nom-del:active { color: var(--evil-text); }
     .nom-empty { font-size: 13px; color: var(--text-muted); font-style: italic; text-align: center; padding: 20px 0; }
+    /* Vote-picking */
+    .seat.nom-voted .seat-inner {
+      border-color: #5a9e2f !important;
+      box-shadow: 0 0 0 3px #5a9e2f, 0 4px 20px rgba(90,158,47,0.4),
+        inset 0 0 20px rgba(90,158,47,0.08) !important;
+    }
+    .nom-voters {
+      display: flex; flex-wrap: wrap; gap: 4px;
+      margin-top: 6px; padding-top: 6px;
+      border-top: 0.5px solid var(--border);
+    }
+    .nom-voter-chip {
+      font-size: 11px; padding: 2px 8px; border-radius: 999px;
+      background: rgba(90,158,47,0.18); color: #8fca4b;
+      border: 0.5px solid rgba(90,158,47,0.3);
+    }
+    .nom-vote-btn {
+      background: none; border: 0.5px solid var(--border); border-radius: var(--radius-sm);
+      cursor: pointer; color: var(--text-secondary); font-size: 11px;
+      padding: 3px 8px; white-space: nowrap; flex-shrink: 0;
+      -webkit-tap-highlight-color: transparent;
+      transition: background 0.1s, color 0.1s, border-color 0.1s;
+    }
+    .nom-vote-btn:active { background: rgba(90,158,47,0.15); color: #8fca4b; border-color: #5a9e2f; }
+    .nom-entry-main { display: flex; align-items: center; gap: 8px; width: 100%; }
   </style>
 </head>
 <body>
@@ -1558,8 +1583,10 @@
   let selected = null;
   let comboRole, comboTrueRole;
   let nominations = {};  // { 'day-1': [{from, to}, ...], ... }
-  let nomMode = false;   // false | 'from' | 'to'
+  let nomMode = false;   // false | 'from' | 'to' | 'votes'
   let nomFrom = null;
+  let nomVoteKey = null;
+  let nomVoteIdx = null;
 
   function blankSeat() {
     return { name:'', role:'', trueRole:'', alignment:'unknown', notes:'', dead:false, nominated:false, usedVote:false };
@@ -1626,10 +1653,13 @@
       const def = defaultPos(i, n, W, H);
       const pos = seatPositions[i] || def;
       const el = document.createElement('div');
+      const voteList = (nomMode === 'votes' && nomVoteKey && nomVoteIdx !== null)
+        ? ((nominations[nomVoteKey]?.[nomVoteIdx]?.votes) || []) : [];
       el.className = 'seat' +
         (s.dead                                  ? ' dead'     : '') +
         (selected === i                          ? ' selected' : '') +
-        (nomMode === 'to' && nomFrom === i       ? ' nom-from' : '');
+        (nomMode === 'to' && nomFrom === i       ? ' nom-from' : '') +
+        (nomMode === 'votes' && voteList.includes(i) ? ' nom-voted' : '');
       el.style.left = pos.x + 'px';
       el.style.top  = pos.y + 'px';
       el.dataset.idx = i;
@@ -1867,14 +1897,62 @@
     } else if (nomMode === 'to') {
       const key = nomKey();
       if (!nominations[key]) nominations[key] = [];
-      nominations[key].push({ from: nomFrom, to: i });
+      nominations[key].push({ from: nomFrom, to: i, votes: [] });
       saveNominations();
       cancelNomMode();
       // Flash the nominated seat briefly
       const seats = document.querySelectorAll('.seat');
       seats.forEach(el => { if (parseInt(el.dataset.idx) === i) el.classList.add('selected'); });
       setTimeout(() => { renderCircle(); updateNomBadge(); }, 600);
+    } else if (nomMode === 'votes') {
+      const entry = nominations[nomVoteKey]?.[nomVoteIdx];
+      if (!entry) return;
+      if (!entry.votes) entry.votes = [];
+      const pos = entry.votes.indexOf(i);
+      if (pos === -1) { entry.votes.push(i); }
+      else { entry.votes.splice(pos, 1); }
+      saveNominations();
+      updateVoteBtn();
+      renderCircle();
     }
+  }
+
+  function updateVoteBtn() {
+    const entry = nominations[nomVoteKey]?.[nomVoteIdx];
+    const n = entry?.votes?.length || 0;
+    const btn = document.getElementById('btn-nom');
+    btn.innerHTML = '✓ Done · <span class="nom-day-count" id="nom-day-count">' + n + ' vote' + (n !== 1 ? 's' : '') + '</span>';
+  }
+
+  function startVoteMode(key, idx) {
+    if (moveMode) return;
+    closeModal('nominations');
+    nomMode   = 'votes';
+    nomVoteKey = key;
+    nomVoteIdx = idx;
+    const entry = nominations[key]?.[idx];
+    const bar = document.getElementById('nom-step-bar');
+    bar.textContent = '🗳 Tap voters for ' + seatLabel(entry.to) + ' · tap again to deselect';
+    bar.classList.add('visible');
+    const btn = document.getElementById('btn-nom');
+    btn.classList.add('nom-active');
+    updateVoteBtn();
+    renderCircle();
+  }
+
+  function finishVoteMode() {
+    nomMode    = false;
+    nomVoteKey = null;
+    nomVoteIdx = null;
+    const bar = document.getElementById('nom-step-bar');
+    bar.textContent = '';
+    bar.classList.remove('visible');
+    const btn = document.getElementById('btn-nom');
+    btn.classList.remove('nom-active');
+    btn.innerHTML = '⚖ Nominate <span class="nom-day-count" id="nom-day-count">' + ((nominations[nomKey()] || []).length) + '</span>';
+    renderCircle();
+    renderNominationsModal();
+    openModal('nominations');
   }
 
   function startNomMode() {
@@ -1894,6 +1972,7 @@
   }
 
   function cancelNomMode() {
+    if (nomMode === 'votes') { finishVoteMode(); return; }
     nomMode = false;
     nomFrom = null;
     const bar = document.getElementById('nom-step-bar');
@@ -1921,14 +2000,23 @@
     list.innerHTML = allKeys.map(key => {
       const dayNum = key.split('-')[1];
       const entries = nominations[key];
-      const rows = entries.map((e, idx) =>
-        `<div class="nom-entry">
-          <span class="nom-player">${esc(seatLabel(e.from))}</span>
-          <span class="nom-arrow">→</span>
-          <span class="nom-player">${esc(seatLabel(e.to))}</span>
-          <button class="nom-del" data-key="${esc(key)}" data-idx="${idx}" title="Remove">✕</button>
-        </div>`
-      ).join('');
+      const rows = entries.map((e, idx) => {
+        const votes = e.votes || [];
+        const voterChips = votes.length
+          ? votes.map(vi => `<span class="nom-voter-chip">${esc(seatLabel(vi))}</span>`).join('')
+          : '<span style="font-size:11px;color:var(--text-muted);font-style:italic;">No votes recorded</span>';
+        const voteLabel = votes.length ? `🗳 ${votes.length} vote${votes.length !== 1 ? 's' : ''}` : '🗳 Votes';
+        return `<div class="nom-entry" style="flex-direction:column;align-items:stretch;">
+          <div class="nom-entry-main">
+            <span class="nom-player">${esc(seatLabel(e.from))}</span>
+            <span class="nom-arrow">→</span>
+            <span class="nom-player">${esc(seatLabel(e.to))}</span>
+            <button class="nom-vote-btn" data-key="${esc(key)}" data-idx="${idx}">${voteLabel}</button>
+            <button class="nom-del" data-key="${esc(key)}" data-idx="${idx}" title="Remove">✕</button>
+          </div>
+          <div class="nom-voters">${voterChips}</div>
+        </div>`;
+      }).join('');
       return `<div class="nom-day-group">
         <div class="nom-day-label">Day ${dayNum} <span style="color:var(--text-secondary);font-size:9px;">${entries.length} nomination${entries.length !== 1 ? 's' : ''}</span></div>
         ${rows}
@@ -1945,6 +2033,11 @@
           updateNomBadge();
           renderNominationsModal();
         }
+      });
+    });
+    list.querySelectorAll('.nom-vote-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        startVoteMode(btn.dataset.key, parseInt(btn.dataset.idx));
       });
     });
   }
