@@ -793,7 +793,7 @@
     .settings-sub   { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
     .settings-control { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
 
-    /* ── PDF modal ───────────────────────────────────── */
+    /* ── Roles image modal ────────────────────────────── */
     #pdf-sheet {
       position: fixed;
       inset: 0;
@@ -812,11 +812,26 @@
       background: var(--bg-surface);
       border-bottom: 0.5px solid var(--border-strong);
     }
-    #pdf-frame {
+    #roles-img-container {
       flex: 1;
-      width: 100%;
-      border: none;
-      background: #fff;
+      overflow: hidden;
+      background: #111;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: grab;
+      position: relative;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    #roles-img-container.dragging { cursor: grabbing; }
+    #roles-img {
+      display: block;
+      max-width: 100%;
+      max-height: 100%;
+      pointer-events: none;
+      -webkit-user-drag: none;
+      transform-origin: center center;
     }
     #modal-pdf { z-index: 200; background: rgba(0,0,0,0.85); }
     .topbar-icon-btn {
@@ -1073,14 +1088,19 @@
     </div>
   </div>
 
-  <!-- MODAL: Roles PDF -->
+  <!-- MODAL: Roles Image -->
   <div class="modal-overlay" id="modal-pdf" style="align-items:stretch;justify-content:stretch;">
     <div id="pdf-sheet">
       <div id="pdf-toolbar">
         <span style="font-family:var(--font-serif);font-size:15px;color:var(--gold-light);">📖 Role Reference</span>
+        <button class="topbar-icon-btn" id="btn-zoom-out" title="Zoom out" style="font-size:20px;font-weight:bold;">−</button>
+        <button class="topbar-icon-btn" id="btn-zoom-reset" title="Fit to screen" style="font-size:13px;">⊡</button>
+        <button class="topbar-icon-btn" id="btn-zoom-in" title="Zoom in" style="font-size:20px;font-weight:bold;">+</button>
         <button class="btn" id="btn-close-pdf" style="padding:6px 14px;margin-left:auto;">✕ Close</button>
       </div>
-      <iframe id="pdf-frame" src="" title="Role Reference"></iframe>
+      <div id="roles-img-container">
+        <img id="roles-img" src="" alt="Role Reference" draggable="false">
+      </div>
     </div>
   </div>
 
@@ -1090,11 +1110,10 @@
 (function () {
   'use strict';
 
-  // ── Roles PDF ──────────────────────────────────────
-  // Relative path: put the PDF next to index.html and use e.g. 'roles.pdf'
-  // Or use a subfolder:  'docs/roles.pdf'
+  // ── Roles image reference ────────────────────────────
+  // Relative path to the role reference image next to index.html.
   // Leave empty ('') to hide the button.
-  const ROLES_PDF_URL = 'assets/roles.pdf';
+  const ROLES_IMG_URL = 'assets/roles_en.png';
 
   // ── Trouble Brewing role data ──────────────────────
   const ROLES = [
@@ -2006,26 +2025,119 @@
     });
   });
 
-  // ── Roles PDF button ──────────────────────────────
+  // ── Roles image viewer ────────────────────────────
   (function () {
-    const btn      = document.getElementById('btn-open-roles-pdf');
-    const overlay  = document.getElementById('modal-pdf');
-    const frame    = document.getElementById('pdf-frame');
-    const closeBtn = document.getElementById('btn-close-pdf');
-    if (!ROLES_PDF_URL) return;
+    const btn         = document.getElementById('btn-open-roles-pdf');
+    const overlay     = document.getElementById('modal-pdf');
+    const container   = document.getElementById('roles-img-container');
+    const img         = document.getElementById('roles-img');
+    const closeBtn    = document.getElementById('btn-close-pdf');
+    const zoomInBtn   = document.getElementById('btn-zoom-in');
+    const zoomOutBtn  = document.getElementById('btn-zoom-out');
+    const zoomResetBtn= document.getElementById('btn-zoom-reset');
+    if (!ROLES_IMG_URL) return;
     btn.style.display = '';
-    function openPdf() {
-      frame.src = ROLES_PDF_URL;
+
+    let scale = 1, tx = 0, ty = 0;
+    const MIN_SCALE = 0.5, MAX_SCALE = 8;
+
+    function applyTransform() {
+      img.style.transform = `translate(${tx}px,${ty}px) scale(${scale})`;
+    }
+    function resetZoom() {
+      scale = 1; tx = 0; ty = 0;
+      applyTransform();
+    }
+    function zoomAt(factor, cx, cy) {
+      // cx, cy: offset from container center
+      const oldScale = scale;
+      scale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, scale * factor));
+      if (scale === oldScale) return;
+      tx = cx + (tx - cx) * (scale / oldScale);
+      ty = cy + (ty - cy) * (scale / oldScale);
+      applyTransform();
+    }
+
+    // Mouse wheel zoom
+    container.addEventListener('wheel', e => {
+      e.preventDefault();
+      const rect = container.getBoundingClientRect();
+      const cx = e.clientX - rect.left - container.clientWidth  / 2;
+      const cy = e.clientY - rect.top  - container.clientHeight / 2;
+      zoomAt(e.deltaY < 0 ? 1.15 : 1 / 1.15, cx, cy);
+    }, { passive: false });
+
+    // Mouse drag pan
+    let dragging = false, dragX, dragY, startTx, startTy;
+    container.addEventListener('mousedown', e => {
+      dragging = true; dragX = e.clientX; dragY = e.clientY;
+      startTx = tx; startTy = ty;
+      container.classList.add('dragging');
+    });
+    window.addEventListener('mousemove', e => {
+      if (!dragging) return;
+      tx = startTx + (e.clientX - dragX);
+      ty = startTy + (e.clientY - dragY);
+      applyTransform();
+    });
+    window.addEventListener('mouseup', () => {
+      dragging = false;
+      container.classList.remove('dragging');
+    });
+
+    // Pinch zoom + single-touch pan
+    let lastPinchDist = null, pinchCX = 0, pinchCY = 0;
+    let touchStartX, touchStartY, touchStartTx, touchStartTy;
+    function pinchDist(e) {
+      return Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+    }
+    container.addEventListener('touchstart', e => {
+      if (e.touches.length === 2) {
+        lastPinchDist = pinchDist(e);
+        const rect = container.getBoundingClientRect();
+        pinchCX = (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left - container.clientWidth  / 2;
+        pinchCY = (e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top  - container.clientHeight / 2;
+      } else if (e.touches.length === 1) {
+        lastPinchDist = null;
+        touchStartX = e.touches[0].clientX; touchStartY = e.touches[0].clientY;
+        touchStartTx = tx; touchStartTy = ty;
+      }
+    }, { passive: true });
+    container.addEventListener('touchmove', e => {
+      if (e.touches.length === 2 && lastPinchDist !== null) {
+        e.preventDefault();
+        const dist = pinchDist(e);
+        zoomAt(dist / lastPinchDist, pinchCX, pinchCY);
+        lastPinchDist = dist;
+      } else if (e.touches.length === 1 && lastPinchDist === null) {
+        tx = touchStartTx + (e.touches[0].clientX - touchStartX);
+        ty = touchStartTy + (e.touches[0].clientY - touchStartY);
+        applyTransform();
+      }
+    }, { passive: false });
+    container.addEventListener('touchend', () => { lastPinchDist = null; }, { passive: true });
+
+    // Zoom buttons
+    zoomInBtn.addEventListener('click',   () => zoomAt(1.4, 0, 0));
+    zoomOutBtn.addEventListener('click',  () => zoomAt(1 / 1.4, 0, 0));
+    zoomResetBtn.addEventListener('click', resetZoom);
+
+    // Open / close
+    function openImg() {
       overlay.classList.add('visible');
+      if (!img.src || !img.src.endsWith(ROLES_IMG_URL)) img.src = ROLES_IMG_URL;
+      if (img.complete && img.naturalWidth) { resetZoom(); }
+      else { img.onload = resetZoom; }
     }
-    function closePdf() {
+    function closeImg() {
       overlay.classList.remove('visible');
-      // Clear src so browser stops loading/rendering when hidden
-      setTimeout(() => { if (!overlay.classList.contains('visible')) frame.src = ''; }, 300);
     }
-    btn.addEventListener('click', openPdf);
-    closeBtn.addEventListener('click', closePdf);
-    overlay.addEventListener('click', e => { if (e.target === overlay) closePdf(); });
+    btn.addEventListener('click', openImg);
+    closeBtn.addEventListener('click', closeImg);
+    overlay.addEventListener('click', e => { if (e.target === overlay) closeImg(); });
   })();
 
   // ── Theme toggle ──────────────────────────────────
