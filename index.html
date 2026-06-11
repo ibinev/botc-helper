@@ -793,7 +793,32 @@
     .settings-sub   { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
     .settings-control { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
 
-    /* ── Topbar icon-only buttons ───────────────────── */
+    /* ── PDF modal ───────────────────────────────────── */
+    #pdf-sheet {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      background: var(--bg-surface);
+      z-index: 200;
+    }
+    #pdf-toolbar {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 16px;
+      padding-top: max(10px, env(safe-area-inset-top));
+      background: var(--bg-surface);
+      border-bottom: 0.5px solid var(--border-strong);
+    }
+    #pdf-frame {
+      flex: 1;
+      width: 100%;
+      border: none;
+      background: #fff;
+    }
+    #modal-pdf { z-index: 200; background: rgba(0,0,0,0.85); }
     .topbar-icon-btn {
       width: 34px; height: 34px; padding: 0;
       display: flex; align-items: center; justify-content: center;
@@ -836,6 +861,7 @@
         <span class="meta-line meta-sub"><span class="meta-good" id="meta-alive-good">—</span>/<span class="meta-evil" id="meta-alive-evil">—</span> · <span class="meta-good" id="meta-dead-good">—</span>/<span class="meta-evil" id="meta-dead-evil">—</span></span>
       </span>
       <button class="topbar-icon-btn" id="btn-open-notes"    title="Night notes">📜</button>
+      <button class="topbar-icon-btn" id="btn-open-roles-pdf" title="Role reference" style="display:none">📖</button>
       <button class="topbar-icon-btn" id="btn-open-settings" title="Settings">⚙️</button>
     </div>
   </div>
@@ -987,7 +1013,7 @@
         <div class="settings-row">
           <div>
             <div class="settings-label">Clear round</div>
-            <div class="settings-sub">Reset round, notes, names &amp; roles — keeps seat positions</div>
+            <div class="settings-sub">Reset round, notes &amp; roles — keeps seat positions and names</div>
           </div>
           <div class="settings-control">
             <button class="btn" id="btn-clear-soft" style="font-size:13px;padding:7px 14px;border-color:var(--gold);color:var(--gold-light);">⟳ Clear</button>
@@ -1013,7 +1039,7 @@
     <div class="modal-sheet" style="max-height:auto;">
       <div class="modal-inner" style="padding:20px 20px 24px;">
         <div style="font-size:16px;font-weight:500;color:var(--gold-light);font-family:var(--font-serif);margin-bottom:8px;">⟳ Clear round?</div>
-        <div style="font-size:13px;color:var(--text-secondary);margin-bottom:20px;line-height:1.6;">This will reset the round counter, all night notes, and all player names and roles. Seat positions will be kept.</div>
+        <div style="font-size:13px;color:var(--text-secondary);margin-bottom:20px;line-height:1.6;">This will reset the round counter, all night notes, and all player roles and comments. Player names and seat positions will be kept.</div>
         <div style="display:flex;gap:10px;justify-content:flex-end;">
           <button class="btn" id="btn-confirm-soft-cancel">Cancel</button>
           <button class="btn" id="btn-confirm-soft-ok" style="border-color:var(--gold);color:var(--gold-light);font-weight:600;">Clear round</button>
@@ -1047,11 +1073,28 @@
     </div>
   </div>
 
+  <!-- MODAL: Roles PDF -->
+  <div class="modal-overlay" id="modal-pdf" style="align-items:stretch;justify-content:stretch;">
+    <div id="pdf-sheet">
+      <div id="pdf-toolbar">
+        <span style="font-family:var(--font-serif);font-size:15px;color:var(--gold-light);">📖 Role Reference</span>
+        <button class="btn" id="btn-close-pdf" style="padding:6px 14px;margin-left:auto;">✕ Close</button>
+      </div>
+      <iframe id="pdf-frame" src="" title="Role Reference"></iframe>
+    </div>
+  </div>
+
 </div>
 
 <script>
 (function () {
   'use strict';
+
+  // ── Roles PDF ──────────────────────────────────────
+  // Relative path: put the PDF next to index.html and use e.g. 'roles.pdf'
+  // Or use a subfolder:  'docs/roles.pdf'
+  // Leave empty ('') to hide the button.
+  const ROLES_PDF_URL = 'assets/roles.pdf';
 
   // ── Trouble Brewing role data ──────────────────────
   const ROLES = [
@@ -1822,9 +1865,9 @@
   });
   document.getElementById('btn-confirm-ok').addEventListener('click', doReset);
 
-  // Soft reset (clear round: keep positions)
+  // Soft reset (clear round: keep positions and player names)
   function doSoftReset() {
-    seats = Array.from({length: seatCount}, () => blankSeat());
+    seats = seats.map(s => Object.assign(blankSeat(), { name: s.name }));
     nightNotes = {};
     try { localStorage.removeItem('botc_night_notes'); } catch(e) {}
     selected = null;
@@ -1962,6 +2005,28 @@
       if (e.target === overlay) closeModal(name);
     });
   });
+
+  // ── Roles PDF button ──────────────────────────────
+  (function () {
+    const btn      = document.getElementById('btn-open-roles-pdf');
+    const overlay  = document.getElementById('modal-pdf');
+    const frame    = document.getElementById('pdf-frame');
+    const closeBtn = document.getElementById('btn-close-pdf');
+    if (!ROLES_PDF_URL) return;
+    btn.style.display = '';
+    function openPdf() {
+      frame.src = ROLES_PDF_URL;
+      overlay.classList.add('visible');
+    }
+    function closePdf() {
+      overlay.classList.remove('visible');
+      // Clear src so browser stops loading/rendering when hidden
+      setTimeout(() => { if (!overlay.classList.contains('visible')) frame.src = ''; }, 300);
+    }
+    btn.addEventListener('click', openPdf);
+    closeBtn.addEventListener('click', closePdf);
+    overlay.addEventListener('click', e => { if (e.target === overlay) closePdf(); });
+  })();
 
   // ── Theme toggle ──────────────────────────────────
   const themeBtn = document.getElementById('btn-theme');
