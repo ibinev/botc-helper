@@ -57,7 +57,7 @@
       --info-bg:        rgba(24,95,165,0.15);
       --info-text:      #0e5a9e;
     }
-    body.day-mode #app { background: var(--bg-page); }
+    body.day-mode #app { background-color: var(--bg-page); }
     body.day-mode #topbar {
       background: rgba(232,220,200,0.95);
       border-bottom-color: var(--border);
@@ -89,7 +89,6 @@
           inset 0 1px 0 rgba(255,255,255,0.7);
       }
     }
-    body.day-mode #circle-inner::after  { background: rgba(120,80,20,0.06); border-color: rgba(120,80,20,0.15); }
     body.day-mode .modal-sheet { box-shadow: 0 -4px 40px rgba(100,60,0,0.2); }
     body.day-mode .combo-dropdown { box-shadow: 0 8px 32px rgba(100,60,0,0.25); }
 
@@ -121,36 +120,40 @@
       inset: 0;
       display: flex;
       flex-direction: column;
-      /* Rich layered background: deep radial glow + subtle vignette */
-      background:
-        radial-gradient(ellipse 80% 60% at 50% 60%, rgba(60,28,8,0.95) 0%, transparent 70%),
-        radial-gradient(ellipse 50% 40% at 50% 50%, rgba(100,45,10,0.4) 0%, transparent 60%),
-        radial-gradient(ellipse 120% 100% at 50% 100%, rgba(139,26,26,0.12) 0%, transparent 55%),
-        linear-gradient(170deg, #0e0905 0%, #1a0f06 35%, #140d08 65%, #0b0604 100%);
+      /* Background image: cover the full viewport, centered, no repeat */
+      background-image: url('assets/background.png');
+      background-size: cover;
+      background-position: center center;
+      background-repeat: no-repeat;
+      background-attachment: scroll; /* scroll (not fixed) — avoids blur on iOS */
+      background-color: #0e0905; /* fallback while image loads */
     }
-    /* Grain texture overlay */
+    /* Dark vignette overlay — keeps UI readable over any image */
     #app::before {
       content: '';
       position: absolute;
       inset: 0;
       z-index: 0;
       pointer-events: none;
-      opacity: 0.035;
-      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-      background-size: 200px 200px;
+      background:
+        radial-gradient(ellipse 100% 80% at 50% 50%, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.72) 100%),
+        linear-gradient(to bottom, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.18) 40%, rgba(0,0,0,0.55) 100%);
     }
-    /* Everything inside sits above the grain */
+    /* Everything inside sits above the overlay */
     #topbar, #circle-wrap, .modal-overlay { position: relative; z-index: 1; }
     #topbar { z-index: 10; }
 
-    /* Day mode background */
+    /* Day mode: lighter tint so the image still breathes */
     body.day-mode #app {
-      background:
-        radial-gradient(ellipse 70% 55% at 50% 55%, rgba(255,240,200,0.6) 0%, transparent 70%),
-        radial-gradient(ellipse 120% 100% at 50% 100%, rgba(201,151,58,0.08) 0%, transparent 55%),
-        linear-gradient(160deg, #f0e2c4 0%, #e8d5b0 40%, #ddc89a 100%);
+      background-image: url('assets/background.png');
+      background-size: cover;
+      background-position: center center;
     }
-    body.day-mode #app::before { opacity: 0.025; }
+    body.day-mode #app::before {
+      background:
+        radial-gradient(ellipse 100% 80% at 50% 50%, rgba(255,240,200,0.22) 0%, rgba(220,190,130,0.55) 100%),
+        linear-gradient(to bottom, rgba(255,245,220,0.38) 0%, rgba(200,160,80,0.15) 50%, rgba(180,130,50,0.45) 100%);
+    }
 
     /* ── Slim top bar ───────────────────────────────── */
     #topbar {
@@ -267,15 +270,6 @@
       position: absolute; inset: 0;
       display: flex; align-items: center; justify-content: center;
     }
-    #circle-inner::after {
-      content: '';
-      position: absolute;
-      width: 8%; height: 8%;
-      border-radius: 50%;
-      background: rgba(201,151,58,0.07);
-      border: 0.5px solid var(--border);
-      pointer-events: none;
-    }
     .center-label {
       position: absolute;
       top: 50%; left: 50%;
@@ -285,13 +279,23 @@
       z-index: 0;
       user-select: none;
     }
-    .center-label .phase-icon  { font-size: 30px; opacity: 0.18; }
+    .center-label .phase-icon {
+      font-size: 42px;
+      opacity: 1;
+      filter: drop-shadow(0 0 10px rgba(201,151,58,0.7)) drop-shadow(0 2px 6px rgba(0,0,0,0.9));
+      line-height: 1;
+    }
     .center-label .round-label {
-      font-size: 10px;
-      color: var(--text-muted);
-      letter-spacing: 0.1em;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--gold-light);
+      letter-spacing: 0.14em;
       text-transform: uppercase;
-      margin-top: 2px;
+      margin-top: 5px;
+      text-shadow:
+        0 0 12px rgba(201,151,58,0.8),
+        0 1px 4px rgba(0,0,0,1),
+        0 2px 8px rgba(0,0,0,0.9);
     }
     #seats-container { position: absolute; inset: 0; }
 
