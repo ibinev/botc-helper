@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -336,6 +336,8 @@
     @media (max-width: 479px) {
       #btn-nom .btn-label,
       #btn-list .btn-label { display: none; }
+      #btn-nom .nom-day-count,
+      #btn-list .list-count { display: none; }
       #btn-nom, #btn-list  { padding: 10px 13px; font-size: 16px; }
     }
 
@@ -977,8 +979,8 @@
       <button class="cycle-btn" id="btn-cycle-next" title="Next">&#8250;</button>
     </div>
 
-    <!-- Move seats -->
-    <button class="btn-sm" id="btn-move-mode">⠿ Move</button>
+    <!-- Done moving (topbar, visible only in move mode) -->
+    <button class="btn-sm" id="btn-move-done" style="display:none;border-color:var(--gold);color:var(--gold-light);flex-shrink:0;">✓ Done Moving</button>
 
     <!-- Right-side: alive/dead + icon buttons pushed to far right -->
     <div style="display:flex;align-items:center;gap:8px;margin-left:auto;flex-shrink:0;">
@@ -1132,6 +1134,16 @@
             <button class="btn-sm" id="settings-minus">−</button>
             <span id="settings-count-display" style="min-width:24px;text-align:center;font-weight:600;color:var(--gold-light);font-size:15px;">8</span>
             <button class="btn-sm" id="settings-plus">+</button>
+          </div>
+        </div>
+
+        <div class="settings-row">
+          <div>
+            <div class="settings-label">Move seats</div>
+            <div class="settings-sub">Drag seats to rearrange the circle</div>
+          </div>
+          <div class="settings-control">
+            <button class="btn" id="btn-move-mode" style="font-size:13px;padding:7px 14px;border-color:var(--gold);color:var(--gold-light);">⣿ Move seats</button>
           </div>
         </div>
 
@@ -1899,9 +1911,9 @@
   }
 
   function updateNomBadge() {
-    const list = nominations[nomKey()] || [];
+    const count = phase === 'night' ? 0 : (nominations[nomKey()] || []).length;
     const el = document.getElementById('nom-day-count');
-    if (el) el.textContent = list.length;
+    if (el) el.textContent = count;
   }
 
   function handleNomClick(i) {
@@ -2112,6 +2124,7 @@
     phase = pr.phase;
     round = pr.round;
     updateCycleUI();
+    updateNomBadge();
     saveState();
   }
 
@@ -2221,16 +2234,19 @@
 
   // ── Move mode ──────────────────────────────────────────────────
   document.getElementById('btn-move-mode').addEventListener('click', () => {
-    moveMode = !moveMode;
-    const btn = document.getElementById('btn-move-mode');
-    btn.classList.toggle('active-move', moveMode);
-    btn.textContent = moveMode ? '✓ Done' : '⠿ Move';
-    document.getElementById('circle-inner').classList.toggle('move-mode', moveMode);
-    // Close edit panel while in move mode to avoid confusion
-    if (moveMode) {
-      closeModal('edit');
-      selected = null;
-    }
+    moveMode = true;
+    document.getElementById('circle-inner').classList.add('move-mode');
+    document.getElementById('btn-move-done').style.display = 'inline-flex';
+    closeModal('edit');
+    closeModal('settings');
+    selected = null;
+    renderCircle();
+  });
+
+  document.getElementById('btn-move-done').addEventListener('click', () => {
+    moveMode = false;
+    document.getElementById('circle-inner').classList.remove('move-mode');
+    document.getElementById('btn-move-done').style.display = 'none';
     renderCircle();
   });
 
@@ -2246,8 +2262,7 @@
     seatPositions = Array.from({length: seatCount}, () => null);
     selected = null;
     moveMode = false;
-    document.getElementById('btn-move-mode').classList.remove('active-move');
-    document.getElementById('btn-move-mode').textContent = '⠿ Move';
+    document.getElementById('btn-move-done').style.display = 'none';
     document.getElementById('circle-inner').classList.remove('move-mode');
     cancelNomMode();
     closeModal('edit');
@@ -2641,6 +2656,7 @@
   // setPhase/setRound without saveState side-effects on first paint
   (function applyPhase(p) {
     updateCycleUI();
+    updateNomBadge();
   })(phase);
   document.getElementById('center-round').textContent  = (phase === 'day' ? 'Day ' : 'Night ') + round;
   // Defer renderCircle until the browser has finished layout so offsetWidth is valid
