@@ -125,6 +125,7 @@ export class BotcCircle extends LitElement {
     let startPx, startPy, startEx, startEy, dragged;
 
     const onStart = (e) => {
+      if (!this.moveMode) return;
       e.preventDefault();
       dragged = false;
       const clientX = e.touches ? e.touches[0].clientX : e.clientX;
