@@ -325,6 +325,11 @@
       font-weight: 600;
       color: var(--gold);
     }
+    @media (max-width: 479px) {
+      #btn-nom .btn-label,
+      #btn-list .btn-label { display: none; }
+      #btn-nom, #btn-list  { padding: 10px 13px; font-size: 16px; }
+    }
 
     /* ── Seat ───────────────────────────────────────── */
     .seat {
@@ -1003,12 +1008,12 @@
 
     <!-- Floating nominate button -->
     <button id="btn-nom">
-      ⚖ Nominate <span class="nom-day-count" id="nom-day-count">0</span>
+      ⚖ <span class="btn-label">Nominate </span><span class="nom-day-count" id="nom-day-count">0</span>
     </button>
 
     <!-- Floating player list button -->
     <button id="btn-list">
-      👥 Players <span class="list-count" id="list-count">0</span>
+      👥 <span class="btn-label">Players </span><span class="list-count" id="list-count">0</span>
     </button>
   </div>
 
@@ -1932,7 +1937,7 @@
     const n = entry?.votes?.length || 0;
     const alive = entry?.aliveCount ?? seats.filter(s => !s.dead).length;
     const btn = document.getElementById('btn-nom');
-    btn.innerHTML = '✓ Done · <span class="nom-day-count" id="nom-day-count">' + n + '/' + alive + ' votes</span>';
+    btn.innerHTML = '✓ <span class="btn-label">Done · </span><span class="nom-day-count" id="nom-day-count">' + n + '/' + alive + ' votes</span>';
   }
 
   function startVoteMode(key, idx) {
@@ -1963,7 +1968,7 @@
     bar.classList.remove('visible');
     const btn = document.getElementById('btn-nom');
     btn.classList.remove('nom-active');
-    btn.innerHTML = '⚖ Nominate <span class="nom-day-count" id="nom-day-count">' + ((nominations[nomKey()] || []).length) + '</span>';
+    btn.innerHTML = '⚖ <span class="btn-label">Nominate </span><span class="nom-day-count" id="nom-day-count">' + ((nominations[nomKey()] || []).length) + '</span>';
     renderCircle();
     renderNominationsModal();
     openModal('nominations');
@@ -1981,7 +1986,7 @@
     bar.textContent = 'Step 1 — tap who is nominating';
     bar.classList.add('visible');
     document.getElementById('btn-nom').classList.add('nom-active');
-    document.getElementById('btn-nom').innerHTML = '✕ Cancel <span class="nom-day-count" id="nom-day-count">' + ((nominations[nomKey()] || []).length) + '</span>';
+    document.getElementById('btn-nom').innerHTML = '✕ <span class="btn-label">Cancel </span><span class="nom-day-count" id="nom-day-count">' + ((nominations[nomKey()] || []).length) + '</span>';
     renderCircle();
   }
 
@@ -1994,7 +1999,7 @@
     bar.classList.remove('visible');
     const btn = document.getElementById('btn-nom');
     btn.classList.remove('nom-active');
-    btn.innerHTML = '⚖ Nominate <span class="nom-day-count" id="nom-day-count">' + ((nominations[nomKey()] || []).length) + '</span>';
+    btn.innerHTML = '⚖ <span class="btn-label">Nominate </span><span class="nom-day-count" id="nom-day-count">' + ((nominations[nomKey()] || []).length) + '</span>';
     renderCircle();
   }
 
