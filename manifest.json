@@ -1,0 +1,19 @@
+{
+  "name": "BotC Town Square",
+  "short_name": "BotC",
+  "description": "Blood on the Clocktower — Town Square tracker",
+  "start_url": ".",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#1a120a",
+  "theme_color": "#1a120a",
+  "icons": [
+    {
+      "src": "icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["games", "utilities"]
+}

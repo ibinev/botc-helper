@@ -1,0 +1,3181 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, minimum-scale=1.0" />
+  <title>Blood on the Clocktower — Town Square</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-page:        #1a120a;
+      --bg-surface:     #241910;
+      --bg-card:        #2e2015;
+      --bg-input:       #1e1510;
+      --border:         rgba(201,151,58,0.22);
+      --border-strong:  rgba(201,151,58,0.5);
+      --gold:           #c9973a;
+      --gold-light:     #e6b85a;
+      --blood:          #8b1a1a;
+      --blood-light:    #c0392b;
+      --text-primary:   #f5ead6;
+      --text-secondary: #a8916e;
+      --text-muted:     #6b5a3e;
+      --good-bg:        rgba(63,107,17,0.25);
+      --good-text:      #8fca4b;
+      --evil-bg:        rgba(139,26,26,0.3);
+      --evil-text:      #e06060;
+      --info-bg:        rgba(24,95,165,0.25);
+      --info-text:      #7ab8f5;
+      --seat-size:      90px;
+      --font-serif:     Georgia, 'Times New Roman', serif;
+      --font-sans:      -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      --radius-sm:      6px;
+      --radius-md:      10px;
+      --radius-lg:      14px;
+    }
+
+    /* ── Day mode overrides ──────────────────────────── */
+    body.day-mode {
+      --bg-page:        #e8dcc8;
+      --bg-surface:     #f2e8d5;
+      --bg-card:        #fdf6e8;
+      --bg-input:       #fff9f0;
+      --border:         rgba(120,80,20,0.25);
+      --border-strong:  rgba(120,80,20,0.5);
+      --gold:           #8b5e0a;
+      --gold-light:     #6b4408;
+      --blood:          #8b1a1a;
+      --blood-light:    #c0392b;
+      --text-primary:   #1a0f00;
+      --text-secondary: #5c3d10;
+      --text-muted:     #8c6830;
+      --good-bg:        rgba(63,107,17,0.18);
+      --good-text:      #2d5c00;
+      --evil-bg:        rgba(139,26,26,0.15);
+      --evil-text:      #8b1a1a;
+      --info-bg:        rgba(24,95,165,0.15);
+      --info-text:      #0e5a9e;
+    }
+    body.day-mode #app { background-color: var(--bg-page); }
+    body.day-mode #topbar {
+      background: rgba(232,220,200,0.95);
+      border-bottom-color: var(--border);
+    }
+    body.day-mode .seat-inner { border-color: rgba(0,0,0,0.2);
+      box-shadow:
+        0 0 0 1px rgba(120,80,20,0.3),
+        0 2px 10px rgba(100,60,0,0.2),
+        inset 0 1px 0 rgba(255,255,255,0.6);
+    }
+    /* Day mode: dark colors that stand out on the light circle background */
+    body.day-mode .seat-num  { color: #5c3d10; text-shadow: 0 1px 1px rgba(255,240,200,0.8); }
+    body.day-mode .seat-name { color: #1a0f00; text-shadow: 0 1px 2px rgba(255,240,200,0.7); }
+    body.day-mode .seat-name.empty { color: #8c6830; }
+    body.day-mode .seat-role { color: #3d1e00; text-shadow: 0 1px 1px rgba(255,240,200,0.8); }
+    body.day-mode .seat:active .seat-inner {
+      border-color: rgba(0,0,0,0.45);
+      box-shadow:
+        0 0 0 2px var(--gold),
+        0 4px 16px rgba(100,60,0,0.3),
+        inset 0 1px 0 rgba(255,255,255,0.7);
+    }
+    @media (hover: hover) and (pointer: fine) {
+      body.day-mode .seat:hover .seat-inner {
+        border-color: rgba(0,0,0,0.45);
+        box-shadow:
+          0 0 0 2px var(--gold),
+          0 4px 16px rgba(100,60,0,0.3),
+          inset 0 1px 0 rgba(255,255,255,0.7);
+      }
+    }
+    body.day-mode .modal-sheet { box-shadow: 0 -4px 40px rgba(100,60,0,0.2); }
+    body.day-mode .combo-dropdown { box-shadow: 0 8px 32px rgba(100,60,0,0.25); }
+
+    .btn-theme {
+      width: 30px; height: 30px; padding: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px; border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    /* ── Base ──────────────────────────────────────── */
+    html, body {
+      height: 100%; height: 100dvh;
+      overflow: hidden;
+      background: var(--bg-page);
+      color: var(--text-primary);
+      font-family: var(--font-sans);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    /* Prevent double-tap zoom; allow pinch-to-zoom */
+    * { touch-action: manipulation; }
+    #circle-wrap, #circle-stage, #circle-inner, #seats-container { touch-action: pinch-zoom; }
+
+    /* ── App shell: full viewport, circle fills it all ─ */
+    #app {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      /* Background image: cover the full viewport, centered, no repeat */
+      background-image: url('assets/background.png');
+      background-size: cover;
+      background-position: center center;
+      background-repeat: no-repeat;
+      background-attachment: scroll; /* scroll (not fixed) — avoids blur on iOS */
+      background-color: #0e0905; /* fallback while image loads */
+    }
+    /* Dark vignette overlay — keeps UI readable over any image */
+    #app::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(ellipse 100% 80% at 50% 50%, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.72) 100%),
+        linear-gradient(to bottom, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.18) 40%, rgba(0,0,0,0.55) 100%);
+    }
+    /* Everything inside sits above the overlay */
+    #topbar, #circle-wrap, .modal-overlay { position: relative; z-index: 1; }
+    #topbar { z-index: 10; }
+
+    /* Day mode: lighter tint so the image still breathes */
+    body.day-mode #app {
+      background-image: url('assets/background.png');
+      background-size: cover;
+      background-position: center center;
+    }
+    body.day-mode #app::before {
+      background:
+        radial-gradient(ellipse 100% 80% at 50% 50%, rgba(255,240,200,0.22) 0%, rgba(220,190,130,0.55) 100%),
+        linear-gradient(to bottom, rgba(255,245,220,0.38) 0%, rgba(200,160,80,0.15) 50%, rgba(180,130,50,0.45) 100%);
+    }
+
+    /* ── Slim top bar ───────────────────────────────── */
+    #topbar {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      padding-top: max(8px, env(safe-area-inset-top));
+      background: rgba(26,18,10,0.92);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border-bottom: 0.5px solid var(--border);
+      flex-wrap: wrap;
+      z-index: 10;
+    }
+
+    .bar-title {
+      font-family: var(--font-serif);
+      font-size: 16px;
+      color: var(--gold-light);
+      letter-spacing: 0.03em;
+      margin-right: 4px;
+    }
+
+    .count-controls {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      background: var(--bg-surface);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 2px 6px;
+    }
+    .count-label { font-size: 11px; color: var(--text-secondary); margin-right: 2px; }
+    .count-val   { min-width: 20px; text-align: center; font-weight: 600; color: var(--gold-light); font-size: 13px; }
+    .btn-icon {
+      width: 24px; height: 24px;
+      display: flex; align-items: center; justify-content: center;
+      background: none; border: none; cursor: pointer;
+      color: var(--gold); font-size: 17px; border-radius: 4px;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .phase-toggle { display: none; }
+
+    .cycle-controls {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      background: var(--bg-surface);
+      border: 0.5px solid var(--border-strong);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+    }
+    .cycle-btn {
+      width: 30px; height: 30px;
+      display: flex; align-items: center; justify-content: center;
+      background: none; border: none; cursor: pointer;
+      color: var(--gold); font-size: 16px;
+      -webkit-tap-highlight-color: transparent;
+      transition: background 0.1s;
+      flex-shrink: 0;
+    }
+    .cycle-btn:active { background: rgba(201,151,58,0.15); }
+    .cycle-btn:disabled { color: var(--text-muted); cursor: default; }
+    .cycle-label {
+      padding: 0 8px;
+      font-size: 12px; font-weight: 700;
+      white-space: nowrap;
+      min-width: 68px; text-align: center;
+    }
+    .cycle-label.phase-day   { color: var(--gold-light); text-shadow: 0 0 8px rgba(201,151,58,0.6); }
+    .cycle-label.phase-night { color: var(--info-text);  text-shadow: 0 0 8px rgba(122,184,245,0.5); }
+
+    .round-controls { display: none; }
+
+    .btn-sm {
+      padding: 5px 10px;
+      background: var(--bg-surface);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-family: var(--font-sans);
+      font-size: 11px;
+      color: var(--text-primary);
+      -webkit-tap-highlight-color: transparent;
+      white-space: nowrap;
+    }
+    .btn-sm.active-move {
+      background: rgba(201,151,58,0.18);
+      border-color: var(--gold);
+      color: var(--gold-light);
+    }
+
+    .bar-meta {
+      font-size: 11px;
+      color: var(--text-secondary);
+      margin-left: auto;
+      white-space: nowrap;
+    }
+    .bar-meta strong { color: var(--text-primary); }
+    .meta-good { color: var(--good-text); }
+    .meta-evil { color: var(--evil-text); }
+
+    /* ── Circle: fills everything below the topbar ───── */
+    #circle-wrap {
+      flex: 1 1 0;
+      min-height: 0;
+      position: relative;
+      overflow: hidden;
+    }
+    #circle-stage {
+      position: absolute;
+      inset: 0;
+    }
+    #circle-inner {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .center-label {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      pointer-events: none;
+      z-index: 0;
+      user-select: none;
+    }
+    .center-label .phase-icon {
+      font-size: 42px;
+      opacity: 1;
+      filter: drop-shadow(0 0 10px rgba(201,151,58,0.7)) drop-shadow(0 2px 6px rgba(0,0,0,0.9));
+      line-height: 1;
+    }
+    .center-label .round-label {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--gold-light);
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      margin-top: 5px;
+      text-shadow:
+        0 0 12px rgba(201,151,58,0.8),
+        0 1px 4px rgba(0,0,0,1),
+        0 2px 8px rgba(0,0,0,0.9);
+    }
+    #seats-container { position: absolute; inset: 0; }
+
+    /* ── Player list button (floating, bottom-right) ─── */
+    #btn-list {
+      position: absolute;
+      bottom: max(18px, env(safe-area-inset-bottom, 18px));
+      right: 16px;
+      z-index: 20;
+      background: var(--bg-surface);
+      border: 0.5px solid var(--border-strong);
+      border-radius: 999px;
+      padding: 9px 16px;
+      font-family: var(--font-sans);
+      font-size: 12px;
+      color: var(--gold-light);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+      -webkit-tap-highlight-color: transparent;
+      transition: background 0.12s, transform 0.1s;
+    }
+    #btn-list:active { transform: scale(0.96); }
+    #btn-list .list-count {
+      background: rgba(201,151,58,0.2);
+      border-radius: 999px;
+      padding: 1px 7px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--gold);
+    }
+    @media (max-width: 479px) {
+      #btn-nom .btn-label,
+      #btn-list .btn-label { display: none; }
+      #btn-nom .nom-day-count,
+      #btn-list .list-count { display: none; }
+      #btn-nom, #btn-list  { padding: 10px 13px; font-size: 16px; }
+    }
+
+    /* ── Seat ───────────────────────────────────────── */
+    .seat {
+      position: absolute;
+      transform: translate(-50%, -50%);
+      cursor: pointer;
+      z-index: 2;
+      width: var(--seat-size);
+      height: var(--seat-size);
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      overflow: visible;
+    }
+    .seat-inner {
+      width: 100%; height: 100%;
+      border-radius: 50%;
+      background: var(--bg-card);
+      border: 2px solid rgba(255,255,255,0.18);
+      box-shadow:
+        0 0 0 1px rgba(201,151,58,0.25),
+        0 2px 12px rgba(0,0,0,0.5),
+        inset 0 1px 0 rgba(255,255,255,0.08);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transition: border-color 0.15s, transform 0.12s, box-shadow 0.15s;
+      position: relative;
+      overflow: hidden;
+    }
+    .seat:active .seat-inner {
+      border-color: rgba(255,255,255,0.45);
+      box-shadow:
+        0 0 0 2px var(--gold),
+        0 4px 18px rgba(0,0,0,0.6),
+        inset 0 1px 0 rgba(255,255,255,0.12);
+      transform: scale(1.06);
+    }
+    @media (hover: hover) and (pointer: fine) {
+      .seat:hover .seat-inner {
+        border-color: rgba(255,255,255,0.45);
+        box-shadow:
+          0 0 0 2px var(--gold),
+          0 4px 18px rgba(0,0,0,0.6),
+          inset 0 1px 0 rgba(255,255,255,0.12);
+        transform: scale(1.06);
+      }
+    }
+    .seat.selected .seat-inner {
+      border-color: rgba(255,255,255,0.7);
+      box-shadow:
+        0 0 0 3px var(--gold-light),
+        0 4px 20px rgba(201,151,58,0.3),
+        inset 0 0 20px rgba(201,151,58,0.08);
+    }
+    .seat.dead .seat-inner {
+      background: rgba(26,18,10,0.7);
+      border: 2px dashed var(--blood);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+      opacity: 0.6;
+    }
+    .seat.dead:active .seat-inner { opacity: 0.85; }
+    @media (hover: hover) and (pointer: fine) {
+      .seat.dead:hover .seat-inner { opacity: 0.85; }
+    }
+    /* Suspicious: purple outer ring — also gated on align-hints */
+    body.align-hints .seat.suspicious .seat-inner {
+      box-shadow:
+        0 0 0 3px #9b4dca,
+        0 2px 12px rgba(0,0,0,0.5),
+        inset 0 1px 0 rgba(255,255,255,0.08);
+    }
+    body.align-hints .seat.dead.suspicious .seat-inner {
+      box-shadow: 0 0 0 3px #9b4dca, 0 2px 8px rgba(0,0,0,0.4);
+    }
+    /* Suspicious badge in player list — same pattern as good/evil */
+    .badge-suspicious { background: rgba(160,60,200,0.2); color: #d08ef0; }
+    /* Alignment ring: good = green, evil = red (mirrors suspicious purple) */
+    body.align-hints .seat.align-good .seat-inner {
+      box-shadow:
+        0 0 0 3px #5a9e2f,
+        0 2px 12px rgba(0,0,0,0.5),
+        inset 0 1px 0 rgba(255,255,255,0.08);
+    }
+    body.align-hints .seat.dead.align-good .seat-inner {
+      box-shadow: 0 0 0 3px #5a9e2f, 0 2px 8px rgba(0,0,0,0.4);
+    }
+    body.align-hints .seat.align-evil .seat-inner {
+      box-shadow:
+        0 0 0 3px #c0392b,
+        0 2px 12px rgba(0,0,0,0.5),
+        inset 0 1px 0 rgba(255,255,255,0.08);
+    }
+    body.align-hints .seat.align-evil.dead .seat-inner {
+      box-shadow: 0 0 0 3px #c0392b, 0 2px 8px rgba(0,0,0,0.4);
+    }
+
+    /* drag mode */
+    .move-mode .seat        { cursor: grab; }
+    .move-mode .seat:active { cursor: grabbing; }
+    .move-mode .seat.dragging .seat-inner {
+      border-color: var(--gold-light);
+      box-shadow: 0 0 0 4px rgba(201,151,58,0.3), 0 8px 28px rgba(0,0,0,0.6);
+      transform: scale(1.1);
+    }
+
+    .seat-num  { font-size: 10px; color: #c4aa80; letter-spacing: 0.08em; text-transform: uppercase;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.9); }
+    .seat-name {
+      font-size: 13px; font-weight: 600; color: #ffffff;
+      max-width: 78px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; text-align: center;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.9);
+    }
+    .seat-name.empty { color: #a08866; font-weight: 400; font-style: italic; }
+    .seat-role {
+      font-size: 11px; color: #e0c880;
+      max-width: 78px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; text-align: center;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.9);
+    }
+    .seat-dot {
+      position: absolute; bottom: 10px; right: 10px;
+      width: 7px; height: 7px; border-radius: 50%;
+      background: #5a9e2f; border: 1.5px solid var(--bg-card);
+      display: none; /* hidden unless align-hints enabled */
+    }
+    body.align-hints .seat-dot { display: block; }
+    .seat.dead .seat-dot { background: var(--blood-light); }
+
+    /* Status icon strip — sits at the bottom of the circle */
+    .seat-status-strip {
+      position: absolute;
+      bottom: 7px; left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 3px;
+      align-items: center;
+      pointer-events: none;
+    }
+    .seat-status-icon {
+      font-size: 9px;
+      line-height: 1;
+    }
+
+    /* Drunk icon — NE corner of seat circle, mirrors role icon at NW */
+    .seat-drunk-icon {
+      position: absolute;
+      top: -14px; right: -14px;
+      width: 55px; height: 55px;
+      object-fit: contain;
+      pointer-events: none;
+      filter: drop-shadow(0 1px 4px rgba(0,0,0,0.9));
+      z-index: 3;
+    }
+    @media (max-width: 479px) {
+      .seat-drunk-icon { width: 45px; height: 45px; top: -13px; right: -13px; }
+      .seat-dot { bottom: 6px; right: 6px; }
+    }
+    @media (min-width: 520px) {
+      .seat-drunk-icon { width: 60px; height: 60px; top: -16px; right: -16px; }
+      .seat-dot { bottom: 11px; right: 11px; }
+    }
+    /* Role icon — centered on the NW point of the circle edge (halfway in, halfway out).
+       For seat-size 90px: r=45, NW edge ≈ (13,13) from bounding-box corner.
+       Icon 55px → center offset = 27.5px → top/left = 13-27.5 ≈ -14px          */
+    .seat-role-icon {
+      position: absolute;
+      top: -14px; left: -14px;
+      width: 55px; height: 55px;
+      object-fit: contain;
+      pointer-events: none;
+      filter: drop-shadow(0 1px 4px rgba(0,0,0,0.9));
+      z-index: 3;
+    }
+    /* seat-size 68px: r=34, NW≈10px, icon 45px → 10-22.5 ≈ -13px */
+    @media (max-width: 479px) {
+      .seat-role-icon { width: 45px; height: 45px; top: -13px; left: -13px; }
+    }
+    /* seat-size 96px: r=48, NW≈14px, icon 60px → 14-30 = -16px */
+    @media (min-width: 520px) {
+      .seat-role-icon { width: 60px; height: 60px; top: -16px; left: -16px; }
+    }
+
+    /* Role icon in player list */
+    .pli-role-icon {
+      width: 26px; height: 26px;
+      object-fit: contain;
+      border-radius: 3px;
+      flex-shrink: 0;
+    }
+    /* Status icon in player list */
+    .pli-status-icon { font-size: 13px; line-height: 1; }
+
+    .seat-badge {
+      position: absolute; top: 4px; right: 4px;
+      font-size: 7px; padding: 1px 3px; border-radius: 3px;
+      font-family: var(--font-sans); font-weight: 600; letter-spacing: 0.04em;
+    }
+    .badge-good { background: var(--good-bg);  color: var(--good-text); }
+    .badge-evil { background: var(--evil-bg);  color: var(--evil-text); }
+
+    /* category dot / tag colours */
+    .dot-townsfolk { background: #5a9e2f; }
+    .dot-outsider  { background: #7ab8f5; }
+    .dot-minion    { background: #e06060; }
+    .dot-demon     { background: #c0392b; }
+    .dot-traveler  { background: #c9973a; }
+    .tag-townsfolk { background: rgba(63,107,17,0.3);  color: #8fca4b; }
+    .tag-outsider  { background: rgba(24,95,165,0.25); color: #7ab8f5; }
+    .tag-minion    { background: rgba(139,26,26,0.35); color: #e06060; }
+    .tag-demon     { background: rgba(192,57,43,0.4);  color: #ff8080; }
+    .tag-traveler  { background: rgba(186,117,23,0.25);color: #e6b85a; }
+
+    /* ── Modal overlay (edit + player list) ─────────── */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      background: rgba(10,7,4,0.7);
+      backdrop-filter: blur(3px);
+      -webkit-backdrop-filter: blur(3px);
+      display: flex;
+      align-items: flex-end;      /* sheet slides from bottom */
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+    }
+    .modal-overlay.visible {
+      opacity: 1;
+      pointer-events: all;
+    }
+    .modal-sheet {
+      width: 100%;
+      max-width: 560px;
+      max-height: 88dvh;
+      background: var(--bg-surface);
+      border-radius: 20px 20px 0 0;
+      border-top: 0.5px solid var(--border-strong);
+      display: flex;
+      flex-direction: column;
+      transform: translateY(40px);
+      transition: transform 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+      overflow: hidden;
+    }
+    .modal-overlay.visible .modal-sheet {
+      transform: translateY(0);
+    }
+    .modal-drag-bar {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 0 6px;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .modal-drag-bar .pill {
+      width: 36px; height: 4px; border-radius: 2px;
+      background: var(--border-strong);
+    }
+    .modal-inner {
+      overflow-y: auto;
+      overflow-x: visible;   /* let combo dropdowns escape horizontally */
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
+      padding: 0 16px calc(24px + max(0px, env(safe-area-inset-bottom)));
+      flex: 1;
+    }
+    /* When a combo is open, temporarily allow overflow so dropdown shows */
+    .modal-inner.combo-open {
+      overflow-y: visible;
+      overflow-x: visible;
+    }
+    /* Extra scroll wrapper that keeps scrolling when combo-open */
+    .modal-inner.combo-open {
+      overflow: visible;
+    }
+
+    /* ── Modal: Edit form ────────────────────────────── */
+    .modal-title    { font-size: 17px; font-weight: 500; color: var(--gold-light); font-family: var(--font-serif); }
+    .modal-subtitle { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+    .modal-header   { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 14px; gap: 8px; }
+
+    .field-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .field-grid.full { grid-template-columns: 1fr; }
+    .field label {
+      display: block;
+      font-size: 10px; color: var(--text-secondary);
+      text-transform: uppercase; letter-spacing: 0.08em;
+      margin-bottom: 4px;
+    }
+    .field input, .field select, .field textarea {
+      width: 100%;
+      background: var(--bg-input);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-primary);
+      font-family: var(--font-sans);
+      font-size: 16px;           /* ≥16px prevents iOS zoom */
+      padding: 8px 10px;
+      outline: none;
+      transition: border-color 0.12s, box-shadow 0.12s;
+      -webkit-appearance: none;
+    }
+    .field input:focus, .field textarea:focus, .field select:focus {
+      border-color: var(--gold);
+      box-shadow: 0 0 0 2px rgba(201,151,58,0.15);
+    }
+    .field textarea { resize: none; height: 92px; line-height: 1.5; }
+    .field select option { background: var(--bg-card); }
+
+    .status-section label {
+      display: block; font-size: 10px; color: var(--text-secondary);
+      text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px;
+    }
+    .toggles { display: flex; gap: 8px; flex-wrap: wrap; }
+    .tog {
+      padding: 7px 14px; border-radius: 999px;
+      border: 0.5px solid var(--border);
+      background: var(--bg-input); color: var(--text-secondary);
+      font-size: 13px; cursor: pointer; font-family: var(--font-sans);
+      transition: all 0.12s; -webkit-tap-highlight-color: transparent;
+    }
+    .tog.on-dead       { background: var(--evil-bg); color: var(--evil-text); border-color: var(--blood); }
+    .tog.on-nominated  { background: rgba(186,117,23,0.2); color: #e6b85a; border-color: var(--gold); }
+    .tog.on-vote       { background: rgba(186,117,23,0.15); color: var(--text-secondary); border-color: var(--border-strong); }
+    .tog.on-suspicious { background: rgba(160,60,200,0.2); color: #d08ef0; border-color: #9b4dca; }
+    .tog.on-drunk      { background: rgba(24,95,165,0.25); color: #7ab8f5; border-color: #3a7fc1; }
+    .tog.on-poisoned   { background: var(--evil-bg); color: var(--evil-text); border-color: var(--blood); }
+
+    .btn-row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; flex-wrap: wrap; }
+    .btn {
+      padding: 9px 18px; border-radius: var(--radius-sm);
+      border: 0.5px solid var(--border);
+      background: var(--bg-input); color: var(--text-primary);
+      font-family: var(--font-sans); font-size: 14px;
+      cursor: pointer; transition: background 0.12s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn-primary { background: rgba(201,151,58,0.15); border-color: var(--gold); color: var(--gold-light); }
+    .btn-danger  { border-color: var(--blood); color: var(--evil-text); }
+
+    /* ── Modal: Player list ──────────────────────────── */
+    .list-section-title {
+      font-size: 11px; color: var(--text-secondary);
+      text-transform: uppercase; letter-spacing: 0.1em;
+      margin-bottom: 8px; margin-top: 4px;
+      font-weight: 600;
+    }
+    .player-list { display: flex; flex-direction: column; gap: 2px; }
+    .pli {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 10px; border-radius: var(--radius-sm);
+      border: 0.5px solid transparent; cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      transition: background 0.1s;
+    }
+    .pli:active  { background: rgba(201,151,58,0.1); }
+    .pli.selected { background: rgba(201,151,58,0.1); border-color: var(--border-strong); }
+    .pli-num  { font-size: 10px; color: var(--text-secondary); min-width: 16px; text-align: right; font-weight: 600; }
+    .pli-dot  { width: 8px; height: 8px; border-radius: 50%; background: #5a9e2f; flex-shrink: 0; }
+    .pli-dot.dead { background: var(--blood-light); }
+    /* Alignment ring on list dot — only when align-hints enabled */
+    body.align-hints .pli-dot.align-good { outline: 2px solid #5a9e2f; outline-offset: 1px; }
+    body.align-hints .pli-dot.align-evil { outline: 2px solid #c0392b; outline-offset: 1px; }
+    body.align-hints .pli-dot.susp       { outline: 2px solid #9b4dca; outline-offset: 1px; }
+    .pli-name { flex: 1; font-size: 14px; font-weight: 500; color: var(--text-primary); }
+    .pli-name.empty { color: var(--text-muted); font-style: italic; font-weight: 400; }
+    .pli-role { font-size: 12px; color: var(--text-secondary); }
+    .pli-badge { font-size: 10px; padding: 2px 8px; border-radius: 999px; font-weight: 500; }
+    .no-players { text-align: center; padding: 2rem; color: var(--text-muted); font-style: italic; font-size: 13px; }
+    .divider { height: 0.5px; background: var(--border); margin: 14px 0; }
+
+    /* Deaths log */
+    .death-group { margin-bottom: 10px; }
+    .death-cycle-label {
+      font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em;
+      color: var(--gold-light); font-weight: 700;
+      text-shadow: 0 0 6px rgba(201,151,58,0.45);
+      margin-bottom: 4px; margin-top: 2px;
+    }
+    .death-entry {
+      display: flex; align-items: center; gap: 8px;
+      padding: 7px 10px; border-radius: var(--radius-sm);
+      background: var(--bg-input); border: 0.5px solid var(--border);
+      margin-bottom: 3px;
+    }
+    .death-skull { font-size: 13px; flex-shrink: 0; opacity: 0.7; }
+    .death-name  { font-size: 13px; color: var(--text-primary); flex: 1; }
+
+    /* Collapsible log sections */
+    .collapsible-header {
+      display: flex; align-items: center; justify-content: space-between;
+      cursor: pointer; padding: 4px 0; -webkit-tap-highlight-color: transparent;
+    }
+    .collapsible-header .list-section-title { margin: 0; }
+    .collapsible-chevron {
+      font-size: 12px; color: var(--text-muted);
+      transition: transform 0.18s; display: inline-block;
+    }
+    .collapsible-body.collapsed { display: none; }
+    /* Bluff marker — shown when claimed role ≠ true role (both must be set) */
+    .bluff-mark { color: #ffffff; font-weight: 700; font-style: normal; margin-right: 1px; }
+
+    /* ── Combobox ───────────────────────────────────── */
+    .combo-wrap { position: relative; }
+    .combo-input-row {
+      display: flex; align-items: center;
+      background: var(--bg-input);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      transition: border-color 0.12s, box-shadow 0.12s;
+      overflow: hidden;
+    }
+    .combo-input-row:focus-within {
+      border-color: var(--gold);
+      box-shadow: 0 0 0 2px rgba(201,151,58,0.15);
+    }
+    .combo-text {
+      flex: 1; min-width: 60px;
+      background: none; border: none; outline: none;
+      color: var(--text-primary);
+      font-family: var(--font-sans);
+      font-size: 16px;   /* ≥16px prevents iOS zoom */
+      padding: 8px 8px;
+    }
+    .combo-text::placeholder { color: var(--text-muted); }
+    .combo-toggle {
+      background: none; border: none; cursor: pointer;
+      color: var(--text-muted); font-size: 14px; padding: 0 8px;
+      line-height: 1; display: flex; align-items: center;
+      flex-shrink: 0; transition: color 0.12s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .combo-toggle:hover { color: var(--gold); }
+    .combo-clear {
+      background: none; border: none; cursor: pointer;
+      color: var(--text-muted); font-size: 14px; padding: 0 8px;
+      line-height: 1; display: none; align-items: center;
+    }
+    .combo-clear.visible { display: flex; }
+    .combo-dropdown {
+      display: none;
+      position: fixed;
+      background: var(--bg-card);
+      border: 0.5px solid var(--border-strong);
+      border-radius: var(--radius-md);
+      z-index: 9999;
+      overflow-y: auto;
+      overflow-x: hidden;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border-strong) transparent;
+      -webkit-overflow-scrolling: touch;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+    }
+    .combo-dropdown.open { display: block; }
+    .combo-group-label {
+      font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em;
+      padding: 8px 10px 4px; color: var(--text-muted); user-select: none;
+      position: sticky; top: 0; background: var(--bg-card);
+    }
+    .combo-option {
+      display: flex; align-items: center; gap: 8px;
+      padding: 9px 10px; cursor: pointer;
+      font-size: 14px; color: var(--text-primary);
+      transition: background 0.08s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .combo-option:active,
+    .combo-option.active { background: rgba(201,151,58,0.1); }
+    .combo-option.selected-opt { color: var(--gold-light); }
+    .combo-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .combo-no-results { padding: 10px 12px; font-size: 13px; color: var(--text-muted); font-style: italic; }
+    .combo-tag { display:none; } /* unused but kept for compat */
+
+      /* Mobile phones: seats 15% smaller, role stays visible */
+    @media (max-width: 479px) {
+      :root { --seat-size: 68px; }
+      .seat-name { font-size: 10px; }
+      .seat-role { font-size: 9px; }
+      .seat-num  { font-size: 8px; }
+      .seat-status-icon { font-size: 7px; padding: 1px 2px; }
+    }
+
+    /* Tablet / large phone / desktop */
+    @media (min-width: 520px) {
+      :root { --seat-size: 96px; }
+      .seat-name { font-size: 14px; }
+      .seat-role { font-size: 12px; }
+    }
+
+    /* Centered modal on tablet/desktop, full-width bottom sheet on small mobile */
+    @media (min-width: 600px) {
+      .modal-sheet {
+        border-radius: 20px;
+        margin-bottom: 32px;
+        max-height: calc(100dvh - 64px); /* 32px top + 32px bottom margin */
+      }
+      .modal-overlay { align-items: center; }
+    }
+
+    /* On small phones: modal sheet takes full width/height */
+    @media (max-width: 479px) {
+      .modal-sheet {
+        max-height: 96dvh;
+        max-width: 100%;
+        width: 100%;
+        border-radius: 18px 18px 0 0;
+      }
+    }
+
+    /* ── Night Notes modal specifics ───────────────── */
+    .notes-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 4px;
+    }
+    .notes-round-nav {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 13px; color: var(--text-secondary);
+    }
+    .notes-round-nav strong { color: var(--text-primary); min-width: 20px; text-align: center; }
+    .notes-textarea {
+      width: 100%; background: var(--bg-input);
+      border: 0.5px solid var(--border); border-radius: var(--radius-sm);
+      color: var(--text-primary); font-family: var(--font-sans);
+      font-size: 16px; padding: 10px 12px; outline: none;
+      resize: none; min-height: 180px; line-height: 1.6;
+      transition: border-color 0.12s;
+      -webkit-appearance: none;
+    }
+    .notes-textarea:focus { border-color: var(--gold); box-shadow: 0 0 0 2px rgba(201,151,58,0.15); }
+    .notes-prev-list { margin-top: 14px; display: flex; flex-direction: column; gap: 8px; }
+    .notes-prev-item {
+      background: var(--bg-input); border: 0.5px solid var(--border);
+      border-radius: var(--radius-sm); padding: 10px 12px;
+    }
+    .notes-prev-label {
+      font-size: 10px; text-transform: uppercase; letter-spacing: .08em;
+      color: var(--text-muted); margin-bottom: 4px;
+    }
+    .notes-prev-text { font-size: 13px; color: var(--text-secondary); line-height: 1.5; white-space: pre-wrap; }
+
+    /* ── Settings modal specifics ───────────────────── */
+    .settings-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 0; border-bottom: 0.5px solid var(--border);
+      gap: 12px;
+    }
+    .settings-row:last-child { border-bottom: none; }
+    .settings-label { font-size: 14px; color: var(--text-primary); }
+    .settings-sub   { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+    .settings-control { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+
+    /* ── Roles image modal ────────────────────────────── */
+    #pdf-sheet {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      background: var(--bg-surface);
+      z-index: 200;
+    }
+    #pdf-toolbar {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 16px;
+      padding-top: max(10px, env(safe-area-inset-top));
+      background: var(--bg-surface);
+      border-bottom: 0.5px solid var(--border-strong);
+    }
+
+    /* ── Character count modal ─────────────────────────── */
+    #charcount-sheet {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      background: var(--bg-surface);
+      z-index: 200;
+    }
+    #charcount-toolbar {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 16px;
+      padding-top: max(10px, env(safe-area-inset-top));
+      background: var(--bg-surface);
+      border-bottom: 0.5px solid var(--border-strong);
+    }
+    #charcount-body {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 16px;
+      gap: 20px;
+    }
+    .charcount-table-wrap {
+      overflow-x: auto;
+      width: 100%;
+      max-width: 680px;
+      border-radius: var(--radius-md);
+      border: 0.5px solid var(--border-strong);
+    }
+    .charcount-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: var(--font-sans);
+      font-size: 14px;
+    }
+    .charcount-table th,
+    .charcount-table td {
+      padding: 11px 14px;
+      text-align: center;
+      border-bottom: 0.5px solid var(--border);
+    }
+    .charcount-table tr:last-child td { border-bottom: none; }
+    .charcount-table thead th {
+      font-size: 11px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.08em;
+      color: var(--text-secondary);
+      background: var(--bg-card);
+    }
+    .charcount-table thead th:first-child { text-align: left; }
+    .charcount-table td.row-label {
+      text-align: left; font-weight: 600;
+      white-space: nowrap;
+    }
+    .charcount-table td { color: var(--text-primary); background: var(--bg-input); }
+    .row-townsfolk td { background: rgba(63,107,17,0.12); }
+    .row-townsfolk td.row-label { color: #8fca4b; }
+    .row-outsider  td { background: rgba(24,95,165,0.12); }
+    .row-outsider  td.row-label { color: #7ab8f5; }
+    .row-minion    td { background: rgba(139,26,26,0.15); }
+    .row-minion    td.row-label { color: #e06060; }
+    .row-demon     td { background: rgba(192,57,43,0.18); }
+    .row-demon     td.row-label { color: #ff8080; }
+    .charcount-table td:not(.row-label) { font-size: 16px; font-weight: 700; }
+    /* Highlight the column matching current seat count */
+    .charcount-table th.col-active,
+    .charcount-table td.col-active {
+      outline: 2px solid var(--gold);
+      outline-offset: -2px;
+      position: relative;
+    }
+    .charcount-note {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-align: center;
+      max-width: 420px;
+      line-height: 1.6;
+    }
+    #roles-img-container {
+      flex: 1;
+      overflow: hidden;
+      background: #111;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: grab;
+      position: relative;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    #roles-img-container.dragging { cursor: grabbing; }
+    #roles-img {
+      display: block;
+      max-width: 100%;
+      max-height: 100%;
+      pointer-events: none;
+      -webkit-user-drag: none;
+      transform-origin: center center;
+    }
+    #modal-pdf { z-index: 200; background: rgba(0,0,0,0.85); }
+    .topbar-icon-btn {
+      width: 34px; height: 34px; padding: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 17px; border-radius: var(--radius-sm);
+      background: var(--bg-surface); border: 0.5px solid var(--border);
+      cursor: pointer; flex-shrink: 0;
+      -webkit-tap-highlight-color: transparent;
+      transition: background 0.12s, border-color 0.12s;
+    }
+    .topbar-icon-btn:active { background: rgba(201,151,58,0.12); border-color: var(--border-strong); }
+
+    /* ── Nomination mode ────────────────────────────── */
+    #nom-step-bar {
+      position: absolute;
+      top: 12px; left: 50%;
+      transform: translateX(-50%);
+      z-index: 30;
+      background: rgba(201,151,58,0.93);
+      color: #1a0f00;
+      font-size: 13px; font-weight: 700;
+      padding: 8px 20px;
+      border-radius: 999px;
+      pointer-events: none;
+      white-space: nowrap;
+      box-shadow: 0 3px 14px rgba(0,0,0,0.45);
+      display: none;
+      letter-spacing: 0.02em;
+    }
+    #nom-step-bar.visible { display: block; }
+    #btn-nom {
+      position: absolute;
+      bottom: max(18px, env(safe-area-inset-bottom, 18px));
+      left: 16px;
+      z-index: 20;
+      background: var(--bg-surface);
+      border: 0.5px solid var(--border-strong);
+      border-radius: 999px;
+      padding: 9px 16px;
+      font-family: var(--font-sans);
+      font-size: 12px;
+      color: var(--gold-light);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+      -webkit-tap-highlight-color: transparent;
+      transition: background 0.12s, transform 0.1s, border-color 0.12s;
+    }
+    #btn-nom:active { transform: scale(0.96); }
+    #btn-nom.nom-active {
+      background: rgba(201,151,58,0.18);
+      border-color: var(--gold);
+      color: var(--gold-light);
+    }
+    .nom-day-count {
+      background: rgba(201,151,58,0.2);
+      border-radius: 999px;
+      padding: 1px 7px;
+      font-size: 11px; font-weight: 600;
+      color: var(--gold);
+    }
+    /* Seats in nomination mode */
+    .nom-mode .seat .seat-inner {
+      border-color: rgba(201,151,58,0.35);
+    }
+    .seat.nom-from .seat-inner {
+      border-color: var(--gold-light) !important;
+      box-shadow: 0 0 0 3px var(--gold), 0 4px 20px rgba(201,151,58,0.45),
+        inset 0 0 20px rgba(201,151,58,0.1) !important;
+    }
+    /* Nominations history modal */
+    .nom-day-group { margin-bottom: 16px; }
+    .nom-day-label {
+      font-size: 10px; text-transform: uppercase; letter-spacing: .1em;
+      color: var(--text-muted); margin-bottom: 6px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .nom-entry {
+      display: flex; align-items: center; gap: 8px;
+      padding: 9px 10px; border-radius: var(--radius-sm);
+      border: 0.5px solid var(--border); background: var(--bg-input);
+      margin-bottom: 4px;
+    }
+    .nom-arrow { color: var(--gold); font-size: 15px; flex-shrink: 0; }
+    .nom-player { font-size: 13px; color: var(--text-primary); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .nom-del { background: none; border: none; cursor: pointer; color: var(--text-muted); font-size: 16px; padding: 0 4px; flex-shrink: 0; -webkit-tap-highlight-color: transparent; line-height: 1; }
+    .nom-del:active { color: var(--evil-text); }
+    .nom-empty { font-size: 13px; color: var(--text-muted); font-style: italic; text-align: center; padding: 20px 0; }
+    /* Vote-picking */
+    .seat.nom-voted .seat-inner {
+      border-color: #5a9e2f !important;
+      box-shadow: 0 0 0 3px #5a9e2f, 0 4px 20px rgba(90,158,47,0.4),
+        inset 0 0 20px rgba(90,158,47,0.08) !important;
+    }
+    .nom-voters {
+      display: flex; flex-wrap: wrap; gap: 4px;
+      margin-top: 6px; padding-top: 6px;
+      border-top: 0.5px solid var(--border);
+    }
+    .nom-voter-chip {
+      font-size: 11px; padding: 2px 8px; border-radius: 999px;
+      background: rgba(90,158,47,0.18); color: #8fca4b;
+      border: 0.5px solid rgba(90,158,47,0.3);
+    }
+    .nom-vote-btn {
+      background: none; border: 0.5px solid var(--border); border-radius: var(--radius-sm);
+      cursor: pointer; color: var(--text-secondary); font-size: 11px;
+      padding: 3px 8px; white-space: nowrap; flex-shrink: 0;
+      -webkit-tap-highlight-color: transparent;
+      transition: background 0.1s, color 0.1s, border-color 0.1s;
+    }
+    .nom-vote-btn:active { background: rgba(90,158,47,0.15); color: #8fca4b; border-color: #5a9e2f; }
+    .nom-entry-main { display: flex; align-items: center; gap: 8px; width: 100%; }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- Top bar -->
+  <div id="topbar">
+    <span class="bar-title">Town Square</span>
+
+    <!-- Day/Night cycle control -->
+    <div class="cycle-controls">
+      <button class="cycle-btn" id="btn-cycle-prev" title="Previous">&#8249;</button>
+      <span class="cycle-label phase-day" id="cycle-label">Day 1</span>
+      <button class="cycle-btn" id="btn-cycle-next" title="Next">&#8250;</button>
+    </div>
+
+    <!-- Done moving (topbar, visible only in move mode) -->
+    <button class="btn-sm" id="btn-move-done" style="display:none;border-color:var(--gold);color:var(--gold-light);flex-shrink:0;">✓ Done Moving</button>
+
+    <!-- Right-side: alive/dead + icon buttons pushed to far right -->
+    <div style="display:flex;align-items:center;gap:8px;margin-left:auto;flex-shrink:0;">
+      <span class="bar-meta">
+        <span class="meta-line"><strong id="meta-alive">—</strong> alive (<span class="meta-good" id="meta-alive-good">—</span>/<span class="meta-evil" id="meta-alive-evil">—</span>) · <strong id="meta-dead">—</strong> dead (<span class="meta-good" id="meta-dead-good">—</span>/<span class="meta-evil" id="meta-dead-evil">—</span>)</span>
+      </span>
+      <button class="topbar-icon-btn" id="btn-open-notes"       title="Notes">📜</button>
+      <button class="topbar-icon-btn" id="btn-open-nominations" title="Nominations">⚖</button>
+      <button class="topbar-icon-btn" id="btn-open-roles-pdf"   title="Role reference" style="display:none">📖</button>
+      <button class="topbar-icon-btn" id="btn-open-charcount"   title="Character count">📊</button>
+      <button class="topbar-icon-btn" id="btn-open-settings" title="Settings">⚙️</button>
+    </div>
+  </div>
+
+  <!-- Circle (fills remaining space) -->
+  <div id="circle-wrap">
+    <div id="circle-stage">
+      <div id="circle-inner">
+        <div class="center-label">
+          <div class="phase-icon" id="center-icon">☀️</div>
+          <div class="round-label" id="center-round">Day 1</div>
+        </div>
+        <div id="seats-container"></div>
+      </div>
+    </div>
+
+    <!-- Nomination step indicator -->
+    <div id="nom-step-bar"></div>
+
+    <!-- Floating nominate button -->
+    <button id="btn-nom">
+      ⚖ <span class="btn-label">Nominate </span><span class="nom-day-count" id="nom-day-count">0</span>
+    </button>
+
+    <!-- Floating player list button -->
+    <button id="btn-list">
+      👥 <span class="btn-label">Players </span><span class="list-count" id="list-count">0</span>
+    </button>
+  </div>
+
+  <!-- MODAL: Edit seat -->
+  <div class="modal-overlay" id="modal-edit">
+    <div class="modal-sheet">
+      <div class="modal-drag-bar" id="modal-edit-dragbar"><div class="pill"></div></div>
+      <div class="modal-inner">
+        <div class="modal-header">
+          <div>
+            <div class="modal-title"  id="panel-title">Seat 1</div>
+            <div class="modal-subtitle" id="panel-sub">No player assigned</div>
+          </div>
+          <button class="btn" id="btn-close-panel" style="padding:6px 12px;">✕</button>
+        </div>
+
+        <div class="field-grid">
+          <div class="field">
+            <label>Player name</label>
+            <input type="text" id="f-name" placeholder="e.g. Alice" autocomplete="off">
+          </div>
+          <div class="field">
+            <label>Role claimed</label>
+            <div class="combo-wrap">
+              <div class="combo-input-row">
+                <input class="combo-text" id="f-role" placeholder="Washerwoman…" autocomplete="off" role="combobox">
+                <button class="combo-clear" id="f-role-clear" tabindex="-1">✕</button>
+                <button class="combo-toggle" id="f-role-toggle" tabindex="-1">▾</button>
+              </div>
+              <div class="combo-dropdown" id="f-role-dropdown" role="listbox"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="field-grid">
+          <div class="field">
+            <label>Alignment</label>
+            <select id="f-alignment">
+              <option value="unknown">Unknown</option>
+              <option value="good">Good</option>
+              <option value="evil">Evil</option>
+              <option value="suspicious">Suspicious</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>True role (ST only)</label>
+            <div class="combo-wrap">
+              <div class="combo-input-row">
+                <input class="combo-text" id="f-true-role" placeholder="Actual role…" autocomplete="off" role="combobox">
+                <button class="combo-clear" id="f-true-role-clear" tabindex="-1">✕</button>
+                <button class="combo-toggle" id="f-true-role-toggle" tabindex="-1">▾</button>
+              </div>
+              <div class="combo-dropdown" id="f-true-role-dropdown" role="listbox"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="field-grid full">
+          <div class="field">
+            <label>Notes</label>
+            <textarea id="f-notes" placeholder="Suspicions, night actions, claims…"></textarea>
+          </div>
+        </div>
+
+        <div class="status-section">
+          <label>Status</label>
+          <div class="toggles">
+            <button class="tog" id="tog-dead"       data-on="on-dead">☠ Dead</button>
+            <button class="tog" id="tog-drunk" data-on="on-drunk"><img src="https://wiki.bloodontheclocktower.com/images/4/4a/Icon_drunk.png" alt="Drunk" style="width:18px;height:18px;object-fit:contain;vertical-align:middle;margin-right:4px;">Drunk</button>
+            <button class="tog" id="tog-poisoned" data-on="on-poisoned"><img src="https://wiki.bloodontheclocktower.com/images/b/b1/Icon_poisoner.png" alt="Poisoned" style="width:18px;height:18px;object-fit:contain;vertical-align:middle;margin-right:4px;">Poisoned</button>
+            <button class="tog" id="tog-vote"       data-on="on-vote">🗳 Ghost vote</button>
+          </div>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn btn-danger" id="btn-clear">Clear seat</button>
+          <button class="btn btn-primary" id="btn-save">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Notes (Day & Night) -->
+  <div class="modal-overlay" id="modal-notes">
+    <div class="modal-sheet">
+      <div class="modal-drag-bar" id="modal-notes-dragbar"><div class="pill"></div></div>
+      <div class="modal-inner">
+        <div class="notes-header">
+          <div class="modal-title" style="font-size:16px;">📜 Notes</div>
+          <div class="notes-round-nav">
+            <button class="btn-sm" id="notes-prev-round">−</button>
+            <span id="notes-phase-display">Night</span> <strong id="notes-round-display">1</strong>
+            <button class="btn-sm" id="notes-next-round">+</button>
+          </div>
+        </div>
+        <div id="notes-desc" style="font-size:12px;color:var(--text-muted);margin-bottom:10px;">General notes for this night — kills, info tokens, whispers…</div>
+        <textarea class="notes-textarea" id="notes-textarea" placeholder="What happened tonight…"></textarea>
+        <div class="notes-prev-list" id="notes-prev-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Settings -->
+  <div class="modal-overlay" id="modal-settings">
+    <div class="modal-sheet">
+      <div class="modal-drag-bar" id="modal-settings-dragbar"><div class="pill"></div></div>
+      <div class="modal-inner">
+        <div class="modal-title" style="margin-bottom:16px;">⚙️ Settings</div>
+
+        <div class="settings-row">
+          <div>
+            <div class="settings-label">Players</div>
+            <div class="settings-sub">Number of seats in the circle</div>
+          </div>
+          <div class="settings-control">
+            <button class="btn-sm" id="settings-minus">−</button>
+            <span id="settings-count-display" style="min-width:24px;text-align:center;font-weight:700;color:var(--gold-light);font-size:15px;text-shadow:0 0 8px rgba(201,151,58,0.5);">8</span>
+            <button class="btn-sm" id="settings-plus">+</button>
+          </div>
+        </div>
+
+        <div class="settings-row">
+          <div>
+            <div class="settings-label">Move seats</div>
+            <div class="settings-sub">Drag seats to rearrange the circle</div>
+          </div>
+          <div class="settings-control">
+            <button class="btn" id="btn-move-mode" style="font-size:13px;padding:7px 14px;border-color:var(--gold);color:var(--gold-light);">⣿ Move seats</button>
+          </div>
+        </div>
+
+        <div class="settings-row">
+          <div>
+            <div class="settings-label">Autoname</div>
+            <div class="settings-sub">Populates empty seats with random Bulgarian names</div>
+          </div>
+          <div class="settings-control">
+            <button class="btn" id="btn-auto-names" style="font-size:13px;padding:7px 14px;border-color:var(--gold);color:var(--gold-light);">Populate</button>
+          </div>
+        </div>
+
+        <div class="settings-row">
+          <div>
+            <div class="settings-label">Extended hints</div>
+            <div class="settings-sub">Show coloured ring on seats when alignment is set and dot for the role</div>
+          </div>
+          <div class="settings-control">
+            <button class="btn-sm" id="btn-align-hints" style="min-width:52px;">On</button>
+          </div>
+        </div>
+
+        <div class="settings-row">
+          <div>
+            <div class="settings-label">Appearance</div>
+            <div class="settings-sub">Switch between dark and day mode</div>
+          </div>
+          <div class="settings-control">
+            <button class="btn-sm btn-theme" id="btn-theme" title="Day mode" style="font-size:18px;padding:4px 8px;min-width:36px;">🔆</button>
+          </div>
+        </div>
+
+        <div class="settings-row">
+          <div>
+            <div class="settings-label">Clear table</div>
+            <div class="settings-sub">Reset table, notes &amp; roles — keeps seat positions and names</div>
+          </div>
+          <div class="settings-control">
+            <button class="btn" id="btn-clear-soft" style="font-size:13px;padding:7px 14px;border-color:var(--gold);color:var(--gold-light);">⟳ Clear</button>
+          </div>
+        </div>
+
+        <div class="settings-row">
+          <div>
+            <div class="settings-label" style="color:var(--evil-text);">Reset everything</div>
+            <div class="settings-sub">Clear all data including seat positions</div>
+          </div>
+          <div class="settings-control">
+            <button class="btn btn-danger" id="btn-reset" style="font-size:13px;padding:7px 14px;">↺ Reset all</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Confirm soft reset (clear) -->
+  <div class="modal-overlay" id="modal-confirm-soft">
+    <div class="modal-sheet" style="max-height:auto;">
+      <div class="modal-inner" style="padding:20px 20px 24px;">
+        <div style="font-size:16px;font-weight:500;color:var(--gold-light);font-family:var(--font-serif);margin-bottom:8px;">⟳ Clear table?</div>
+        <div style="font-size:13px;color:var(--text-secondary);margin-bottom:20px;line-height:1.6;">This will reset the table, all night notes, and all player roles and comments. Player names and seat positions will be kept.</div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;">
+          <button class="btn" id="btn-confirm-soft-cancel">Cancel</button>
+          <button class="btn" id="btn-confirm-soft-ok" style="border-color:var(--gold);color:var(--gold-light);font-weight:600;">Clear table</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Confirm reset -->
+  <div class="modal-overlay" id="modal-confirm">
+    <div class="modal-sheet" style="max-height:auto;">
+      <div class="modal-inner" style="padding:20px 20px 24px;">
+        <div style="font-size:16px;font-weight:500;color:var(--evil-text);font-family:var(--font-serif);margin-bottom:8px;">↺ Reset game?</div>
+        <div style="font-size:13px;color:var(--text-secondary);margin-bottom:20px;line-height:1.6;">This will clear all player data, roles, notes, and custom seat positions. This cannot be undone.</div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;">
+          <button class="btn" id="btn-confirm-cancel">Cancel</button>
+          <button class="btn btn-danger" id="btn-confirm-ok" style="font-weight:600;">Reset everything</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Nominations history -->
+  <div class="modal-overlay" id="modal-nominations">
+    <div class="modal-sheet">
+      <div class="modal-drag-bar" id="modal-nominations-dragbar"><div class="pill"></div></div>
+      <div class="modal-inner">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+          <div class="modal-title" style="font-family:var(--font-serif);">⚖ Nominations</div>
+          <button class="btn btn-primary" id="btn-nom-new" style="font-size:12px;padding:6px 14px;">➕ New</button>
+        </div>
+        <div id="nominations-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Player list -->
+  <div class="modal-overlay" id="modal-list">
+    <div class="modal-sheet">
+      <div class="modal-drag-bar" id="modal-list-dragbar"><div class="pill"></div></div>
+      <div class="modal-inner">
+        <div class="collapsible-header" id="allseats-header">
+          <div class="list-section-title" style="margin:0;">All seats</div>
+          <span class="collapsible-chevron" id="allseats-chevron">▾</span>
+        </div>
+        <div class="collapsible-body" id="allseats-body">
+          <div class="player-list" id="player-list"></div>
+        </div>
+        <div id="deaths-section" style="display:none;">
+          <div class="divider"></div>
+          <div class="collapsible-header" id="deaths-header">
+            <div class="list-section-title" style="margin:0;">Deaths</div>
+            <span class="collapsible-chevron" id="deaths-chevron">▾</span>
+          </div>
+          <div class="collapsible-body" id="deaths-body">
+            <div id="deaths-list"></div>
+          </div>
+        </div>
+        <div id="poisoned-section" style="display:none;">
+          <div class="divider"></div>
+          <div class="collapsible-header" id="poisoned-header">
+            <div class="list-section-title" style="margin:0;">Poisoned</div>
+            <span class="collapsible-chevron" id="poisoned-chevron">▾</span>
+          </div>
+          <div class="collapsible-body" id="poisoned-body">
+            <div id="poisoned-list"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Roles Image -->
+  <div class="modal-overlay" id="modal-pdf" style="align-items:stretch;justify-content:stretch;">
+    <div id="pdf-sheet">
+      <div id="pdf-toolbar">
+        <span style="font-family:var(--font-serif);font-size:15px;color:var(--gold-light);">📖 Role Reference</span>
+        <button class="topbar-icon-btn" id="btn-zoom-out" title="Zoom out" style="font-size:20px;font-weight:bold;">−</button>
+        <button class="topbar-icon-btn" id="btn-zoom-reset" title="Fit to screen" style="font-size:13px;">⊡</button>
+        <button class="topbar-icon-btn" id="btn-zoom-in" title="Zoom in" style="font-size:20px;font-weight:bold;">+</button>
+        <button class="btn" id="btn-close-pdf" style="padding:6px 14px;margin-left:auto;">✕ Close</button>
+      </div>
+      <div id="roles-img-container">
+        <img id="roles-img" src="" alt="Role Reference" draggable="false">
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Character Count -->
+  <div class="modal-overlay" id="modal-charcount" style="align-items:stretch;justify-content:stretch;">
+    <div id="charcount-sheet">
+      <div id="charcount-toolbar">
+        <span style="font-family:var(--font-serif);font-size:15px;color:var(--gold-light);">📊 Character Count</span>
+        <button class="btn" id="btn-close-charcount" style="padding:6px 14px;margin-left:auto;">✕ Close</button>
+      </div>
+      <div id="charcount-body">
+        <div class="charcount-table-wrap">
+          <table class="charcount-table">
+            <thead>
+              <tr>
+                <th>Players</th>
+                <th>5</th><th>6</th><th>7</th><th>8</th><th>9</th>
+                <th>10</th><th>11</th><th>12</th><th>13</th><th>14</th><th>15+</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="row-townsfolk">
+                <td class="row-label">Townsfolk</td>
+                <td>3</td><td>3</td><td>5</td><td>5</td><td>5</td>
+                <td>7</td><td>7</td><td>7</td><td>9</td><td>9</td><td>9+</td>
+              </tr>
+              <tr class="row-outsider">
+                <td class="row-label">Outsiders</td>
+                <td>0</td><td>1</td><td>0</td><td>1</td><td>2</td>
+                <td>0</td><td>1</td><td>2</td><td>0</td><td>1</td><td>2</td>
+              </tr>
+              <tr class="row-minion">
+                <td class="row-label">Minions</td>
+                <td>1</td><td>1</td><td>1</td><td>1</td><td>1</td>
+                <td>2</td><td>2</td><td>2</td><td>3</td><td>3</td><td>3</td>
+              </tr>
+              <tr class="row-demon">
+                <td class="row-label">Demons</td>
+                <td>1</td><td>1</td><td>1</td><td>1</td><td>1</td>
+                <td>1</td><td>1</td><td>1</td><td>1</td><td>1</td><td>1</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="charcount-note">Based on Trouble Brewing standard distribution. 15+ follows the same pattern as 15 (9/2/3/1).</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ── Roles image reference ────────────────────────────
+  // Relative path to the role reference image next to index.html.
+  // Leave empty ('') to hide the button.
+  const ROLES_IMG_URL = 'assets/roles_en.png';
+
+  // ── Trouble Brewing role data ──────────────────────
+  const ROLES = [
+    { name:'Washerwoman',   cat:'townsfolk',  align:'good' },
+    { name:'Librarian',     cat:'townsfolk',  align:'good' },
+    { name:'Investigator',  cat:'townsfolk',  align:'good' },
+    { name:'Chef',          cat:'townsfolk',  align:'good' },
+    { name:'Empath',        cat:'townsfolk',  align:'good' },
+    { name:'Fortune Teller',cat:'townsfolk',  align:'good' },
+    { name:'Undertaker',    cat:'townsfolk',  align:'good' },
+    { name:'Monk',          cat:'townsfolk',  align:'good' },
+    { name:'Ravenkeeper',   cat:'townsfolk',  align:'good' },
+    { name:'Virgin',        cat:'townsfolk',  align:'good' },
+    { name:'Slayer',        cat:'townsfolk',  align:'good' },
+    { name:'Soldier',       cat:'townsfolk',  align:'good' },
+    { name:'Mayor',         cat:'townsfolk',  align:'good' },
+    { name:'Butler',        cat:'outsider',   align:'good' },
+    { name:'Recluse',       cat:'outsider',   align:'good' },
+    { name:'Saint',         cat:'outsider',   align:'good' },
+    { name:'Poisoner',      cat:'minion',     align:'evil' },
+    { name:'Spy',           cat:'minion',     align:'evil' },
+    { name:'Scarlet Woman', cat:'minion',     align:'evil' },
+    { name:'Baron',         cat:'minion',     align:'evil' },
+    { name:'Imp',           cat:'demon',      align:'evil' },
+    { name:'Apprentice',    cat:'traveler',   align:'good' },
+    { name:'Barista',       cat:'traveler',   align:'good' },
+    { name:'Beggar',        cat:'traveler',   align:'good' },
+    { name:'Bone Collector',cat:'traveler',   align:'good' },
+    { name:'Bureaucrat',    cat:'traveler',   align:'good' },
+    { name:'Butcher',       cat:'traveler',   align:'good' },
+    { name:'Deviant',       cat:'traveler',   align:'good' },
+    { name:'Gangster',      cat:'traveler',   align:'good' },
+    { name:'Gunslinger',    cat:'traveler',   align:'good' },
+    { name:'Harlot',        cat:'traveler',   align:'good' },
+    { name:'Judge',         cat:'traveler',   align:'good' },
+    { name:'Matron',        cat:'traveler',   align:'good' },
+    { name:'Scapegoat',     cat:'traveler',   align:'good' },
+    { name:'Thief',         cat:'traveler',   align:'good' },
+  ];
+
+  // ── Role icons — replace URLs with your own image resources ─────────────
+  // Format: 'path/to/image.png' or a full URL.
+  // Find this block by searching for ROLE_ICONS in the source.
+  const ROLE_ICONS = {
+    'Washerwoman':    'https://wiki.bloodontheclocktower.com/images/8/85/Icon_washerwoman.png',
+    'Librarian':      'https://wiki.bloodontheclocktower.com/images/e/e0/Icon_librarian.png',
+    'Investigator':   'https://wiki.bloodontheclocktower.com/images/a/ad/Icon_investigator.png',
+    'Chef':           'https://wiki.bloodontheclocktower.com/images/d/d5/Icon_chef.png',
+    'Empath':         'https://wiki.bloodontheclocktower.com/images/1/13/Icon_empath.png',
+    'Fortune Teller': 'https://wiki.bloodontheclocktower.com/images/9/97/Icon_fortuneteller.png',
+    'Undertaker':     'https://wiki.bloodontheclocktower.com/images/0/05/Icon_undertaker.png',
+    'Monk':           'https://wiki.bloodontheclocktower.com/images/7/7c/Icon_monk.png',
+    'Ravenkeeper':    'https://wiki.bloodontheclocktower.com/images/e/ef/Icon_ravenkeeper.png',
+    'Virgin':         'https://wiki.bloodontheclocktower.com/images/d/d3/Icon_virgin.png',
+    'Slayer':         'https://wiki.bloodontheclocktower.com/images/d/d3/Icon_slayer.png',
+    'Soldier':        'https://wiki.bloodontheclocktower.com/images/c/c3/Icon_soldier.png',
+    'Mayor':          'https://wiki.bloodontheclocktower.com/images/a/a1/Icon_mayor.png',
+    'Butler':         'https://wiki.bloodontheclocktower.com/images/1/19/Icon_butler.png',
+    'Drunk':          'https://wiki.bloodontheclocktower.com/images/4/4a/Icon_drunk.png',
+    'Recluse':        'https://wiki.bloodontheclocktower.com/images/6/60/Icon_recluse.png',
+    'Saint':          'https://wiki.bloodontheclocktower.com/images/c/c9/Icon_saint.png',
+    'Poisoner':       'https://wiki.bloodontheclocktower.com/images/b/b1/Icon_poisoner.png',
+    'Spy':            'https://wiki.bloodontheclocktower.com/images/5/54/Icon_spy.png',
+    'Scarlet Woman':  'https://wiki.bloodontheclocktower.com/images/1/13/Icon_scarletwoman.png',
+    'Baron':          'https://wiki.bloodontheclocktower.com/images/6/6d/Icon_baron.png',
+    'Imp':            'https://wiki.bloodontheclocktower.com/images/5/5c/Icon_imp.png',
+    'Apprentice':     'https://wiki.bloodontheclocktower.com/images/0/03/Icon_apprentice.png',
+    'Barista':        'https://wiki.bloodontheclocktower.com/images/2/24/Icon_barista.png',
+    'Beggar':         'https://wiki.bloodontheclocktower.com/images/e/e3/Icon_beggar.png',
+    'Bone Collector': 'https://wiki.bloodontheclocktower.com/images/9/9e/Icon_bonecollector.png',
+    'Bureaucrat':     'https://wiki.bloodontheclocktower.com/images/b/b1/Icon_bureaucrat.png',
+    'Butcher':        'https://wiki.bloodontheclocktower.com/images/e/e3/Icon_butcher.png',
+    'Deviant':        'https://wiki.bloodontheclocktower.com/images/a/a5/Icon_deviant.png',
+    'Gangster':       'https://wiki.bloodontheclocktower.com/images/a/a5/Icon_gangster.png',
+    'Gunslinger':     'https://wiki.bloodontheclocktower.com/images/1/1c/Icon_gunslinger.png',
+    'Harlot':         'https://wiki.bloodontheclocktower.com/images/6/60/Icon_harlot.png',
+    'Judge':          'https://wiki.bloodontheclocktower.com/images/5/59/Icon_judge.png',
+    'Matron':         'https://wiki.bloodontheclocktower.com/images/2/21/Icon_matron.png',
+    'Scapegoat':      'https://wiki.bloodontheclocktower.com/images/3/3a/Icon_scapegoat.png',
+    'Thief':          'https://wiki.bloodontheclocktower.com/images/7/77/Icon_thief.png',
+  };
+
+  const CAT_LABELS = {
+    townsfolk: 'Townsfolk',
+    outsider:  'Outsiders',
+    minion:    'Minions',
+    demon:     'Demon',
+    traveler:  'Travelers',
+  };
+  const CAT_ORDER = ['townsfolk','outsider','minion','demon','traveler'];
+
+  // ── Combobox factory ───────────────────────────────
+  // Returns { getValue, setValue, clear } for a combobox instance.
+  // Input is a plain (non-readonly) text field; the toggle button opens the
+  // list without focusing the input (so mobile keyboard doesn't appear on
+  // toggle — only when the user taps the text field directly).
+  function makeCombo(inputId, dropdownId, clearBtnId, toggleBtnId) {
+    const input     = document.getElementById(inputId);
+    const dropdown  = document.getElementById(dropdownId);
+    const clearBtn  = document.getElementById(clearBtnId);
+    const toggleBtn = toggleBtnId ? document.getElementById(toggleBtnId) : null;
+    // Move dropdown to body so CSS transforms on the modal don't clip it
+    document.body.appendChild(dropdown);
+    let activeIdx  = -1;
+    let currentVal = '';   // committed role name
+    let isOpen     = false;
+
+    function getFilteredGroups(q) {
+      const ql = q.toLowerCase();
+      const groups = [];
+      CAT_ORDER.forEach(cat => {
+        const matches = ROLES.filter(r =>
+          r.cat === cat && r.name.toLowerCase().includes(ql)
+        );
+        if (matches.length) groups.push({ cat, matches });
+      });
+      return groups;
+    }
+
+
+
+    function buildDropdown(q) {
+      const groups = getFilteredGroups(q);
+      dropdown.innerHTML = '';
+      activeIdx = -1;
+      if (!groups.length) {
+        dropdown.innerHTML = '<div class="combo-no-results">No roles found</div>';
+        return;
+      }
+      let optIdx = 0;
+      groups.forEach(({ cat, matches }) => {
+        const grpLabel = document.createElement('div');
+        grpLabel.className = 'combo-group-label';
+        grpLabel.textContent = CAT_LABELS[cat];
+        dropdown.appendChild(grpLabel);
+        matches.forEach(role => {
+          const opt = document.createElement('div');
+          opt.className = 'combo-option' + (role.name === currentVal ? ' selected-opt' : '');
+          opt.dataset.role    = role.name;
+          opt.dataset.cat     = role.cat;
+          opt.dataset.optIdx  = optIdx++;
+          opt.setAttribute('role', 'option');
+          const iconSrc  = ROLE_ICONS[role.name];
+          const iconHtml = iconSrc
+            ? `<img src="${esc(iconSrc)}" alt="" style="width:20px;height:20px;object-fit:contain;margin-left:auto;flex-shrink:0;">`
+            : '';
+          opt.innerHTML = `<span class="combo-dot dot-${role.cat}"></span>${esc(role.name)}${iconHtml}`;
+          opt.addEventListener('mousedown', e => { e.preventDefault(); selectRole(role.name); });
+          // Per-option touch: measure Y displacement to tell tap from scroll.
+          // Never call preventDefault() — touchend may be non-cancelable during scroll.
+          let optTouchY = 0;
+          opt.addEventListener('touchstart', e => { optTouchY = e.touches[0].clientY; }, { passive: true });
+          opt.addEventListener('touchend', e => {
+            if (Math.abs(e.changedTouches[0].clientY - optTouchY) > 8) return; // scroll, not tap
+            selectRole(role.name);
+          });
+          dropdown.appendChild(opt);
+        });
+      });
+    }
+
+    function positionDropdown() {
+      const rect = input.getBoundingClientRect();
+      if (!rect.width) return;
+      const spaceBelow = window.innerHeight - rect.bottom - 8;
+      const spaceAbove = rect.top - 8;
+      // Width: at least the input width, at most the viewport minus 8px margins
+      const vw = window.innerWidth;
+      const desiredW = Math.max(rect.width, 220);
+      const clampedW = Math.min(desiredW, vw - 16);
+      // Left: align with input, but shift left if it would overflow the right edge
+      const rawLeft  = rect.left;
+      const clampedLeft = Math.max(8, Math.min(rawLeft, vw - clampedW - 8));
+      dropdown.style.minWidth = '';
+      dropdown.style.width = clampedW + 'px';
+      dropdown.style.left  = clampedLeft + 'px';
+      if (spaceBelow >= 150 || spaceBelow >= spaceAbove) {
+        dropdown.style.top       = (rect.bottom + 4) + 'px';
+        dropdown.style.bottom    = 'auto';
+        dropdown.style.maxHeight = Math.min(spaceBelow, window.innerHeight * 0.45) + 'px';
+      } else {
+        dropdown.style.top       = 'auto';
+        dropdown.style.bottom    = (window.innerHeight - rect.top + 4) + 'px';
+        dropdown.style.maxHeight = Math.min(spaceAbove, window.innerHeight * 0.45) + 'px';
+      }
+    }
+
+    // q = filter string; omit/undefined → smart default (full list if value committed)
+    function open(q) {
+      const filter = (q !== undefined) ? q : (currentVal ? '' : input.value);
+      buildDropdown(filter);
+      dropdown.classList.add('open');
+      input.setAttribute('aria-expanded', 'true');
+      isOpen = true;
+      positionDropdown();
+    }
+
+    function close() {
+      dropdown.classList.remove('open');
+      input.setAttribute('aria-expanded', 'false');
+      activeIdx = -1;
+      isOpen    = false;
+      input.value = currentVal; // restore committed display value
+      updateClearBtn();
+    }
+
+    function selectRole(name) {
+      currentVal = name;
+      input.value = name;
+      isOpen = false;
+      dropdown.classList.remove('open');
+      input.setAttribute('aria-expanded', 'false');
+      updateClearBtn();
+      input.blur(); // dismiss keyboard after selection
+    }
+
+    function updateClearBtn() {
+      clearBtn.classList.toggle('visible', !!currentVal);
+    }
+
+    function moveActive(dir) {
+      const opts = dropdown.querySelectorAll('.combo-option');
+      if (!opts.length) return;
+      opts[activeIdx]?.classList.remove('active');
+      activeIdx = Math.max(0, Math.min(opts.length - 1, activeIdx + dir));
+      opts[activeIdx].classList.add('active');
+      opts[activeIdx].scrollIntoView({ block: 'nearest' });
+    }
+
+    // ── Toggle button ────────────────────────────────
+    // mousedown: keep input focused (e.preventDefault prevents focus shift to button)
+    // click: actually toggle (fires reliably after mousedown on desktop)
+    // touchend: handle mobile tap; e.preventDefault() stops synthesised mouse events
+    if (toggleBtn) {
+      let togTouchMoved = false;
+      toggleBtn.addEventListener('mousedown', e => e.preventDefault());
+      toggleBtn.addEventListener('click', () => {
+        if (isOpen) { close(); } else { open(''); }
+      });
+      toggleBtn.addEventListener('touchstart', () => { togTouchMoved = false; }, { passive: true });
+      toggleBtn.addEventListener('touchmove',  () => { togTouchMoved = true;  }, { passive: true });
+      toggleBtn.addEventListener('touchend', e => {
+        if (togTouchMoved) return;        // was a scroll, not a tap
+        e.preventDefault();              // stop synthesised mousedown / click
+        if (isOpen) { close(); } else { open(''); }
+      });
+    }
+
+    // ── Input: focus opens dropdown (keyboard appears naturally) ─
+    input.addEventListener('focus', () => {
+      if (!isOpen) open(); // smart default: full list if val committed, filtered otherwise
+    });
+
+    // ── Typing filters the list ──────────────────────
+    input.addEventListener('input', () => {
+      currentVal = '';
+      buildDropdown(input.value);
+      if (!isOpen) {
+        dropdown.classList.add('open');
+        input.setAttribute('aria-expanded', 'true');
+        isOpen = true;
+      }
+      positionDropdown();
+      updateClearBtn();
+    });
+
+    // ── Blur: close after a delay so option clicks can register ─
+    input.addEventListener('blur', () => {
+      setTimeout(() => {
+        const af = document.activeElement;
+        // Don't close if focus went to another part of this combo
+        if (af === toggleBtn || af === clearBtn || (af && dropdown.contains(af))) return;
+        close();
+      }, 200);
+    });
+
+    // ── Keyboard navigation ──────────────────────────
+    input.addEventListener('keydown', e => {
+      switch (e.key) {
+        case 'ArrowDown': e.preventDefault(); isOpen ? moveActive(1)  : open(''); break;
+        case 'ArrowUp':   e.preventDefault(); isOpen ? moveActive(-1) : open(''); break;
+        case 'Enter':
+          e.preventDefault();
+          if (isOpen) {
+            const active = dropdown.querySelector('.combo-option.active');
+            active ? selectRole(active.dataset.role) : close();
+          }
+          break;
+        case 'Escape': currentVal = ''; input.value = ''; close(); break;
+      }
+    });
+
+    // ── Clear button ────────────────────────────────
+    // mousedown: keep input focused (prevent focus-loss race with blur handler)
+    clearBtn.addEventListener('mousedown', e => e.preventDefault());
+    clearBtn.addEventListener('click', () => {
+      currentVal = '';
+      input.value = '';
+      updateClearBtn();
+      open('');
+      // Re-position after layout settles (clear btn hides, affecting rect)
+      requestAnimationFrame(positionDropdown);
+    });
+    clearBtn.addEventListener('touchend', e => {
+      e.preventDefault();
+      currentVal = '';
+      input.value = '';
+      updateClearBtn();
+      open('');
+      // Re-position after layout settles; on mobile also after keyboard may shift
+      requestAnimationFrame(() => requestAnimationFrame(positionDropdown));
+    });
+
+    // ── Click outside: close dropdown ───────────────
+    document.addEventListener('click', e => {
+      if (!isOpen) return;
+      const wrap = input.closest('.combo-wrap');
+      // dropdown is appended to body, so check it separately
+      if ((wrap && wrap.contains(e.target)) || dropdown.contains(e.target)) return;
+      close();
+    });
+
+    return {
+      getValue()  { return currentVal || input.value.trim(); },
+      setValue(v) { currentVal = v; input.value = v; updateClearBtn(); },
+      clear()     { currentVal = ''; input.value = ''; updateClearBtn(); },
+    };
+  }
+
+  // ── App state ──────────────────────────────────────
+  const MIN = 5, MAX = 20;
+  const LS_KEY = 'botc_town_square_v1';
+  let seatCount = 8;
+  let round = 1;
+  let phase = 'day';
+  let seats = [];
+  let seatPositions = []; // [{x,y}|null] per seat; null = use default
+  let moveMode = false;
+  let selected = null;
+  let comboRole, comboTrueRole;
+  let nominations = {};  // { 'day-1': [{from, to}, ...], ... }
+  let nomMode = false;   // false | 'from' | 'to' | 'votes'
+  let nomFrom = null;
+  let nomVoteKey = null;
+  let nomVoteIdx = null;
+  let poisonSnapshots = {};  // { 'night-1': [seatIdx, ...], ... }
+  let deathsCollapsed = false;
+  let poisonedCollapsed = false;
+  let allseatsCollapsed = false;
+
+  function loadCollapsePrefs() {
+    try {
+      const raw = localStorage.getItem('botc_collapse_prefs');
+      if (raw) {
+        const p = JSON.parse(raw);
+        deathsCollapsed   = !!p.deaths;
+        poisonedCollapsed = !!p.poisoned;
+        allseatsCollapsed = !!p.allseats;
+      }
+    } catch(e) {}
+  }
+  function saveCollapsePrefs() {
+    try {
+      localStorage.setItem('botc_collapse_prefs', JSON.stringify({
+        deaths: deathsCollapsed, poisoned: poisonedCollapsed, allseats: allseatsCollapsed
+      }));
+    } catch(e) {}
+  }
+
+  function blankSeat() {
+    return { name:'', role:'', trueRole:'', alignment:'unknown', notes:'', dead:false, usedVote:false, suspicious:false, drunk:false, poisoned:false, diedAt:null, poisonedAt:null };
+  }
+
+  function initSeats(n) {
+    const old = seats.slice();
+    const oldPos = seatPositions.slice();
+    seats = Array.from({length: n}, (_, i) => old[i] || blankSeat());
+    // New seats always get default (null) position; existing custom positions preserved
+    seatPositions = Array.from({length: n}, (_, i) => (i < old.length ? (oldPos[i] || null) : null));
+  }
+
+  // ── Persistence ────────────────────────────────────
+  function saveState() {
+    try {
+      localStorage.setItem(LS_KEY, JSON.stringify({ seatCount, round, phase, seats, seatPositions }));
+    } catch(e) {}
+  }
+
+  function loadState() {
+    try {
+      const raw = localStorage.getItem(LS_KEY);
+      if (!raw) return false;
+      const s = JSON.parse(raw);
+      seatCount = Math.min(MAX, Math.max(MIN, s.seatCount || 8));
+      round     = Math.max(1, s.round || 1);
+      phase     = s.phase === 'night' ? 'night' : 'day';
+      seats         = Array.from({length: seatCount}, (_, i) => Object.assign(blankSeat(), s.seats?.[i] || {}));
+      seatPositions = Array.from({length: seatCount}, (_, i) =>
+        (s.seatPositions && s.seatPositions[i]) ? s.seatPositions[i] : null
+      );
+      return true;
+    } catch(e) { return false; }
+  }
+
+  function clearStorage() {
+    try { localStorage.removeItem(LS_KEY); } catch(e) {}
+  }
+
+  function esc(str) {
+    return str.replace(/[&<>]/g, c => ({'&':'\u0026','<':'\u003c','>':'\u003e'}[c]));
+  }
+
+  // ── Default seat position ──────────────────────────
+  function defaultPos(i, n, W, H) {
+    const cx = W / 2, cy = H / 2;
+    const maxR = Math.min(W, H) / 2;
+    const R = maxR * (n <= 7 ? 0.62 : n <= 10 ? 0.67 : n <= 13 ? 0.71 : 0.75);
+    const angle = (2 * Math.PI * i / n) - Math.PI / 2;
+    return { x: cx + R * Math.cos(angle), y: cy + R * Math.sin(angle) };
+  }
+
+  // ── Render circle ──────────────────────────────────
+  function renderCircle() {
+    const container = document.getElementById('seats-container');
+    const stage     = document.getElementById('circle-stage');
+    const W = stage.offsetWidth  || 400;
+    const H = stage.offsetHeight || W;
+    const n = seatCount;
+    document.getElementById('circle-inner').classList.toggle('nom-mode', !!nomMode);
+    container.innerHTML = '';
+    seats.forEach((s, i) => {
+      const def = defaultPos(i, n, W, H);
+      const pos = seatPositions[i] || def;
+      const el = document.createElement('div');
+      const voteList = (nomMode === 'votes' && nomVoteKey && nomVoteIdx !== null)
+        ? ((nominations[nomVoteKey]?.[nomVoteIdx]?.votes) || []) : [];
+      el.className = 'seat' +
+        (s.dead                                         ? ' dead'       : '') +
+        (s.alignment === 'suspicious'                   ? ' suspicious' : '') +
+        (s.alignment === 'good'                         ? ' align-good' : '') +
+        (s.alignment === 'evil'                         ? ' align-evil' : '') +
+        (selected === i                                 ? ' selected'   : '') +
+        (nomMode === 'to' && nomFrom === i              ? ' nom-from'   : '') +
+        (nomMode === 'votes' && voteList.includes(i)    ? ' nom-voted'  : '');
+      el.style.left = pos.x + 'px';
+      el.style.top  = pos.y + 'px';
+      el.dataset.idx = i;
+
+      const roleData = s.role ? ROLES.find(r => r.name === s.role) : null;
+      const badgeHtml = '';
+      const isBluff = !!(s.role && s.trueRole && s.role !== s.trueRole);
+      const nameHtml = s.name
+        ? `<span class="seat-name">${isBluff ? '<span class="bluff-mark">*</span>' : ''}${esc(s.name)}</span>`
+        : `<span class="seat-name empty">Empty</span>`;
+      // Show true role name/icon if set, otherwise fall back to claimed role
+      const displayRole = s.trueRole || s.role;
+      const iconSrc = displayRole && ROLE_ICONS[displayRole] ? ROLE_ICONS[displayRole] : null;
+      const roleIconHtml = iconSrc
+        ? `<img class="seat-role-icon" src="${esc(iconSrc)}" alt="${esc(displayRole)}" title="${esc(displayRole)}">`
+        : '';
+      const drunkIconSrc = s.poisoned
+        ? 'https://wiki.bloodontheclocktower.com/images/b/b1/Icon_poisoner.png'
+        : s.drunk ? ROLE_ICONS['Drunk'] : null;
+      const drunkIconHtml = drunkIconSrc
+        ? `<img class="seat-drunk-icon" src="${esc(drunkIconSrc)}" alt="${s.poisoned?'Poisoned':'Drunk'}" title="${s.poisoned?'Poisoned':'Drunk'}">`
+        : '';
+      const roleHtml = displayRole ? `<span class="seat-role">${esc(displayRole)}</span>` : '';
+      const displayRoleData = displayRole ? ROLES.find(r => r.name === displayRole) : null;
+      const dotClass = displayRoleData ? ` dot-${displayRoleData.cat}` : (roleData ? ` dot-${roleData.cat}` : '');
+      const dayNoms = nominations['day-' + round] || [];
+      const isNominated = phase === 'day' && dayNoms.some(n => n.to === i);
+
+      const statusIcons = [
+        isNominated  ? '<span class="seat-status-icon nominated">⚖</span>' : '',
+
+        s.usedVote   ? '<span class="seat-status-icon ghost-vote">👻</span>' : '',
+      ].join('');
+      const statusStrip = statusIcons
+        ? `<span class="seat-status-strip">${statusIcons}</span>` : '';
+
+      el.innerHTML = `${roleIconHtml}${drunkIconHtml}<div class="seat-inner">
+        ${badgeHtml}
+        <span class="seat-num">${i + 1}</span>
+        ${nameHtml}
+        ${roleHtml}
+        ${statusStrip}
+        ${roleData ? `<span class="seat-dot${dotClass}"></span>` : ''}
+      </div>`;
+
+      if (moveMode) {
+        attachDrag(el, i);
+      } else if (nomMode) {
+        el.addEventListener('click', () => handleNomClick(i));
+      } else {
+        el.addEventListener('click', () => openSeat(i));
+      }
+      container.appendChild(el);
+    });
+    updateMeta();
+    renderList();
+  }
+
+  // ── Drag logic ─────────────────────────────────────
+  function attachDrag(el, idx) {
+    let startPx, startPy, startEx, startEy, dragged;
+
+    function onStart(e) {
+      e.preventDefault();
+      dragged = false;
+      const stage = document.getElementById('circle-stage');
+      const rect  = stage.getBoundingClientRect();
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      startPx = clientX;
+      startPy = clientY;
+      startEx = parseFloat(el.style.left);
+      startEy = parseFloat(el.style.top);
+      el.classList.add('dragging');
+      el.style.zIndex = 10;
+
+      function onMove(e2) {
+        const cx2 = e2.touches ? e2.touches[0].clientX : e2.clientX;
+        const cy2 = e2.touches ? e2.touches[0].clientY : e2.clientY;
+        const dx = cx2 - startPx, dy = cy2 - startPy;
+        if (Math.abs(dx) + Math.abs(dy) > 3) dragged = true;
+        el.style.left = (startEx + dx) + 'px';
+        el.style.top  = (startEy + dy) + 'px';
+        seatPositions[idx] = { x: startEx + dx, y: startEy + dy };
+      }
+
+      function onEnd() {
+        el.classList.remove('dragging');
+        el.style.zIndex = '';
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup',   onEnd);
+        document.removeEventListener('touchmove', onMove);
+        document.removeEventListener('touchend',  onEnd);
+        if (dragged) saveState();
+      }
+
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup',   onEnd);
+      document.addEventListener('touchmove', onMove, { passive: false });
+      document.addEventListener('touchend',  onEnd);
+    }
+
+    el.addEventListener('mousedown',  onStart);
+    el.addEventListener('touchstart', onStart, { passive: false });
+  }
+
+  function updateMeta() {
+    const isEvil = s => s.alignment === 'evil';
+    const alive     = seats.filter(s => !s.dead);
+    const dead      = seats.filter(s =>  s.dead);
+    const aliveGood = alive.filter(s => !isEvil(s)).length;
+    const aliveEvil = alive.filter(isEvil).length;
+    const deadGood  = dead.filter(s => !isEvil(s)).length;
+    const deadEvil  = dead.filter(isEvil).length;
+    document.getElementById('meta-alive').textContent      = alive.length;
+    document.getElementById('meta-dead').textContent       = dead.length;
+    document.getElementById('meta-alive-good').textContent = aliveGood;
+    document.getElementById('meta-alive-evil').textContent = aliveEvil;
+    document.getElementById('meta-dead-good').textContent  = deadGood;
+    document.getElementById('meta-dead-evil').textContent  = deadEvil;
+  }
+
+  // ── Seat panel ─────────────────────────────────────
+  function openSeat(i) {
+    selected = i;
+    renderCircle();
+    const s = seats[i];
+    /* seat-panel shown via modal */
+    document.getElementById('panel-title').textContent = `Seat ${i + 1}`;
+    document.getElementById('panel-sub').textContent   = s.name ? `Editing ${s.name}` : 'No player assigned';
+    document.getElementById('f-name').value      = s.name;
+    comboRole.setValue(s.role);
+    comboTrueRole.setValue(s.trueRole);
+    document.getElementById('f-alignment').value = s.alignment;
+    document.getElementById('f-notes').value     = s.notes;
+    setTog('tog-dead',      s.dead,      'on-dead');
+    setTog('tog-vote',      s.usedVote,  'on-vote');
+    document.getElementById('tog-vote').style.display = s.dead ? '' : 'none';
+    setTog('tog-drunk',     s.drunk,     'on-drunk');
+    setTog('tog-poisoned',  s.poisoned,  'on-poisoned');
+    openModal('edit');
+  }
+
+  function setTog(id, active, cls) {
+    const el = document.getElementById(id);
+    el._active = active;
+    el.className = 'tog' + (active ? ' ' + cls : '');
+  }
+
+  function saveSeat() {
+    if (selected === null) return;
+    const s = seats[selected];
+    const wasDead      = s.dead;
+    const wasPoisoned   = s.poisoned;
+    s.name      = document.getElementById('f-name').value.trim();
+    s.role      = comboRole.getValue();
+    s.trueRole  = comboTrueRole.getValue();
+    s.alignment = document.getElementById('f-alignment').value;
+    s.notes     = document.getElementById('f-notes').value.trim();
+    s.dead      = !!document.getElementById('tog-dead')._active;
+    s.usedVote  = !!document.getElementById('tog-vote')._active;
+    s.drunk     = !!document.getElementById('tog-drunk')._active;
+    s.poisoned  = !!document.getElementById('tog-poisoned')._active;
+    s.suspicious= (s.alignment === 'suspicious');
+    if (s.dead && !wasDead)         s.diedAt     = { phase, round };
+    if (!s.dead && wasDead)         s.diedAt     = null;
+    if (s.poisoned && !wasPoisoned) s.poisonedAt = { phase, round };
+    if (!s.poisoned && wasPoisoned) s.poisonedAt = null;
+    closePanel();
+  }
+
+  function closePanel() {
+    selected = null;
+    renderCircle();
+    saveState();
+    closeModal('edit');
+  }
+
+  function clearSeat() {
+    if (selected === null) return;
+    seats[selected] = blankSeat();
+    closePanel();
+  }
+
+  // ── Player list ────────────────────────────────────
+  function renderList() {
+    const list = document.getElementById('player-list');
+    const named = seats.filter(s => s.name);
+    const lcEl = document.getElementById('list-count');
+    if (lcEl) lcEl.textContent = named.length;
+
+    // All seats collapsible state
+    const allseatsBody    = document.getElementById('allseats-body');
+    const allseatsChevron = document.getElementById('allseats-chevron');
+    if (allseatsBody) {
+      allseatsBody.classList.toggle('collapsed', allseatsCollapsed);
+      allseatsChevron.style.transform = allseatsCollapsed ? 'rotate(-90deg)' : '';
+    }
+
+    if (!named.length) {
+      list.innerHTML = '<div class="no-players">No players assigned yet. Click a seat to add one.</div>';
+    } else {
+      const roleData = name => ROLES.find(r => r.name === name);
+      list.innerHTML = seats.map((s, i) => {
+        const rd = s.role ? roleData(s.role) : null;
+        const roleIconSrc = s.role && ROLE_ICONS[s.role] ? ROLE_ICONS[s.role] : null;
+        const roleIconHtml = roleIconSrc ? `<img class="pli-role-icon" src="${esc(roleIconSrc)}" alt="">` : '';
+        const roleBadge = rd
+          ? `<span class="pli-badge tag-${rd.cat}">${esc(s.role)}</span>`
+          : s.role ? `<span class="pli-role">${esc(s.role)}</span>` : '';
+        const alignBadge = s.alignment !== 'unknown'
+          ? `<span class="pli-badge badge-${s.alignment}">${s.alignment}</span>`
+          : '';
+        const dotExtra = s.alignment === 'suspicious' ? ' susp'
+          : s.alignment === 'good' ? ' align-good'
+          : s.alignment === 'evil' ? ' align-evil' : '';
+        const isBluff = !!(s.role && s.trueRole && s.role !== s.trueRole);
+        const statusIcons = [
+          s.usedVote ? '<span class="pli-status-icon">👻</span>' : '',
+        ].join('');
+        return `<div class="pli${selected===i?' selected':''}" data-idx="${i}">
+          <span class="pli-num">${i+1}</span>
+          <span class="pli-dot${s.dead?' dead':''}${dotExtra}"></span>
+          <span class="pli-name${s.name?'':' empty'}">${s.name ? (isBluff ? '<span class="bluff-mark">*</span>' : '') + esc(s.name) : 'Empty'}</span>
+          ${statusIcons}
+          ${roleIconHtml}${roleBadge}
+          ${alignBadge}
+        </div>`;
+      }).join('');
+      list.querySelectorAll('.pli').forEach(el => {
+        el.addEventListener('click', () => { closeModal('list'); openSeat(parseInt(el.dataset.idx)); });
+      });
+    }
+
+    // Helper: build a pli-style row for deaths/poisoned
+    function logEntryHtml(s, i, icon) {
+      const displayRole = s.trueRole || s.role;
+      const roleIconSrc = displayRole && ROLE_ICONS[displayRole] ? ROLE_ICONS[displayRole] : null;
+      const roleIconHtml = roleIconSrc ? `<img class="pli-role-icon" src="${esc(roleIconSrc)}" alt="">` : '';
+      const rd = displayRole ? ROLES.find(r => r.name === displayRole) : null;
+      const roleBadge = rd
+        ? `<span class="pli-badge tag-${rd.cat}">${esc(displayRole)}</span>`
+        : displayRole ? `<span class="pli-role">${esc(displayRole)}</span>` : '';
+      return `<div class="death-entry">
+        <span style="font-size:13px;flex-shrink:0;">${icon}</span>
+        <span class="death-name">${s.name ? esc(s.name) : 'Seat ' + (i + 1)}</span>
+        ${roleIconHtml}${roleBadge}
+      </div>`;
+    }
+
+    // Deaths log
+    const deathsSection = document.getElementById('deaths-section');
+    const deathsList    = document.getElementById('deaths-list');
+    const deathsBody    = document.getElementById('deaths-body');
+    const deathsChevron = document.getElementById('deaths-chevron');
+    const dead = seats.map((s, i) => ({ s, i })).filter(({ s }) => s.dead && s.diedAt);
+    if (dead.length) {
+      const groups = {};
+      dead.forEach(({ s, i }) => {
+        const label = (s.diedAt.phase === 'day' ? 'Day ' : 'Night ') + s.diedAt.round;
+        if (!groups[label]) groups[label] = { phase: s.diedAt.phase, round: s.diedAt.round, entries: [] };
+        groups[label].entries.push({ s, i });
+      });
+      const sortedKeys = Object.keys(groups).sort((a, b) => {
+        const ga = groups[a], gb = groups[b];
+        if (ga.round !== gb.round) return ga.round - gb.round;
+        return ga.phase === 'day' ? -1 : 1; // day before night
+      });
+      deathsList.innerHTML = sortedKeys.map(label =>
+        `<div class="death-group">
+          <div class="death-cycle-label">${label}</div>
+          ${groups[label].entries.map(({ s, i }) => logEntryHtml(s, i, '☠')).join('')}
+        </div>`
+      ).join('');
+      deathsSection.style.display = '';
+      deathsBody.classList.toggle('collapsed', deathsCollapsed);
+      deathsChevron.style.transform = deathsCollapsed ? 'rotate(-90deg)' : '';
+    } else {
+      deathsSection.style.display = 'none';
+    }
+
+    // Poisoned log — grouped by cycle
+    const poisonedSection = document.getElementById('poisoned-section');
+    const poisonedList    = document.getElementById('poisoned-list');
+    const poisonedBody    = document.getElementById('poisoned-body');
+    const poisonedChevron = document.getElementById('poisoned-chevron');
+    const poisonedSeats = seats.map((s, i) => ({ s, i })).filter(({ s }) => s.poisonedAt);
+    if (poisonedSeats.length) {
+      const groups = {};
+      poisonedSeats.forEach(({ s, i }) => {
+        const label = (s.poisonedAt.phase === 'day' ? 'Day ' : 'Night ') + s.poisonedAt.round;
+        if (!groups[label]) groups[label] = { phase: s.poisonedAt.phase, round: s.poisonedAt.round, entries: [] };
+        groups[label].entries.push({ s, i });
+      });
+      const sortedKeys = Object.keys(groups).sort((a, b) => {
+        const ga = groups[a], gb = groups[b];
+        if (ga.round !== gb.round) return ga.round - gb.round;
+        return ga.phase === 'day' ? -1 : 1;
+      });
+      poisonedList.innerHTML = sortedKeys.map(label =>
+        `<div class="death-group">
+          <div class="death-cycle-label">${label}</div>
+          ${groups[label].entries.map(({ s, i }) => logEntryHtml(s, i, '🧪')).join('')}
+        </div>`
+      ).join('');
+      poisonedSection.style.display = '';
+      poisonedBody.classList.toggle('collapsed', poisonedCollapsed);
+      poisonedChevron.style.transform = poisonedCollapsed ? 'rotate(-90deg)' : '';
+    } else {
+      poisonedSection.style.display = 'none';
+    }
+  }
+
+  // ── Nominations ───────────────────────────────────
+  function nomKey() { return 'day-' + round; }
+
+  function seatLabel(idx) {
+    const s = seats[idx];
+    return s && s.name ? s.name : 'Seat ' + (idx + 1);
+  }
+
+  function saveNominations() {
+    try { localStorage.setItem('botc_nominations', JSON.stringify(nominations)); } catch(e) {}
+  }
+
+  function loadNominations() {
+    try {
+      const raw = localStorage.getItem('botc_nominations');
+      if (raw) nominations = JSON.parse(raw);
+    } catch(e) {}
+  }
+
+  function savePoisonSnapshots() {
+    try { localStorage.setItem('botc_poison_snaps', JSON.stringify(poisonSnapshots)); } catch(e) {}
+  }
+
+  function loadPoisonSnapshots() {
+    try {
+      const raw = localStorage.getItem('botc_poison_snaps');
+      if (raw) poisonSnapshots = JSON.parse(raw);
+    } catch(e) {}
+  }
+
+  function updateNomBadge() {
+    const count = phase === 'night' ? 0 : (nominations[nomKey()] || []).length;
+    const el = document.getElementById('nom-day-count');
+    if (el) el.textContent = count;
+  }
+
+  function handleNomClick(i) {
+    if (nomMode === 'from') {
+      nomFrom = i;
+      nomMode = 'to';
+      const bar = document.getElementById('nom-step-bar');
+      bar.textContent = '⚖ ' + seatLabel(i) + ' is nominating… pick target';
+      renderCircle();
+    } else if (nomMode === 'to') {
+      const key = nomKey();
+      if (!nominations[key]) nominations[key] = [];
+      nominations[key].push({ from: nomFrom, to: i, votes: [] });
+      saveNominations();
+      cancelNomMode();
+      updateNomBadge();
+      // Automatically start vote-picking for the nomination just added
+      const newIdx = nominations[key].length - 1;
+      startVoteMode(key, newIdx);
+    } else if (nomMode === 'votes') {
+      const entry = nominations[nomVoteKey]?.[nomVoteIdx];
+      if (!entry) return;
+      if (!entry.votes) entry.votes = [];
+      const pos = entry.votes.indexOf(i);
+      if (pos === -1) { entry.votes.push(i); }
+      else { entry.votes.splice(pos, 1); }
+      saveNominations();
+      updateVoteBtn();
+      renderCircle();
+    }
+  }
+
+  function updateVoteBtn() {
+    const entry = nominations[nomVoteKey]?.[nomVoteIdx];
+    const n = entry?.votes?.length || 0;
+    const alive = entry?.aliveCount ?? seats.filter(s => !s.dead).length;
+    const btn = document.getElementById('btn-nom');
+    btn.innerHTML = '✓ <span class="btn-label">Done · </span><span class="nom-day-count" id="nom-day-count">' + n + '/' + alive + ' votes</span>';
+  }
+
+  function startVoteMode(key, idx) {
+    if (moveMode) return;
+    closeModal('nominations');
+    nomMode   = 'votes';
+    nomVoteKey = key;
+    nomVoteIdx = idx;
+    const entry = nominations[key]?.[idx];
+    // Snapshot alive count at the moment voting is recorded
+    entry.aliveCount = seats.filter(s => !s.dead).length;
+    saveNominations();
+    const bar = document.getElementById('nom-step-bar');
+    bar.textContent = '🗳 Tap voters for ' + seatLabel(entry.to) + ' · tap again to deselect';
+    bar.classList.add('visible');
+    const btn = document.getElementById('btn-nom');
+    btn.classList.add('nom-active');
+    updateVoteBtn();
+    renderCircle();
+  }
+
+  function finishVoteMode() {
+    nomMode    = false;
+    nomVoteKey = null;
+    nomVoteIdx = null;
+    const bar = document.getElementById('nom-step-bar');
+    bar.textContent = '';
+    bar.classList.remove('visible');
+    const btn = document.getElementById('btn-nom');
+    btn.classList.remove('nom-active');
+    btn.innerHTML = '⚖ <span class="btn-label">Nominate </span><span class="nom-day-count" id="nom-day-count">' + ((nominations[nomKey()] || []).length) + '</span>';
+    renderCircle();
+    renderNominationsModal();
+    openModal('nominations');
+  }
+
+  function startNomMode() {
+    if (moveMode) return;
+    if (phase === 'night') return;
+    closeModal('edit');
+    closeModal('list');
+    closeModal('nominations');
+    selected = null;
+    nomMode = 'from';
+    nomFrom = null;
+    const bar = document.getElementById('nom-step-bar');
+    bar.textContent = 'Step 1 — tap who is nominating';
+    bar.classList.add('visible');
+    document.getElementById('btn-nom').classList.add('nom-active');
+    document.getElementById('btn-nom').innerHTML = '✕ <span class="btn-label">Cancel </span><span class="nom-day-count" id="nom-day-count">' + ((nominations[nomKey()] || []).length) + '</span>';
+    renderCircle();
+  }
+
+  function cancelNomMode() {
+    if (nomMode === 'votes') { finishVoteMode(); return; }
+    nomMode = false;
+    nomFrom = null;
+    const bar = document.getElementById('nom-step-bar');
+    bar.textContent = '';
+    bar.classList.remove('visible');
+    const btn = document.getElementById('btn-nom');
+    btn.classList.remove('nom-active');
+    btn.innerHTML = '⚖ <span class="btn-label">Nominate </span><span class="nom-day-count" id="nom-day-count">' + ((nominations[nomKey()] || []).length) + '</span>';
+    renderCircle();
+  }
+
+  function renderNominationsModal() {
+    document.getElementById('btn-nom-new').style.display = phase === 'night' ? 'none' : '';
+    const list = document.getElementById('nominations-list');
+    const allKeys = Object.keys(nominations)
+      .filter(k => nominations[k].length > 0)
+      .sort((a, b) => {
+        const na = parseInt(a.split('-')[1]);
+        const nb = parseInt(b.split('-')[1]);
+        return nb - na; // desc by day number
+      });
+    if (!allKeys.length) {
+      list.innerHTML = '<div class="nom-empty">No nominations recorded yet.<br>Use ⚖ Nominate on the circle to add one.</div>';
+      return;
+    }
+    list.innerHTML = allKeys.map(key => {
+      const dayNum = key.split('-')[1];
+      const entries = nominations[key]
+        .map((e, idx) => ({ e, idx }))
+        .reverse(); // newest nomination first, original idx preserved
+      const rows = entries.map(({ e, idx }) => {
+        const votes = e.votes || [];
+        const voterChips = votes.length
+          ? votes.map(vi => `<span class="nom-voter-chip">${esc(seatLabel(vi))}</span>`).join('')
+          : '<span style="font-size:11px;color:var(--text-muted);font-style:italic;">No votes recorded</span>';
+        const voteLabel = votes.length
+          ? `🗳 ${votes.length}/${e.aliveCount ?? '?'} votes`
+          : '🗳 Votes';
+        return `<div class="nom-entry" style="flex-direction:column;align-items:stretch;">
+          <div class="nom-entry-main">
+            <span class="nom-player">${esc(seatLabel(e.from))}</span>
+            <span class="nom-arrow">→</span>
+            <span class="nom-player">${esc(seatLabel(e.to))}</span>
+            <button class="nom-vote-btn" data-key="${esc(key)}" data-idx="${idx}">${voteLabel}</button>
+            <button class="nom-del" data-key="${esc(key)}" data-idx="${idx}" title="Remove">✕</button>
+          </div>
+          <div class="nom-voters">${voterChips}</div>
+        </div>`;
+      }).join('');
+      return `<div class="nom-day-group">
+        <div class="nom-day-label">Day ${dayNum} <span style="color:var(--text-secondary);font-size:9px;">${entries.length} nomination${entries.length !== 1 ? 's' : ''}</span></div>
+        ${rows}
+      </div>`;
+    }).join('');
+    list.querySelectorAll('.nom-del').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const key = btn.dataset.key;
+        const idx = parseInt(btn.dataset.idx);
+        if (nominations[key]) {
+          nominations[key].splice(idx, 1);
+          if (!nominations[key].length) delete nominations[key];
+          saveNominations();
+          updateNomBadge();
+          renderNominationsModal();
+        }
+      });
+    });
+    list.querySelectorAll('.nom-vote-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        startVoteMode(btn.dataset.key, parseInt(btn.dataset.idx));
+      });
+    });
+  }
+
+  // ── Phase & round (unified cycle) ───────────────────
+  // Sequence: Day1, Night1, Day2, Night2, … Day17, Night17
+  // step = 0-based index into that sequence.
+  const MAX_STEP = 33; // Night 17 = index 33
+
+  function stepToPhaseRound(step) {
+    return { phase: step % 2 === 0 ? 'day' : 'night', round: Math.floor(step / 2) + 1 };
+  }
+  function phaseRoundToStep(p, r) {
+    return (r - 1) * 2 + (p === 'night' ? 1 : 0);
+  }
+
+  function updateCycleUI() {
+    const label = document.getElementById('cycle-label');
+    if (label) {
+      label.textContent = (phase === 'day' ? 'Day ' : 'Night ') + round;
+      label.className = 'cycle-label ' + (phase === 'day' ? 'phase-day' : 'phase-night');
+    }
+    const step = phaseRoundToStep(phase, round);
+    const prev = document.getElementById('btn-cycle-prev');
+    const next = document.getElementById('btn-cycle-next');
+    if (prev) prev.disabled = step === 0;
+    if (next) next.disabled = step === MAX_STEP;
+    // Keep legacy element references alive (notes modal uses them)
+    document.getElementById('center-icon').textContent  = phase === 'day' ? '☀️' : '🌙';
+    document.getElementById('center-round').textContent = (phase === 'day' ? 'Day ' : 'Night ') + round;
+    // Hide nominate button on night
+    const btnNom = document.getElementById('btn-nom');
+    if (btnNom) btnNom.style.display = phase === 'night' ? 'none' : '';
+    if (phase === 'night' && nomMode) cancelNomMode();
+  }
+
+  function setPhase(p) {
+    phase = p;
+    updateCycleUI();
+    saveState();
+  }
+
+  function setRound(r) {
+    round = Math.max(1, r);
+    updateCycleUI();
+  }
+
+  function advanceCycle(dir) {
+    const step = phaseRoundToStep(phase, round);
+    const next = Math.max(0, Math.min(MAX_STEP, step + dir));
+    if (next === step) return;
+    // Save current cycle's poison state
+    const oldKey = (phase === 'day' ? 'day-' : 'night-') + round;
+    poisonSnapshots[oldKey] = seats.reduce((acc, s, i) => { if (s.poisoned) acc.push(i); return acc; }, []);
+    savePoisonSnapshots();
+    const pr = stepToPhaseRound(next);
+    phase = pr.phase;
+    round = pr.round;
+    // Restore or clear poison for the new cycle
+    const newKey = (phase === 'day' ? 'day-' : 'night-') + round;
+    const snap = poisonSnapshots[newKey];
+    seats.forEach((s, i) => {
+      const wasOn = s.poisoned;
+      s.poisoned = snap ? snap.includes(i) : false;
+      if (s.poisoned && !wasOn) s.poisonedAt = { phase, round };
+      // poisonedAt is NOT cleared here — it persists for the list until manually unset
+    });
+    updateCycleUI();
+    updateNomBadge();
+    renderCircle();
+    saveState();
+  }
+
+  document.getElementById('btn-cycle-prev').addEventListener('click', () => advanceCycle(-1));
+  document.getElementById('btn-cycle-next').addEventListener('click', () => advanceCycle(+1));
+
+  // ── Toggle buttons ─────────────────────────────────
+  ['tog-dead','tog-vote'].forEach(id => {
+    document.getElementById(id).addEventListener('click', function () {
+      this._active = !this._active;
+      this.className = 'tog' + (this._active ? ' ' + this.dataset.on : '');
+      if (id === 'tog-dead') {
+        const voteBtn = document.getElementById('tog-vote');
+        voteBtn.style.display = this._active ? '' : 'none';
+        if (!this._active) { voteBtn._active = false; voteBtn.className = 'tog'; }
+      }
+    });
+  });
+  // Drunk and Poisoned are mutually exclusive
+  ['tog-drunk','tog-poisoned'].forEach(id => {
+    const otherId = id === 'tog-drunk' ? 'tog-poisoned' : 'tog-drunk';
+    document.getElementById(id).addEventListener('click', function () {
+      this._active = !this._active;
+      this.className = 'tog' + (this._active ? ' ' + this.dataset.on : '');
+      if (this._active) {
+        const other = document.getElementById(otherId);
+        other._active = false;
+        other.className = 'tog';
+      }
+    });
+  });
+
+  // ── Seat count ─────────────────────────────────────
+  // Player count controls moved to Settings modal
+
+  // ── Round ──────────────────────────────────────────
+  document.getElementById('btn-round-minus') && document.getElementById('btn-round-minus').addEventListener('click', () => { setRound(round - 1); saveState(); });
+  document.getElementById('btn-round-plus')  && document.getElementById('btn-round-plus').addEventListener('click',  () => { setRound(round + 1); saveState(); });
+  document.getElementById('btn-day')   && document.getElementById('btn-day').addEventListener('click',   () => setPhase('day'));
+  document.getElementById('btn-night') && document.getElementById('btn-night').addEventListener('click', () => setPhase('night'));
+
+  // ── Panel actions ──────────────────────────────────
+  document.getElementById('btn-save').addEventListener('click', saveSeat);
+  document.getElementById('btn-clear').addEventListener('click', clearSeat);
+  document.getElementById('btn-close-panel').addEventListener('click', closePanel);
+
+  document.getElementById('f-name').addEventListener('keydown', e => {
+    if (e.key === 'Enter') saveSeat();
+  });
+
+
+  // ── Modals ────────────────────────────────────────
+  function openModal(name) {
+    // Close other modal first
+    ['edit','list'].forEach(n => { if (n !== name) closeModal(n); });
+    const overlay = document.getElementById('modal-' + name);
+    if (!overlay) return;
+    overlay.classList.add('visible');
+  }
+
+  function closeModal(name) {
+    const overlay = document.getElementById('modal-' + name);
+    if (overlay) overlay.classList.remove('visible');
+  }
+
+  // Tap backdrop to close
+  ['edit','list','confirm'].forEach(name => {
+    const overlay = document.getElementById('modal-' + name);
+    if (!overlay) return;
+    overlay.addEventListener('click', e => {
+      if (e.target === overlay) {
+        if (name === 'edit') { selected = null; renderCircle(); saveState(); }
+        closeModal(name);
+      }
+    });
+  });
+
+  // Swipe-down pill to close each modal
+  function attachModalSwipe(name, dragbarId) {
+    const overlay = document.getElementById('modal-' + name);
+    const sheet   = overlay ? overlay.querySelector('.modal-sheet') : null;
+    const dragbar = document.getElementById(dragbarId);
+    const inner   = overlay ? overlay.querySelector('.modal-inner') : null;
+    if (!overlay || !sheet || !dragbar) return;
+    let ty0 = 0, dragging = false, startedNearTop = false;
+
+    // Tapping the pill bar always closes
+    dragbar.addEventListener('click', () => {
+      if (name === 'edit') { selected = null; renderCircle(); saveState(); }
+      closeModal(name);
+    });
+
+    overlay.addEventListener('touchstart', e => {
+      startedNearTop = dragbar.contains(e.target) || (inner && inner.scrollTop <= 4);
+      ty0 = e.touches[0].clientY;
+      dragging = false;
+    }, { passive: true });
+
+    overlay.addEventListener('touchmove', e => {
+      if (!startedNearTop) return;
+      const dy = e.touches[0].clientY - ty0;
+      if (dy > 6) dragging = true;
+      if (dragging && dy > 0) {
+        sheet.style.transition = 'none';
+        sheet.style.transform = 'translateY(' + dy + 'px)';
+      }
+    }, { passive: true });
+
+    overlay.addEventListener('touchend', e => {
+      sheet.style.transition = '';
+      sheet.style.transform  = '';
+      if (dragging && (e.changedTouches[0].clientY - ty0) > 72) {
+        if (name === 'edit') { selected = null; renderCircle(); saveState(); }
+        closeModal(name);
+      }
+      dragging = false;
+    });
+  }
+
+  attachModalSwipe('edit', 'modal-edit-dragbar');
+  attachModalSwipe('list', 'modal-list-dragbar');
+
+  // ── Collapsible section toggles ───────────────────
+  ['allseats', 'deaths', 'poisoned'].forEach(key => {
+    const header = document.getElementById(key + '-header');
+    if (!header) return;
+    header.addEventListener('click', () => {
+      if (key === 'deaths')   deathsCollapsed   = !deathsCollapsed;
+      else if (key === 'poisoned') poisonedCollapsed = !poisonedCollapsed;
+      else allseatsCollapsed = !allseatsCollapsed;
+      const collapsed = key === 'deaths' ? deathsCollapsed : key === 'poisoned' ? poisonedCollapsed : allseatsCollapsed;
+      document.getElementById(key + '-body').classList.toggle('collapsed', collapsed);
+      document.getElementById(key + '-chevron').style.transform = collapsed ? 'rotate(-90deg)' : '';
+      saveCollapsePrefs();
+    });
+  });
+
+  // Floating player-list button
+  document.getElementById('btn-list').addEventListener('click', () => openModal('list'));
+
+  // ── Move mode ──────────────────────────────────────────────────
+  document.getElementById('btn-move-mode').addEventListener('click', () => {
+    moveMode = true;
+    document.getElementById('circle-inner').classList.add('move-mode');
+    document.getElementById('btn-move-done').style.display = 'inline-flex';
+    closeModal('edit');
+    closeModal('settings');
+    selected = null;
+    renderCircle();
+  });
+
+  document.getElementById('btn-move-done').addEventListener('click', () => {
+    moveMode = false;
+    document.getElementById('circle-inner').classList.remove('move-mode');
+    document.getElementById('btn-move-done').style.display = 'none';
+    renderCircle();
+  });
+
+  // ── Reset ──────────────────────────────────────────
+  function doReset() {
+    clearStorage();
+    gameNotes = {};
+    nominations = {};
+    poisonSnapshots = {};
+    deathsCollapsed = false; poisonedCollapsed = false; allseatsCollapsed = false;
+    try { localStorage.removeItem('botc_game_notes'); } catch(e) {}
+    try { localStorage.removeItem('botc_night_notes'); } catch(e) {}
+    try { localStorage.removeItem('botc_nominations'); } catch(e) {}
+    try { localStorage.removeItem('botc_poison_snaps'); } catch(e) {}
+    try { localStorage.removeItem('botc_collapse_prefs'); } catch(e) {}
+    seats = Array.from({length: seatCount}, () => blankSeat());
+    seatPositions = Array.from({length: seatCount}, () => null);
+    selected = null;
+    moveMode = false;
+    document.getElementById('btn-move-done').style.display = 'none';
+    document.getElementById('circle-inner').classList.remove('move-mode');
+    cancelNomMode();
+    closeModal('edit');
+    closeModal('list');
+    closeModal('confirm');
+    closeModal('nominations');
+    round = 1;
+    setRound(1);
+    setPhase('day');
+    renderCircle();
+  }
+
+  document.getElementById('btn-reset').addEventListener('click', () => {
+    openModal('confirm');
+  });
+  document.getElementById('btn-confirm-cancel').addEventListener('click', () => {
+    closeModal('confirm');
+  });
+  document.getElementById('btn-confirm-ok').addEventListener('click', doReset);
+
+  // Soft reset (clear round: keep positions and player names)
+  function doSoftReset() {
+    seats = seats.map(s => Object.assign(blankSeat(), { name: s.name }));
+    gameNotes = {};
+    poisonSnapshots = {};
+    deathsCollapsed = false; poisonedCollapsed = false; allseatsCollapsed = false;
+    try { localStorage.removeItem('botc_game_notes'); } catch(e) {}
+    try { localStorage.removeItem('botc_night_notes'); } catch(e) {}
+    nominations = {};
+    try { localStorage.removeItem('botc_nominations'); } catch(e) {}
+    try { localStorage.removeItem('botc_poison_snaps'); } catch(e) {}
+    try { localStorage.removeItem('botc_collapse_prefs'); } catch(e) {}
+    selected = null;
+    round = 1;
+    closeModal('edit');
+    closeModal('confirm-soft');
+    closeModal('settings');
+    closeModal('nominations');
+    setRound(1);
+    setPhase('day');
+    renderCircle();
+    saveState();
+  }
+
+  document.getElementById('btn-clear-soft').addEventListener('click', () => {
+    closeModal('settings');
+    openModal('confirm-soft');
+  });
+  document.getElementById('btn-confirm-soft-cancel').addEventListener('click', () => closeModal('confirm-soft'));
+  document.getElementById('btn-confirm-soft-ok').addEventListener('click', doSoftReset);
+
+  // Register confirm-soft in backdrop-close
+  (['confirm-soft']).forEach(name => {
+    const overlay = document.getElementById('modal-' + name);
+    if (!overlay) return;
+    overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(name); });
+  });
+
+  // ── Resize ─────────────────────────────────────────
+  let resizeTimer;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(renderCircle, 60);
+  });
+
+  // ── Init ───────────────────────────────────────────
+  // ── Game Notes (Day & Night) ──────────────────────
+  let gameNotes = {};   // { "day-1": "text", "night-1": "text", … }
+  let notesRound = 1;
+  let notesPhase = 'night';
+
+  function notesKey(ph, rn) { return ph + '-' + rn; }
+
+  function saveGameNotes() {
+    try { localStorage.setItem('botc_game_notes', JSON.stringify(gameNotes)); } catch(e) {}
+  }
+
+  function loadGameNotes() {
+    try {
+      const raw = localStorage.getItem('botc_game_notes');
+      if (raw) { gameNotes = JSON.parse(raw); return; }
+      // Migrate legacy night-only notes
+      const old = localStorage.getItem('botc_night_notes');
+      if (old) {
+        const oldData = JSON.parse(old);
+        Object.entries(oldData).forEach(([n, txt]) => { if (txt) gameNotes['night-' + n] = txt; });
+      }
+    } catch(e) {}
+  }
+
+  function renderNotesModal() {
+    const phaseLabel = notesPhase === 'day' ? 'Day' : 'Night';
+    document.getElementById('notes-phase-display').textContent = phaseLabel;
+    document.getElementById('notes-round-display').textContent = notesRound;
+    const ta = document.getElementById('notes-textarea');
+    ta.value = gameNotes[notesKey(notesPhase, notesRound)] || '';
+    ta.placeholder = notesPhase === 'day'
+      ? 'What happened today — executions, nominations, revelations…'
+      : 'What happened tonight — kills, info tokens, whispers…';
+    const descEl = document.getElementById('notes-desc');
+    if (descEl) descEl.textContent = notesPhase === 'day'
+      ? 'General notes for this day — executions, nominations, revelations…'
+      : 'General notes for this night — kills, info tokens, whispers…';
+
+    // Show all other notes in reverse-chronological order
+    const list = document.getElementById('notes-prev-list');
+    const currentKey = notesKey(notesPhase, notesRound);
+    function entryOrder(k) {
+      const m = k.match(/^(day|night)-(\d+)$/);
+      if (!m) return 99999;
+      return parseInt(m[2]) * 2 + (m[1] === 'night' ? 1 : 0);
+    }
+    const prevEntries = Object.entries(gameNotes)
+      .filter(([k, txt]) => k !== currentKey && txt && txt.trim())
+      .sort(([a], [b]) => entryOrder(b) - entryOrder(a));
+
+    if (!prevEntries.length) { list.innerHTML = ''; return; }
+    list.innerHTML = '<div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted);margin-bottom:6px;">Previous notes</div>' +
+      prevEntries.map(([k, txt]) => {
+        const m = k.match(/^(day|night)-(\d+)$/);
+        const label = m ? (m[1] === 'day' ? 'Day ' : 'Night ') + m[2] : k;
+        return `<div class="notes-prev-item">
+          <div class="notes-prev-label">${label}</div>
+          <div class="notes-prev-text">${txt.replace(/</g,'\u003c').replace(/>/g,'\u003e')}</div>
+        </div>`;
+      }).join('');
+  }
+
+  document.getElementById('notes-textarea').addEventListener('input', function() {
+    gameNotes[notesKey(notesPhase, notesRound)] = this.value;
+    saveGameNotes();
+  });
+
+  // Navigation: Day 1 → Night 1 → Day 2 → Night 2 → …
+  document.getElementById('notes-prev-round').addEventListener('click', () => {
+    if (notesPhase === 'night') {
+      notesPhase = 'day';
+    } else {
+      if (notesRound <= 1) return;
+      notesRound--;
+      notesPhase = 'night';
+    }
+    renderNotesModal();
+  });
+
+  document.getElementById('notes-next-round').addEventListener('click', () => {
+    if (notesPhase === 'day') {
+      notesPhase = 'night';
+    } else {
+      notesRound++;
+      notesPhase = 'day';
+    }
+    renderNotesModal();
+  });
+
+  document.getElementById('btn-open-notes').addEventListener('click', () => {
+    notesRound = round;  // sync to current game round
+    notesPhase = phase;  // sync to current game phase
+    renderNotesModal();
+    openModal('notes');
+  });
+
+  attachModalSwipe('notes', 'modal-notes-dragbar');
+
+  // ── Nominations UI ─────────────────────────────────
+  document.getElementById('btn-nom').addEventListener('click', () => {
+    if (nomMode) { cancelNomMode(); } else { startNomMode(); }
+  });
+
+  document.getElementById('btn-open-nominations').addEventListener('click', () => {
+    renderNominationsModal();
+    openModal('nominations');
+  });
+
+  // ── Character count modal ──────────────────────────
+  const CHARCOUNT_COLS = [5,6,7,8,9,10,11,12,13,14,'15+'];
+  function openCharCount() {
+    // Highlight column matching current seatCount
+    const table = document.querySelector('.charcount-table');
+    if (table) {
+      table.querySelectorAll('.col-active').forEach(el => el.classList.remove('col-active'));
+      const colIdx = seatCount <= 15
+        ? CHARCOUNT_COLS.indexOf(seatCount < 15 ? seatCount : '15+')
+        : CHARCOUNT_COLS.indexOf('15+');
+      if (colIdx !== -1) {
+        table.querySelectorAll('tr').forEach(row => {
+          const cells = row.querySelectorAll('th, td');
+          // +1 because first cell is label/header
+          if (cells[colIdx + 1]) cells[colIdx + 1].classList.add('col-active');
+        });
+      }
+    }
+    const overlay = document.getElementById('modal-charcount');
+    overlay.classList.add('visible');
+  }
+  document.getElementById('btn-open-charcount').addEventListener('click', openCharCount);
+  document.getElementById('btn-close-charcount').addEventListener('click', () => {
+    document.getElementById('modal-charcount').classList.remove('visible');
+  });
+  document.getElementById('modal-charcount').addEventListener('click', e => {
+    if (e.target === document.getElementById('modal-charcount'))
+      document.getElementById('modal-charcount').classList.remove('visible');
+  });
+
+  document.getElementById('btn-nom-new').addEventListener('click', () => {
+    closeModal('nominations');
+    startNomMode();
+  });
+
+  attachModalSwipe('nominations', 'modal-nominations-dragbar');
+
+  ['nominations'].forEach(name => {
+    const overlay = document.getElementById('modal-' + name);
+    if (!overlay) return;
+    overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(name); });
+  });
+
+  // ── Settings ───────────────────────────────────────
+  function syncSettingsCount() {
+    const el = document.getElementById('settings-count-display');
+    if (el) el.textContent = seatCount;
+  }
+
+  document.getElementById('btn-open-settings').addEventListener('click', () => {
+    syncSettingsCount();
+    openModal('settings');
+  });
+
+  // Player count inside settings panel
+  document.getElementById('settings-minus').addEventListener('click', () => {
+    if (seatCount <= MIN) return;
+    seatCount--;
+    document.getElementById('seat-count-display') && (document.getElementById('seat-count-display').textContent = seatCount);
+    syncSettingsCount();
+    initSeats(seatCount);
+    if (selected !== null && selected >= seatCount) {
+      selected = null; closeModal('edit');
+    }
+    renderCircle(); saveState();
+  });
+  document.getElementById('settings-plus').addEventListener('click', () => {
+    if (seatCount >= MAX) return;
+    seatCount++;
+    document.getElementById('seat-count-display') && (document.getElementById('seat-count-display').textContent = seatCount);
+    syncSettingsCount();
+    initSeats(seatCount);
+    renderCircle(); saveState();
+  });
+
+  attachModalSwipe('settings', 'modal-settings-dragbar');
+
+  // ── Auto Bulgarian names ───────────────────────────
+  const BG_NAMES = [
+    'Александър','Ангела','Андрей','Антония','Бойко',
+    'Борислав','Валентина','Васил','Георги','Даниела',
+    'Денис','Димитър','Елена','Иван','Иванка',
+    'Илиян','Илияна','Ирина','Калина','Красимир',
+    'Кристина','Любомир','Мария','Мартин','Милена',
+    'Михаил','Надя','Николай','Павел','Петър',
+    'Пламена','Радослав','Росица','Симеон','Снежана',
+    'Станислав','Стефан','Стефка','Тодор','Теодора',
+    'Цветан','Цветелина','Христо','Христина','Ивайло',
+    'Йордан','Златка','Веселин','Драгомир','Асен',
+    'Галина','Деляна','Николета','Пламен','Радостина',
+  ];
+
+  document.getElementById('btn-auto-names').addEventListener('click', () => {
+    const pool = BG_NAMES.slice().sort(() => Math.random() - 0.5);
+    let pi = 0;
+    seats.forEach(s => {
+      if (!s.name && pi < pool.length) { s.name = pool[pi++]; }
+    });
+    renderCircle();
+    saveState();
+  });
+
+  // Also register 'notes' and 'settings' in backdrop-close forEach
+  ['notes','settings'].forEach(name => {
+    const overlay = document.getElementById('modal-' + name);
+    if (!overlay) return;
+    overlay.addEventListener('click', e => {
+      if (e.target === overlay) closeModal(name);
+    });
+  });
+
+  // ── Roles image viewer ────────────────────────────
+  (function () {
+    const btn         = document.getElementById('btn-open-roles-pdf');
+    const overlay     = document.getElementById('modal-pdf');
+    const container   = document.getElementById('roles-img-container');
+    const img         = document.getElementById('roles-img');
+    const closeBtn    = document.getElementById('btn-close-pdf');
+    const zoomInBtn   = document.getElementById('btn-zoom-in');
+    const zoomOutBtn  = document.getElementById('btn-zoom-out');
+    const zoomResetBtn= document.getElementById('btn-zoom-reset');
+    if (!ROLES_IMG_URL) return;
+    btn.style.display = '';
+
+    let scale = 1, tx = 0, ty = 0;
+    const MIN_SCALE = 0.5, MAX_SCALE = 8;
+
+    function applyTransform() {
+      img.style.transform = `translate(${tx}px,${ty}px) scale(${scale})`;
+    }
+    function resetZoom() {
+      scale = 1; tx = 0; ty = 0;
+      applyTransform();
+    }
+    function zoomAt(factor, cx, cy) {
+      // cx, cy: offset from container center
+      const oldScale = scale;
+      scale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, scale * factor));
+      if (scale === oldScale) return;
+      tx = cx + (tx - cx) * (scale / oldScale);
+      ty = cy + (ty - cy) * (scale / oldScale);
+      applyTransform();
+    }
+
+    // Mouse wheel zoom
+    container.addEventListener('wheel', e => {
+      e.preventDefault();
+      const rect = container.getBoundingClientRect();
+      const cx = e.clientX - rect.left - container.clientWidth  / 2;
+      const cy = e.clientY - rect.top  - container.clientHeight / 2;
+      zoomAt(e.deltaY < 0 ? 1.15 : 1 / 1.15, cx, cy);
+    }, { passive: false });
+
+    // Mouse drag pan
+    let dragging = false, dragX, dragY, startTx, startTy;
+    container.addEventListener('mousedown', e => {
+      dragging = true; dragX = e.clientX; dragY = e.clientY;
+      startTx = tx; startTy = ty;
+      container.classList.add('dragging');
+    });
+    window.addEventListener('mousemove', e => {
+      if (!dragging) return;
+      tx = startTx + (e.clientX - dragX);
+      ty = startTy + (e.clientY - dragY);
+      applyTransform();
+    });
+    window.addEventListener('mouseup', () => {
+      dragging = false;
+      container.classList.remove('dragging');
+    });
+
+    // Pinch zoom + single-touch pan
+    let lastPinchDist = null, pinchCX = 0, pinchCY = 0;
+    let touchStartX, touchStartY, touchStartTx, touchStartTy;
+    function pinchDist(e) {
+      return Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+    }
+    container.addEventListener('touchstart', e => {
+      if (e.touches.length === 2) {
+        lastPinchDist = pinchDist(e);
+        const rect = container.getBoundingClientRect();
+        pinchCX = (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left - container.clientWidth  / 2;
+        pinchCY = (e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top  - container.clientHeight / 2;
+      } else if (e.touches.length === 1) {
+        lastPinchDist = null;
+        touchStartX = e.touches[0].clientX; touchStartY = e.touches[0].clientY;
+        touchStartTx = tx; touchStartTy = ty;
+      }
+    }, { passive: true });
+    container.addEventListener('touchmove', e => {
+      if (e.touches.length === 2 && lastPinchDist !== null) {
+        e.preventDefault();
+        const dist = pinchDist(e);
+        zoomAt(dist / lastPinchDist, pinchCX, pinchCY);
+        lastPinchDist = dist;
+      } else if (e.touches.length === 1 && lastPinchDist === null) {
+        tx = touchStartTx + (e.touches[0].clientX - touchStartX);
+        ty = touchStartTy + (e.touches[0].clientY - touchStartY);
+        applyTransform();
+      }
+    }, { passive: false });
+    container.addEventListener('touchend', () => { lastPinchDist = null; }, { passive: true });
+
+    // Zoom buttons
+    zoomInBtn.addEventListener('click',   () => zoomAt(1.4, 0, 0));
+    zoomOutBtn.addEventListener('click',  () => zoomAt(1 / 1.4, 0, 0));
+    zoomResetBtn.addEventListener('click', resetZoom);
+
+    // Open / close
+    function openImg() {
+      overlay.classList.add('visible');
+      if (!img.src || !img.src.endsWith(ROLES_IMG_URL)) img.src = ROLES_IMG_URL;
+      if (img.complete && img.naturalWidth) { resetZoom(); }
+      else { img.onload = resetZoom; }
+    }
+    function closeImg() {
+      overlay.classList.remove('visible');
+    }
+    btn.addEventListener('click', openImg);
+    closeBtn.addEventListener('click', closeImg);
+    overlay.addEventListener('click', e => { if (e.target === overlay) closeImg(); });
+  })();
+
+  // ── Extended hints toggle ────────────────────────
+  const alignHintsBtn = document.getElementById('btn-align-hints');
+  let alignHints = localStorage.getItem('botc_align_hints') === 'on';
+  function applyAlignHints() {
+    document.body.classList.toggle('align-hints', alignHints);
+    alignHintsBtn.textContent = alignHints ? 'On' : 'Off';
+    alignHintsBtn.style.borderColor = alignHints ? 'var(--gold)' : '';
+    alignHintsBtn.style.color = alignHints ? 'var(--gold-light)' : '';
+    try { localStorage.setItem('botc_align_hints', alignHints ? 'on' : 'off'); } catch(e) {}
+  }
+  alignHintsBtn.addEventListener('click', () => { alignHints = !alignHints; applyAlignHints(); });
+  applyAlignHints();
+
+  // ── Theme toggle ──────────────────────────────────
+  const themeBtn = document.getElementById('btn-theme');
+  let dayMode = localStorage.getItem('botc_theme') === 'day';
+  function applyTheme() {
+    document.body.classList.toggle('day-mode', dayMode);
+    themeBtn.textContent = dayMode ? '🕯' : '🔆';
+    themeBtn.title = dayMode ? 'Dark mode' : 'Day mode';
+    try { localStorage.setItem('botc_theme', dayMode ? 'day' : 'dark'); } catch(e) {}
+  }
+  themeBtn.addEventListener('click', () => { dayMode = !dayMode; applyTheme(); });
+  applyTheme();
+
+  comboRole     = makeCombo('f-role',      'f-role-dropdown',      'f-role-clear',      'f-role-toggle');
+  comboTrueRole = makeCombo('f-true-role', 'f-true-role-dropdown', 'f-true-role-clear', 'f-true-role-toggle');
+
+  loadGameNotes();
+  loadNominations();
+  loadPoisonSnapshots();
+  loadCollapsePrefs();
+  const restored = loadState();
+  if (!restored) {
+    initSeats(seatCount);
+    seatPositions = Array.from({length: seatCount}, () => null);
+  }
+  // Ensure seatPositions array is always the right length
+  while (seatPositions.length < seatCount) seatPositions.push(null);
+  // setPhase/setRound without saveState side-effects on first paint
+  (function applyPhase(p) {
+    updateCycleUI();
+    updateNomBadge();
+  })(phase);
+  document.getElementById('center-round').textContent  = (phase === 'day' ? 'Day ' : 'Night ') + round;
+  // Defer renderCircle until the browser has finished layout so offsetWidth is valid
+  requestAnimationFrame(() => requestAnimationFrame(renderCircle));
+
+})();
+</script>
+</body>
+</html>
