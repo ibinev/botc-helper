@@ -463,7 +463,9 @@
       position: absolute; bottom: 10px; right: 10px;
       width: 7px; height: 7px; border-radius: 50%;
       background: #5a9e2f; border: 1.5px solid var(--bg-card);
+      display: none; /* hidden unless align-hints enabled */
     }
+    body.align-hints .seat-dot { display: block; }
     .seat.dead .seat-dot { background: var(--blood-light); }
 
     /* Status icon strip — sits at the bottom of the circle */
@@ -1248,8 +1250,8 @@
 
         <div class="settings-row">
           <div>
-            <div class="settings-label">Alignment hints</div>
-            <div class="settings-sub">Show coloured ring on seats when alignment is set</div>
+            <div class="settings-label">Extended hints</div>
+            <div class="settings-sub">Show coloured ring on seats when alignment is set and dot for the role</div>
           </div>
           <div class="settings-control">
             <button class="btn-sm" id="btn-align-hints" style="min-width:52px;">On</button>
@@ -2951,7 +2953,7 @@
     overlay.addEventListener('click', e => { if (e.target === overlay) closeImg(); });
   })();
 
-  // ── Alignment hints toggle ────────────────────────
+  // ── Extended hints toggle ────────────────────────
   const alignHintsBtn = document.getElementById('btn-align-hints');
   let alignHints = localStorage.getItem('botc_align_hints') !== 'off';
   function applyAlignHints() {
