@@ -205,7 +205,7 @@
       align-items: center;
       gap: 2px;
       background: var(--bg-surface);
-      border: 0.5px solid var(--border);
+      border: 0.5px solid var(--border-strong);
       border-radius: var(--radius-md);
       overflow: hidden;
     }
@@ -222,12 +222,12 @@
     .cycle-btn:disabled { color: var(--text-muted); cursor: default; }
     .cycle-label {
       padding: 0 8px;
-      font-size: 12px; font-weight: 600;
+      font-size: 12px; font-weight: 700;
       white-space: nowrap;
       min-width: 68px; text-align: center;
     }
-    .cycle-label.phase-day   { color: var(--gold-light); }
-    .cycle-label.phase-night { color: var(--info-text); }
+    .cycle-label.phase-day   { color: var(--gold-light); text-shadow: 0 0 8px rgba(201,151,58,0.6); }
+    .cycle-label.phase-night { color: var(--info-text);  text-shadow: 0 0 8px rgba(122,184,245,0.5); }
 
     .round-controls { display: none; }
 
@@ -405,35 +405,35 @@
     @media (hover: hover) and (pointer: fine) {
       .seat.dead:hover .seat-inner { opacity: 0.85; }
     }
-    /* Suspicious: purple outer ring */
-    .seat.suspicious .seat-inner {
+    /* Suspicious: purple outer ring — also gated on align-hints */
+    body.align-hints .seat.suspicious .seat-inner {
       box-shadow:
         0 0 0 3px #9b4dca,
         0 2px 12px rgba(0,0,0,0.5),
         inset 0 1px 0 rgba(255,255,255,0.08);
     }
-    .seat.dead.suspicious .seat-inner {
+    body.align-hints .seat.dead.suspicious .seat-inner {
       box-shadow: 0 0 0 3px #9b4dca, 0 2px 8px rgba(0,0,0,0.4);
     }
     /* Suspicious badge in player list — same pattern as good/evil */
     .badge-suspicious { background: rgba(160,60,200,0.2); color: #d08ef0; }
     /* Alignment ring: good = green, evil = red (mirrors suspicious purple) */
-    .seat.align-good .seat-inner {
+    body.align-hints .seat.align-good .seat-inner {
       box-shadow:
         0 0 0 3px #5a9e2f,
         0 2px 12px rgba(0,0,0,0.5),
         inset 0 1px 0 rgba(255,255,255,0.08);
     }
-    .seat.dead.align-good .seat-inner {
+    body.align-hints .seat.dead.align-good .seat-inner {
       box-shadow: 0 0 0 3px #5a9e2f, 0 2px 8px rgba(0,0,0,0.4);
     }
-    .seat.align-evil .seat-inner {
+    body.align-hints .seat.align-evil .seat-inner {
       box-shadow:
         0 0 0 3px #c0392b,
         0 2px 12px rgba(0,0,0,0.5),
         inset 0 1px 0 rgba(255,255,255,0.08);
     }
-    .seat.align-evil.dead .seat-inner {
+    body.align-hints .seat.align-evil.dead .seat-inner {
       box-shadow: 0 0 0 3px #c0392b, 0 2px 8px rgba(0,0,0,0.4);
     }
 
@@ -687,9 +687,10 @@
 
     /* ── Modal: Player list ──────────────────────────── */
     .list-section-title {
-      font-size: 10px; color: var(--text-muted);
+      font-size: 11px; color: var(--text-secondary);
       text-transform: uppercase; letter-spacing: 0.1em;
       margin-bottom: 8px; margin-top: 4px;
+      font-weight: 600;
     }
     .player-list { display: flex; flex-direction: column; gap: 2px; }
     .pli {
@@ -701,19 +702,48 @@
     }
     .pli:active  { background: rgba(201,151,58,0.1); }
     .pli.selected { background: rgba(201,151,58,0.1); border-color: var(--border-strong); }
-    .pli-num  { font-size: 10px; color: var(--text-muted); min-width: 16px; text-align: right; }
+    .pli-num  { font-size: 10px; color: var(--text-secondary); min-width: 16px; text-align: right; font-weight: 600; }
     .pli-dot  { width: 8px; height: 8px; border-radius: 50%; background: #5a9e2f; flex-shrink: 0; }
     .pli-dot.dead { background: var(--blood-light); }
-    /* Alignment ring on list dot — mirrors seat circle rings */
-    .pli-dot.align-good { outline: 2px solid #5a9e2f; outline-offset: 1px; }
-    .pli-dot.align-evil { outline: 2px solid #c0392b; outline-offset: 1px; }
-    .pli-dot.susp       { outline: 2px solid #9b4dca; outline-offset: 1px; }
+    /* Alignment ring on list dot — only when align-hints enabled */
+    body.align-hints .pli-dot.align-good { outline: 2px solid #5a9e2f; outline-offset: 1px; }
+    body.align-hints .pli-dot.align-evil { outline: 2px solid #c0392b; outline-offset: 1px; }
+    body.align-hints .pli-dot.susp       { outline: 2px solid #9b4dca; outline-offset: 1px; }
     .pli-name { flex: 1; font-size: 14px; font-weight: 500; color: var(--text-primary); }
     .pli-name.empty { color: var(--text-muted); font-style: italic; font-weight: 400; }
     .pli-role { font-size: 12px; color: var(--text-secondary); }
     .pli-badge { font-size: 10px; padding: 2px 8px; border-radius: 999px; font-weight: 500; }
     .no-players { text-align: center; padding: 2rem; color: var(--text-muted); font-style: italic; font-size: 13px; }
     .divider { height: 0.5px; background: var(--border); margin: 14px 0; }
+
+    /* Deaths log */
+    .death-group { margin-bottom: 10px; }
+    .death-cycle-label {
+      font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em;
+      color: var(--gold-light); font-weight: 700;
+      text-shadow: 0 0 6px rgba(201,151,58,0.45);
+      margin-bottom: 4px; margin-top: 2px;
+    }
+    .death-entry {
+      display: flex; align-items: center; gap: 8px;
+      padding: 7px 10px; border-radius: var(--radius-sm);
+      background: var(--bg-input); border: 0.5px solid var(--border);
+      margin-bottom: 3px;
+    }
+    .death-skull { font-size: 13px; flex-shrink: 0; opacity: 0.7; }
+    .death-name  { font-size: 13px; color: var(--text-primary); flex: 1; }
+
+    /* Collapsible log sections */
+    .collapsible-header {
+      display: flex; align-items: center; justify-content: space-between;
+      cursor: pointer; padding: 4px 0; -webkit-tap-highlight-color: transparent;
+    }
+    .collapsible-header .list-section-title { margin: 0; }
+    .collapsible-chevron {
+      font-size: 12px; color: var(--text-muted);
+      transition: transform 0.18s; display: inline-block;
+    }
+    .collapsible-body.collapsed { display: none; }
     /* Bluff marker — shown when claimed role ≠ true role (both must be set) */
     .bluff-mark { color: #ffffff; font-weight: 700; font-style: normal; margin-right: 1px; }
 
@@ -1191,7 +1221,7 @@
           </div>
           <div class="settings-control">
             <button class="btn-sm" id="settings-minus">−</button>
-            <span id="settings-count-display" style="min-width:24px;text-align:center;font-weight:600;color:var(--gold-light);font-size:15px;">8</span>
+            <span id="settings-count-display" style="min-width:24px;text-align:center;font-weight:700;color:var(--gold-light);font-size:15px;text-shadow:0 0 8px rgba(201,151,58,0.5);">8</span>
             <button class="btn-sm" id="settings-plus">+</button>
           </div>
         </div>
@@ -1213,6 +1243,16 @@
           </div>
           <div class="settings-control">
             <button class="btn" id="btn-auto-names" style="font-size:13px;padding:7px 14px;border-color:var(--gold);color:var(--gold-light);">Populate</button>
+          </div>
+        </div>
+
+        <div class="settings-row">
+          <div>
+            <div class="settings-label">Alignment hints</div>
+            <div class="settings-sub">Show coloured ring on seats when alignment is set</div>
+          </div>
+          <div class="settings-control">
+            <button class="btn-sm" id="btn-align-hints" style="min-width:52px;">On</button>
           </div>
         </div>
 
@@ -1297,8 +1337,33 @@
     <div class="modal-sheet">
       <div class="modal-drag-bar" id="modal-list-dragbar"><div class="pill"></div></div>
       <div class="modal-inner">
-        <div class="list-section-title">All seats</div>
-        <div class="player-list" id="player-list"></div>
+        <div class="collapsible-header" id="allseats-header">
+          <div class="list-section-title" style="margin:0;">All seats</div>
+          <span class="collapsible-chevron" id="allseats-chevron">▾</span>
+        </div>
+        <div class="collapsible-body" id="allseats-body">
+          <div class="player-list" id="player-list"></div>
+        </div>
+        <div id="deaths-section" style="display:none;">
+          <div class="divider"></div>
+          <div class="collapsible-header" id="deaths-header">
+            <div class="list-section-title" style="margin:0;">Deaths</div>
+            <span class="collapsible-chevron" id="deaths-chevron">▾</span>
+          </div>
+          <div class="collapsible-body" id="deaths-body">
+            <div id="deaths-list"></div>
+          </div>
+        </div>
+        <div id="poisoned-section" style="display:none;">
+          <div class="divider"></div>
+          <div class="collapsible-header" id="poisoned-header">
+            <div class="list-section-title" style="margin:0;">Poisoned</div>
+            <span class="collapsible-chevron" id="poisoned-chevron">▾</span>
+          </div>
+          <div class="collapsible-body" id="poisoned-body">
+            <div id="poisoned-list"></div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -1674,9 +1739,32 @@
   let nomFrom = null;
   let nomVoteKey = null;
   let nomVoteIdx = null;
+  let poisonSnapshots = {};  // { 'night-1': [seatIdx, ...], ... }
+  let deathsCollapsed = false;
+  let poisonedCollapsed = false;
+  let allseatsCollapsed = false;
+
+  function loadCollapsePrefs() {
+    try {
+      const raw = localStorage.getItem('botc_collapse_prefs');
+      if (raw) {
+        const p = JSON.parse(raw);
+        deathsCollapsed   = !!p.deaths;
+        poisonedCollapsed = !!p.poisoned;
+        allseatsCollapsed = !!p.allseats;
+      }
+    } catch(e) {}
+  }
+  function saveCollapsePrefs() {
+    try {
+      localStorage.setItem('botc_collapse_prefs', JSON.stringify({
+        deaths: deathsCollapsed, poisoned: poisonedCollapsed, allseats: allseatsCollapsed
+      }));
+    } catch(e) {}
+  }
 
   function blankSeat() {
-    return { name:'', role:'', trueRole:'', alignment:'unknown', notes:'', dead:false, usedVote:false, suspicious:false, drunk:false, poisoned:false };
+    return { name:'', role:'', trueRole:'', alignment:'unknown', notes:'', dead:false, usedVote:false, suspicious:false, drunk:false, poisoned:false, diedAt:null, poisonedAt:null };
   }
 
   function initSeats(n) {
@@ -1760,9 +1848,11 @@
       const nameHtml = s.name
         ? `<span class="seat-name">${isBluff ? '<span class="bluff-mark">*</span>' : ''}${esc(s.name)}</span>`
         : `<span class="seat-name empty">Empty</span>`;
-      const iconSrc = s.role && ROLE_ICONS[s.role] ? ROLE_ICONS[s.role] : null;
+      // Show true role name/icon if set, otherwise fall back to claimed role
+      const displayRole = s.trueRole || s.role;
+      const iconSrc = displayRole && ROLE_ICONS[displayRole] ? ROLE_ICONS[displayRole] : null;
       const roleIconHtml = iconSrc
-        ? `<img class="seat-role-icon" src="${esc(iconSrc)}" alt="${esc(s.role)}" title="${esc(s.role)}">`
+        ? `<img class="seat-role-icon" src="${esc(iconSrc)}" alt="${esc(displayRole)}" title="${esc(displayRole)}">`
         : '';
       const drunkIconSrc = s.poisoned
         ? 'https://wiki.bloodontheclocktower.com/images/b/b1/Icon_poisoner.png'
@@ -1770,8 +1860,9 @@
       const drunkIconHtml = drunkIconSrc
         ? `<img class="seat-drunk-icon" src="${esc(drunkIconSrc)}" alt="${s.poisoned?'Poisoned':'Drunk'}" title="${s.poisoned?'Poisoned':'Drunk'}">`
         : '';
-      const roleHtml = s.role ? `<span class="seat-role">${esc(s.role)}</span>` : '';
-      const dotClass = roleData ? ` dot-${roleData.cat}` : '';
+      const roleHtml = displayRole ? `<span class="seat-role">${esc(displayRole)}</span>` : '';
+      const displayRoleData = displayRole ? ROLES.find(r => r.name === displayRole) : null;
+      const dotClass = displayRoleData ? ` dot-${displayRoleData.cat}` : (roleData ? ` dot-${roleData.cat}` : '');
       const dayNoms = nominations['day-' + round] || [];
       const isNominated = phase === 'day' && dayNoms.some(n => n.to === i);
 
@@ -1899,6 +1990,8 @@
   function saveSeat() {
     if (selected === null) return;
     const s = seats[selected];
+    const wasDead      = s.dead;
+    const wasPoisoned   = s.poisoned;
     s.name      = document.getElementById('f-name').value.trim();
     s.role      = comboRole.getValue();
     s.trueRole  = comboTrueRole.getValue();
@@ -1909,6 +2002,10 @@
     s.drunk     = !!document.getElementById('tog-drunk')._active;
     s.poisoned  = !!document.getElementById('tog-poisoned')._active;
     s.suspicious= (s.alignment === 'suspicious');
+    if (s.dead && !wasDead)         s.diedAt     = { phase, round };
+    if (!s.dead && wasDead)         s.diedAt     = null;
+    if (s.poisoned && !wasPoisoned) s.poisonedAt = { phase, round };
+    if (!s.poisoned && wasPoisoned) s.poisonedAt = null;
     closePanel();
   }
 
@@ -1931,40 +2028,117 @@
     const named = seats.filter(s => s.name);
     const lcEl = document.getElementById('list-count');
     if (lcEl) lcEl.textContent = named.length;
+
+    // All seats collapsible state
+    const allseatsBody    = document.getElementById('allseats-body');
+    const allseatsChevron = document.getElementById('allseats-chevron');
+    if (allseatsBody) {
+      allseatsBody.classList.toggle('collapsed', allseatsCollapsed);
+      allseatsChevron.style.transform = allseatsCollapsed ? 'rotate(-90deg)' : '';
+    }
+
     if (!named.length) {
       list.innerHTML = '<div class="no-players">No players assigned yet. Click a seat to add one.</div>';
-      return;
+    } else {
+      const roleData = name => ROLES.find(r => r.name === name);
+      list.innerHTML = seats.map((s, i) => {
+        const rd = s.role ? roleData(s.role) : null;
+        const roleIconSrc = s.role && ROLE_ICONS[s.role] ? ROLE_ICONS[s.role] : null;
+        const roleIconHtml = roleIconSrc ? `<img class="pli-role-icon" src="${esc(roleIconSrc)}" alt="">` : '';
+        const roleBadge = rd
+          ? `<span class="pli-badge tag-${rd.cat}">${esc(s.role)}</span>`
+          : s.role ? `<span class="pli-role">${esc(s.role)}</span>` : '';
+        const alignBadge = s.alignment !== 'unknown'
+          ? `<span class="pli-badge badge-${s.alignment}">${s.alignment}</span>`
+          : '';
+        const dotExtra = s.alignment === 'suspicious' ? ' susp'
+          : s.alignment === 'good' ? ' align-good'
+          : s.alignment === 'evil' ? ' align-evil' : '';
+        const isBluff = !!(s.role && s.trueRole && s.role !== s.trueRole);
+        const statusIcons = [
+          s.usedVote ? '<span class="pli-status-icon">👻</span>' : '',
+        ].join('');
+        return `<div class="pli${selected===i?' selected':''}" data-idx="${i}">
+          <span class="pli-num">${i+1}</span>
+          <span class="pli-dot${s.dead?' dead':''}${dotExtra}"></span>
+          <span class="pli-name${s.name?'':' empty'}">${s.name ? (isBluff ? '<span class="bluff-mark">*</span>' : '') + esc(s.name) : 'Empty'}</span>
+          ${statusIcons}
+          ${roleIconHtml}${roleBadge}
+          ${alignBadge}
+        </div>`;
+      }).join('');
+      list.querySelectorAll('.pli').forEach(el => {
+        el.addEventListener('click', () => { closeModal('list'); openSeat(parseInt(el.dataset.idx)); });
+      });
     }
-    const roleData = name => ROLES.find(r => r.name === name);
-    list.innerHTML = seats.map((s, i) => {
-      const rd = s.role ? roleData(s.role) : null;
-      const roleIconSrc = s.role && ROLE_ICONS[s.role] ? ROLE_ICONS[s.role] : null;
+
+    // Helper: build a pli-style row for deaths/poisoned
+    function logEntryHtml(s, i, icon) {
+      const displayRole = s.trueRole || s.role;
+      const roleIconSrc = displayRole && ROLE_ICONS[displayRole] ? ROLE_ICONS[displayRole] : null;
       const roleIconHtml = roleIconSrc ? `<img class="pli-role-icon" src="${esc(roleIconSrc)}" alt="">` : '';
+      const rd = displayRole ? ROLES.find(r => r.name === displayRole) : null;
       const roleBadge = rd
-        ? `<span class="pli-badge tag-${rd.cat}">${esc(s.role)}</span>`
-        : s.role ? `<span class="pli-role">${esc(s.role)}</span>` : '';
-      const alignBadge = s.alignment !== 'unknown'
-        ? `<span class="pli-badge badge-${s.alignment}">${s.alignment}</span>`
-        : '';
-      const dotExtra = s.alignment === 'suspicious' ? ' susp'
-        : s.alignment === 'good' ? ' align-good'
-        : s.alignment === 'evil' ? ' align-evil' : '';
-      const isBluff = !!(s.role && s.trueRole && s.role !== s.trueRole);
-      const statusIcons = [
-        s.usedVote   ? '<span class="pli-status-icon">👻</span>' : '',
-      ].join('');
-      return `<div class="pli${selected===i?' selected':''}" data-idx="${i}">
-        <span class="pli-num">${i+1}</span>
-        <span class="pli-dot${s.dead?' dead':''}${dotExtra}"></span>
-        <span class="pli-name${s.name?'':' empty'}">${s.name ? (isBluff ? '<span class="bluff-mark">*</span>' : '') + esc(s.name) : 'Empty'}</span>
-        ${statusIcons}
+        ? `<span class="pli-badge tag-${rd.cat}">${esc(displayRole)}</span>`
+        : displayRole ? `<span class="pli-role">${esc(displayRole)}</span>` : '';
+      return `<div class="death-entry">
+        <span style="font-size:13px;flex-shrink:0;">${icon}</span>
+        <span class="death-name">${s.name ? esc(s.name) : 'Seat ' + (i + 1)}</span>
         ${roleIconHtml}${roleBadge}
-        ${alignBadge}
       </div>`;
-    }).join('');
-    list.querySelectorAll('.pli').forEach(el => {
-      el.addEventListener('click', () => { closeModal('list'); openSeat(parseInt(el.dataset.idx)); });
-    });
+    }
+
+    // Deaths log
+    const deathsSection = document.getElementById('deaths-section');
+    const deathsList    = document.getElementById('deaths-list');
+    const deathsBody    = document.getElementById('deaths-body');
+    const deathsChevron = document.getElementById('deaths-chevron');
+    const dead = seats.map((s, i) => ({ s, i })).filter(({ s }) => s.dead && s.diedAt);
+    if (dead.length) {
+      const groups = {};
+      dead.forEach(({ s, i }) => {
+        const label = (s.diedAt.phase === 'day' ? 'Day ' : 'Night ') + s.diedAt.round;
+        if (!groups[label]) groups[label] = [];
+        groups[label].push({ s, i });
+      });
+      deathsList.innerHTML = Object.entries(groups).map(([label, entries]) =>
+        `<div class="death-group">
+          <div class="death-cycle-label">${label}</div>
+          ${entries.map(({ s, i }) => logEntryHtml(s, i, '☠')).join('')}
+        </div>`
+      ).join('');
+      deathsSection.style.display = '';
+      deathsBody.classList.toggle('collapsed', deathsCollapsed);
+      deathsChevron.style.transform = deathsCollapsed ? 'rotate(-90deg)' : '';
+    } else {
+      deathsSection.style.display = 'none';
+    }
+
+    // Poisoned log — grouped by cycle
+    const poisonedSection = document.getElementById('poisoned-section');
+    const poisonedList    = document.getElementById('poisoned-list');
+    const poisonedBody    = document.getElementById('poisoned-body');
+    const poisonedChevron = document.getElementById('poisoned-chevron');
+    const poisonedSeats = seats.map((s, i) => ({ s, i })).filter(({ s }) => s.poisonedAt);
+    if (poisonedSeats.length) {
+      const groups = {};
+      poisonedSeats.forEach(({ s, i }) => {
+        const label = (s.poisonedAt.phase === 'day' ? 'Day ' : 'Night ') + s.poisonedAt.round;
+        if (!groups[label]) groups[label] = [];
+        groups[label].push({ s, i });
+      });
+      poisonedList.innerHTML = Object.entries(groups).map(([label, entries]) =>
+        `<div class="death-group">
+          <div class="death-cycle-label">${label}</div>
+          ${entries.map(({ s, i }) => logEntryHtml(s, i, '🧪')).join('')}
+        </div>`
+      ).join('');
+      poisonedSection.style.display = '';
+      poisonedBody.classList.toggle('collapsed', poisonedCollapsed);
+      poisonedChevron.style.transform = poisonedCollapsed ? 'rotate(-90deg)' : '';
+    } else {
+      poisonedSection.style.display = 'none';
+    }
   }
 
   // ── Nominations ───────────────────────────────────
@@ -1983,6 +2157,17 @@
     try {
       const raw = localStorage.getItem('botc_nominations');
       if (raw) nominations = JSON.parse(raw);
+    } catch(e) {}
+  }
+
+  function savePoisonSnapshots() {
+    try { localStorage.setItem('botc_poison_snaps', JSON.stringify(poisonSnapshots)); } catch(e) {}
+  }
+
+  function loadPoisonSnapshots() {
+    try {
+      const raw = localStorage.getItem('botc_poison_snaps');
+      if (raw) poisonSnapshots = JSON.parse(raw);
     } catch(e) {}
   }
 
@@ -2202,9 +2387,22 @@
     const step = phaseRoundToStep(phase, round);
     const next = Math.max(0, Math.min(MAX_STEP, step + dir));
     if (next === step) return;
+    // Save current cycle's poison state
+    const oldKey = (phase === 'day' ? 'day-' : 'night-') + round;
+    poisonSnapshots[oldKey] = seats.reduce((acc, s, i) => { if (s.poisoned) acc.push(i); return acc; }, []);
+    savePoisonSnapshots();
     const pr = stepToPhaseRound(next);
     phase = pr.phase;
     round = pr.round;
+    // Restore or clear poison for the new cycle
+    const newKey = (phase === 'day' ? 'day-' : 'night-') + round;
+    const snap = poisonSnapshots[newKey];
+    seats.forEach((s, i) => {
+      const wasOn = s.poisoned;
+      s.poisoned = snap ? snap.includes(i) : false;
+      if (s.poisoned && !wasOn) s.poisonedAt = { phase, round };
+      // poisonedAt is NOT cleared here — it persists for the list until manually unset
+    });
     updateCycleUI();
     updateNomBadge();
     renderCircle();
@@ -2330,6 +2528,21 @@
   attachModalSwipe('edit', 'modal-edit-dragbar');
   attachModalSwipe('list', 'modal-list-dragbar');
 
+  // ── Collapsible section toggles ───────────────────
+  ['allseats', 'deaths', 'poisoned'].forEach(key => {
+    const header = document.getElementById(key + '-header');
+    if (!header) return;
+    header.addEventListener('click', () => {
+      if (key === 'deaths')   deathsCollapsed   = !deathsCollapsed;
+      else if (key === 'poisoned') poisonedCollapsed = !poisonedCollapsed;
+      else allseatsCollapsed = !allseatsCollapsed;
+      const collapsed = key === 'deaths' ? deathsCollapsed : key === 'poisoned' ? poisonedCollapsed : allseatsCollapsed;
+      document.getElementById(key + '-body').classList.toggle('collapsed', collapsed);
+      document.getElementById(key + '-chevron').style.transform = collapsed ? 'rotate(-90deg)' : '';
+      saveCollapsePrefs();
+    });
+  });
+
   // Floating player-list button
   document.getElementById('btn-list').addEventListener('click', () => openModal('list'));
 
@@ -2356,9 +2569,13 @@
     clearStorage();
     gameNotes = {};
     nominations = {};
+    poisonSnapshots = {};
+    deathsCollapsed = false; poisonedCollapsed = false; allseatsCollapsed = false;
     try { localStorage.removeItem('botc_game_notes'); } catch(e) {}
     try { localStorage.removeItem('botc_night_notes'); } catch(e) {}
     try { localStorage.removeItem('botc_nominations'); } catch(e) {}
+    try { localStorage.removeItem('botc_poison_snaps'); } catch(e) {}
+    try { localStorage.removeItem('botc_collapse_prefs'); } catch(e) {}
     seats = Array.from({length: seatCount}, () => blankSeat());
     seatPositions = Array.from({length: seatCount}, () => null);
     selected = null;
@@ -2388,10 +2605,14 @@
   function doSoftReset() {
     seats = seats.map(s => Object.assign(blankSeat(), { name: s.name }));
     gameNotes = {};
+    poisonSnapshots = {};
+    deathsCollapsed = false; poisonedCollapsed = false; allseatsCollapsed = false;
     try { localStorage.removeItem('botc_game_notes'); } catch(e) {}
     try { localStorage.removeItem('botc_night_notes'); } catch(e) {}
     nominations = {};
     try { localStorage.removeItem('botc_nominations'); } catch(e) {}
+    try { localStorage.removeItem('botc_poison_snaps'); } catch(e) {}
+    try { localStorage.removeItem('botc_collapse_prefs'); } catch(e) {}
     selected = null;
     round = 1;
     closeModal('edit');
@@ -2730,6 +2951,19 @@
     overlay.addEventListener('click', e => { if (e.target === overlay) closeImg(); });
   })();
 
+  // ── Alignment hints toggle ────────────────────────
+  const alignHintsBtn = document.getElementById('btn-align-hints');
+  let alignHints = localStorage.getItem('botc_align_hints') !== 'off';
+  function applyAlignHints() {
+    document.body.classList.toggle('align-hints', alignHints);
+    alignHintsBtn.textContent = alignHints ? 'On' : 'Off';
+    alignHintsBtn.style.borderColor = alignHints ? 'var(--gold)' : '';
+    alignHintsBtn.style.color = alignHints ? 'var(--gold-light)' : '';
+    try { localStorage.setItem('botc_align_hints', alignHints ? 'on' : 'off'); } catch(e) {}
+  }
+  alignHintsBtn.addEventListener('click', () => { alignHints = !alignHints; applyAlignHints(); });
+  applyAlignHints();
+
   // ── Theme toggle ──────────────────────────────────
   const themeBtn = document.getElementById('btn-theme');
   let dayMode = localStorage.getItem('botc_theme') === 'day';
@@ -2747,6 +2981,8 @@
 
   loadGameNotes();
   loadNominations();
+  loadPoisonSnapshots();
+  loadCollapsePrefs();
   const restored = loadState();
   if (!restored) {
     initSeats(seatCount);
