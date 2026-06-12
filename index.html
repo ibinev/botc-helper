@@ -917,6 +917,91 @@
       background: var(--bg-surface);
       border-bottom: 0.5px solid var(--border-strong);
     }
+
+    /* ── Character count modal ─────────────────────────── */
+    #charcount-sheet {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      background: var(--bg-surface);
+      z-index: 200;
+    }
+    #charcount-toolbar {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 16px;
+      padding-top: max(10px, env(safe-area-inset-top));
+      background: var(--bg-surface);
+      border-bottom: 0.5px solid var(--border-strong);
+    }
+    #charcount-body {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 16px;
+      gap: 20px;
+    }
+    .charcount-table-wrap {
+      overflow-x: auto;
+      width: 100%;
+      max-width: 680px;
+      border-radius: var(--radius-md);
+      border: 0.5px solid var(--border-strong);
+    }
+    .charcount-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: var(--font-sans);
+      font-size: 14px;
+    }
+    .charcount-table th,
+    .charcount-table td {
+      padding: 11px 14px;
+      text-align: center;
+      border-bottom: 0.5px solid var(--border);
+    }
+    .charcount-table tr:last-child td { border-bottom: none; }
+    .charcount-table thead th {
+      font-size: 11px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.08em;
+      color: var(--text-secondary);
+      background: var(--bg-card);
+    }
+    .charcount-table thead th:first-child { text-align: left; }
+    .charcount-table td.row-label {
+      text-align: left; font-weight: 600;
+      white-space: nowrap;
+    }
+    .charcount-table td { color: var(--text-primary); background: var(--bg-input); }
+    .row-townsfolk td { background: rgba(63,107,17,0.12); }
+    .row-townsfolk td.row-label { color: #8fca4b; }
+    .row-outsider  td { background: rgba(24,95,165,0.12); }
+    .row-outsider  td.row-label { color: #7ab8f5; }
+    .row-minion    td { background: rgba(139,26,26,0.15); }
+    .row-minion    td.row-label { color: #e06060; }
+    .row-demon     td { background: rgba(192,57,43,0.18); }
+    .row-demon     td.row-label { color: #ff8080; }
+    .charcount-table td:not(.row-label) { font-size: 16px; font-weight: 700; }
+    /* Highlight the column matching current seat count */
+    .charcount-table th.col-active,
+    .charcount-table td.col-active {
+      outline: 2px solid var(--gold);
+      outline-offset: -2px;
+      position: relative;
+    }
+    .charcount-note {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-align: center;
+      max-width: 420px;
+      line-height: 1.6;
+    }
     #roles-img-container {
       flex: 1;
       overflow: hidden;
@@ -1080,6 +1165,7 @@
       <button class="topbar-icon-btn" id="btn-open-notes"       title="Notes">📜</button>
       <button class="topbar-icon-btn" id="btn-open-nominations" title="Nominations">⚖</button>
       <button class="topbar-icon-btn" id="btn-open-roles-pdf"   title="Role reference" style="display:none">📖</button>
+      <button class="topbar-icon-btn" id="btn-open-charcount"   title="Character count">📊</button>
       <button class="topbar-icon-btn" id="btn-open-settings" title="Settings">⚙️</button>
     </div>
   </div>
@@ -1382,6 +1468,52 @@
       </div>
       <div id="roles-img-container">
         <img id="roles-img" src="" alt="Role Reference" draggable="false">
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Character Count -->
+  <div class="modal-overlay" id="modal-charcount" style="align-items:stretch;justify-content:stretch;">
+    <div id="charcount-sheet">
+      <div id="charcount-toolbar">
+        <span style="font-family:var(--font-serif);font-size:15px;color:var(--gold-light);">📊 Character Count</span>
+        <button class="btn" id="btn-close-charcount" style="padding:6px 14px;margin-left:auto;">✕ Close</button>
+      </div>
+      <div id="charcount-body">
+        <div class="charcount-table-wrap">
+          <table class="charcount-table">
+            <thead>
+              <tr>
+                <th>Players</th>
+                <th>5</th><th>6</th><th>7</th><th>8</th><th>9</th>
+                <th>10</th><th>11</th><th>12</th><th>13</th><th>14</th><th>15+</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="row-townsfolk">
+                <td class="row-label">Townsfolk</td>
+                <td>3</td><td>3</td><td>5</td><td>5</td><td>5</td>
+                <td>7</td><td>7</td><td>7</td><td>9</td><td>9</td><td>9+</td>
+              </tr>
+              <tr class="row-outsider">
+                <td class="row-label">Outsiders</td>
+                <td>0</td><td>1</td><td>0</td><td>1</td><td>2</td>
+                <td>0</td><td>1</td><td>2</td><td>0</td><td>1</td><td>2</td>
+              </tr>
+              <tr class="row-minion">
+                <td class="row-label">Minions</td>
+                <td>1</td><td>1</td><td>1</td><td>1</td><td>1</td>
+                <td>2</td><td>2</td><td>2</td><td>3</td><td>3</td><td>3</td>
+              </tr>
+              <tr class="row-demon">
+                <td class="row-label">Demons</td>
+                <td>1</td><td>1</td><td>1</td><td>1</td><td>1</td>
+                <td>1</td><td>1</td><td>1</td><td>1</td><td>1</td><td>1</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="charcount-note">Based on Trouble Brewing standard distribution. 15+ follows the same pattern as 15 (9/2/3/1).</p>
       </div>
     </div>
   </div>
@@ -2755,6 +2887,36 @@
   document.getElementById('btn-open-nominations').addEventListener('click', () => {
     renderNominationsModal();
     openModal('nominations');
+  });
+
+  // ── Character count modal ──────────────────────────
+  const CHARCOUNT_COLS = [5,6,7,8,9,10,11,12,13,14,'15+'];
+  function openCharCount() {
+    // Highlight column matching current seatCount
+    const table = document.querySelector('.charcount-table');
+    if (table) {
+      table.querySelectorAll('.col-active').forEach(el => el.classList.remove('col-active'));
+      const colIdx = seatCount <= 15
+        ? CHARCOUNT_COLS.indexOf(seatCount < 15 ? seatCount : '15+')
+        : CHARCOUNT_COLS.indexOf('15+');
+      if (colIdx !== -1) {
+        table.querySelectorAll('tr').forEach(row => {
+          const cells = row.querySelectorAll('th, td');
+          // +1 because first cell is label/header
+          if (cells[colIdx + 1]) cells[colIdx + 1].classList.add('col-active');
+        });
+      }
+    }
+    const overlay = document.getElementById('modal-charcount');
+    overlay.classList.add('visible');
+  }
+  document.getElementById('btn-open-charcount').addEventListener('click', openCharCount);
+  document.getElementById('btn-close-charcount').addEventListener('click', () => {
+    document.getElementById('modal-charcount').classList.remove('visible');
+  });
+  document.getElementById('modal-charcount').addEventListener('click', e => {
+    if (e.target === document.getElementById('modal-charcount'))
+      document.getElementById('modal-charcount').classList.remove('visible');
   });
 
   document.getElementById('btn-nom-new').addEventListener('click', () => {
