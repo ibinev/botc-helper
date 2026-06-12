@@ -405,6 +405,18 @@
     @media (hover: hover) and (pointer: fine) {
       .seat.dead:hover .seat-inner { opacity: 0.85; }
     }
+    /* Suspicious: purple outer ring */
+    .seat.suspicious .seat-inner {
+      box-shadow:
+        0 0 0 3px #9b4dca,
+        0 2px 12px rgba(0,0,0,0.5),
+        inset 0 1px 0 rgba(255,255,255,0.08);
+    }
+    .seat.dead.suspicious .seat-inner {
+      box-shadow: 0 0 0 3px #9b4dca, 0 2px 8px rgba(0,0,0,0.4);
+    }
+    /* Suspicious tint in player list */
+    .pli-suspicious .pli-name { color: #d08ef0 !important; }
 
     /* drag mode */
     .move-mode .seat        { cursor: grab; }
@@ -450,6 +462,22 @@
       line-height: 1;
     }
 
+    /* Drunk icon — NE corner of seat circle, mirrors role icon at NW */
+    .seat-drunk-icon {
+      position: absolute;
+      top: -14px; right: -14px;
+      width: 55px; height: 55px;
+      object-fit: contain;
+      pointer-events: none;
+      filter: drop-shadow(0 1px 4px rgba(0,0,0,0.9));
+      z-index: 3;
+    }
+    @media (max-width: 479px) {
+      .seat-drunk-icon { width: 45px; height: 45px; top: -13px; right: -13px; }
+    }
+    @media (min-width: 520px) {
+      .seat-drunk-icon { width: 60px; height: 60px; top: -16px; right: -16px; }
+    }
     /* Role icon — centered on the NW point of the circle edge (halfway in, halfway out).
        For seat-size 90px: r=45, NW edge ≈ (13,13) from bounding-box corner.
        Icon 55px → center offset = 27.5px → top/left = 13-27.5 ≈ -14px          */
@@ -617,9 +645,12 @@
       font-size: 13px; cursor: pointer; font-family: var(--font-sans);
       transition: all 0.12s; -webkit-tap-highlight-color: transparent;
     }
-    .tog.on-dead      { background: var(--evil-bg); color: var(--evil-text); border-color: var(--blood); }
-    .tog.on-nominated { background: rgba(186,117,23,0.2); color: #e6b85a; border-color: var(--gold); }
-    .tog.on-vote      { background: rgba(186,117,23,0.15); color: var(--text-secondary); border-color: var(--border-strong); }
+    .tog.on-dead       { background: var(--evil-bg); color: var(--evil-text); border-color: var(--blood); }
+    .tog.on-nominated  { background: rgba(186,117,23,0.2); color: #e6b85a; border-color: var(--gold); }
+    .tog.on-vote       { background: rgba(186,117,23,0.15); color: var(--text-secondary); border-color: var(--border-strong); }
+    .tog.on-suspicious { background: rgba(160,60,200,0.2); color: #d08ef0; border-color: #9b4dca; }
+    .tog.on-drunk      { background: rgba(24,95,165,0.25); color: #7ab8f5; border-color: #3a7fc1; }
+    .tog.on-poisoned   { background: var(--evil-bg); color: var(--evil-text); border-color: var(--blood); }
 
     .btn-row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; flex-wrap: wrap; }
     .btn {
@@ -985,8 +1016,7 @@
     <!-- Right-side: alive/dead + icon buttons pushed to far right -->
     <div style="display:flex;align-items:center;gap:8px;margin-left:auto;flex-shrink:0;">
       <span class="bar-meta">
-        <span class="meta-line"><strong id="meta-alive">—</strong> alive · <strong id="meta-dead">—</strong> dead</span>
-        <span class="meta-line meta-sub"><span class="meta-good" id="meta-alive-good">—</span>/<span class="meta-evil" id="meta-alive-evil">—</span> · <span class="meta-good" id="meta-dead-good">—</span>/<span class="meta-evil" id="meta-dead-evil">—</span></span>
+        <span class="meta-line"><strong id="meta-alive">—</strong> alive (<span class="meta-good" id="meta-alive-good">—</span>/<span class="meta-evil" id="meta-alive-evil">—</span>) · <strong id="meta-dead">—</strong> dead (<span class="meta-good" id="meta-dead-good">—</span>/<span class="meta-evil" id="meta-dead-evil">—</span>)</span>
       </span>
       <button class="topbar-icon-btn" id="btn-open-notes"       title="Notes">📜</button>
       <button class="topbar-icon-btn" id="btn-open-nominations" title="Nominations">⚖</button>
@@ -1084,9 +1114,11 @@
         <div class="status-section">
           <label>Status</label>
           <div class="toggles">
-            <button class="tog" id="tog-dead"      data-on="on-dead">☠ Dead</button>
-            <button class="tog" id="tog-nominated" data-on="on-nominated">⚖ Nominated</button>
-            <button class="tog" id="tog-vote"      data-on="on-vote">🗳 Ghost vote</button>
+            <button class="tog" id="tog-dead"       data-on="on-dead">☠ Dead</button>
+            <button class="tog" id="tog-drunk" data-on="on-drunk"><img src="https://wiki.bloodontheclocktower.com/images/4/4a/Icon_drunk.png" alt="Drunk" style="width:18px;height:18px;object-fit:contain;vertical-align:middle;margin-right:4px;">Drunk</button>
+            <button class="tog" id="tog-poisoned" data-on="on-poisoned"><img src="https://wiki.bloodontheclocktower.com/images/b/b1/Icon_poisoner.png" alt="Poisoned" style="width:18px;height:18px;object-fit:contain;vertical-align:middle;margin-right:4px;">Poisoned</button>
+            <button class="tog" id="tog-suspicious" data-on="on-suspicious">🔍 Suspicious</button>
+            <button class="tog" id="tog-vote"       data-on="on-vote">🗳 Ghost vote</button>
           </div>
         </div>
 
@@ -1169,8 +1201,8 @@
 
         <div class="settings-row">
           <div>
-            <div class="settings-label">Clear round</div>
-            <div class="settings-sub">Reset round, notes &amp; roles — keeps seat positions and names</div>
+            <div class="settings-label">Clear table</div>
+            <div class="settings-sub">Reset table, notes &amp; roles — keeps seat positions and names</div>
           </div>
           <div class="settings-control">
             <button class="btn" id="btn-clear-soft" style="font-size:13px;padding:7px 14px;border-color:var(--gold);color:var(--gold-light);">⟳ Clear</button>
@@ -1195,11 +1227,11 @@
   <div class="modal-overlay" id="modal-confirm-soft">
     <div class="modal-sheet" style="max-height:auto;">
       <div class="modal-inner" style="padding:20px 20px 24px;">
-        <div style="font-size:16px;font-weight:500;color:var(--gold-light);font-family:var(--font-serif);margin-bottom:8px;">⟳ Clear round?</div>
-        <div style="font-size:13px;color:var(--text-secondary);margin-bottom:20px;line-height:1.6;">This will reset the round counter, all night notes, and all player roles and comments. Player names and seat positions will be kept.</div>
+        <div style="font-size:16px;font-weight:500;color:var(--gold-light);font-family:var(--font-serif);margin-bottom:8px;">⟳ Clear table?</div>
+        <div style="font-size:13px;color:var(--text-secondary);margin-bottom:20px;line-height:1.6;">This will reset the table, all night notes, and all player roles and comments. Player names and seat positions will be kept.</div>
         <div style="display:flex;gap:10px;justify-content:flex-end;">
           <button class="btn" id="btn-confirm-soft-cancel">Cancel</button>
-          <button class="btn" id="btn-confirm-soft-ok" style="border-color:var(--gold);color:var(--gold-light);font-weight:600;">Clear round</button>
+          <button class="btn" id="btn-confirm-soft-ok" style="border-color:var(--gold);color:var(--gold-light);font-weight:600;">Clear table</button>
         </div>
       </div>
     </div>
@@ -1287,7 +1319,6 @@
     { name:'Soldier',       cat:'townsfolk',  align:'good' },
     { name:'Mayor',         cat:'townsfolk',  align:'good' },
     { name:'Butler',        cat:'outsider',   align:'good' },
-    { name:'Drunk',         cat:'outsider',   align:'good' },
     { name:'Recluse',       cat:'outsider',   align:'good' },
     { name:'Saint',         cat:'outsider',   align:'good' },
     { name:'Poisoner',      cat:'minion',     align:'evil' },
@@ -1618,7 +1649,7 @@
   let nomVoteIdx = null;
 
   function blankSeat() {
-    return { name:'', role:'', trueRole:'', alignment:'unknown', notes:'', dead:false, nominated:false, usedVote:false };
+    return { name:'', role:'', trueRole:'', alignment:'unknown', notes:'', dead:false, usedVote:false, suspicious:false, drunk:false, poisoned:false };
   }
 
   function initSeats(n) {
@@ -1685,10 +1716,11 @@
       const voteList = (nomMode === 'votes' && nomVoteKey && nomVoteIdx !== null)
         ? ((nominations[nomVoteKey]?.[nomVoteIdx]?.votes) || []) : [];
       el.className = 'seat' +
-        (s.dead                                  ? ' dead'     : '') +
-        (selected === i                          ? ' selected' : '') +
-        (nomMode === 'to' && nomFrom === i       ? ' nom-from' : '') +
-        (nomMode === 'votes' && voteList.includes(i) ? ' nom-voted' : '');
+        (s.dead                                  ? ' dead'       : '') +
+        (s.suspicious                            ? ' suspicious' : '') +
+        (selected === i                          ? ' selected'   : '') +
+        (nomMode === 'to' && nomFrom === i       ? ' nom-from'   : '') +
+        (nomMode === 'votes' && voteList.includes(i) ? ' nom-voted'  : '');
       el.style.left = pos.x + 'px';
       el.style.top  = pos.y + 'px';
       el.dataset.idx = i;
@@ -1704,17 +1736,26 @@
       const roleIconHtml = iconSrc
         ? `<img class="seat-role-icon" src="${esc(iconSrc)}" alt="${esc(s.role)}" title="${esc(s.role)}">`
         : '';
+      const drunkIconSrc = s.poisoned
+        ? 'https://wiki.bloodontheclocktower.com/images/b/b1/Icon_poisoner.png'
+        : s.drunk ? ROLE_ICONS['Drunk'] : null;
+      const drunkIconHtml = drunkIconSrc
+        ? `<img class="seat-drunk-icon" src="${esc(drunkIconSrc)}" alt="${s.poisoned?'Poisoned':'Drunk'}" title="${s.poisoned?'Poisoned':'Drunk'}">`
+        : '';
       const roleHtml = s.role ? `<span class="seat-role">${esc(s.role)}</span>` : '';
       const dotClass = roleData ? ` dot-${roleData.cat}` : '';
+      const dayNoms = nominations['day-' + round] || [];
+      const isNominated = phase === 'day' && dayNoms.some(n => n.to === i);
 
       const statusIcons = [
-        s.nominated ? '<span class="seat-status-icon nominated">⚖</span>' : '',
-        s.usedVote  ? '<span class="seat-status-icon ghost-vote">👻</span>' : '',
+        isNominated  ? '<span class="seat-status-icon nominated">⚖</span>' : '',
+
+        s.usedVote   ? '<span class="seat-status-icon ghost-vote">👻</span>' : '',
       ].join('');
       const statusStrip = statusIcons
         ? `<span class="seat-status-strip">${statusIcons}</span>` : '';
 
-      el.innerHTML = `${roleIconHtml}<div class="seat-inner">
+      el.innerHTML = `${roleIconHtml}${drunkIconHtml}<div class="seat-inner">
         ${badgeHtml}
         <span class="seat-num">${i + 1}</span>
         ${nameHtml}
@@ -1814,8 +1855,11 @@
     document.getElementById('f-alignment').value = s.alignment;
     document.getElementById('f-notes').value     = s.notes;
     setTog('tog-dead',      s.dead,      'on-dead');
-    setTog('tog-nominated', s.nominated, 'on-nominated');
     setTog('tog-vote',      s.usedVote,  'on-vote');
+    document.getElementById('tog-vote').style.display = s.dead ? '' : 'none';
+    setTog('tog-drunk',     s.drunk,     'on-drunk');
+    setTog('tog-poisoned',  s.poisoned,  'on-poisoned');
+    setTog('tog-suspicious',s.suspicious,'on-suspicious');
     openModal('edit');
   }
 
@@ -1834,8 +1878,10 @@
     s.alignment = document.getElementById('f-alignment').value;
     s.notes     = document.getElementById('f-notes').value.trim();
     s.dead      = !!document.getElementById('tog-dead')._active;
-    s.nominated = !!document.getElementById('tog-nominated')._active;
     s.usedVote  = !!document.getElementById('tog-vote')._active;
+    s.drunk     = !!document.getElementById('tog-drunk')._active;
+    s.poisoned  = !!document.getElementById('tog-poisoned')._active;
+    s.suspicious= !!document.getElementById('tog-suspicious')._active;
     closePanel();
   }
 
@@ -1874,10 +1920,9 @@
         ? `<span class="pli-badge badge-${s.alignment}">${s.alignment}</span>`
         : '';
       const statusIcons = [
-        s.nominated ? '<span class="pli-status-icon">⚖</span>' : '',
-        s.usedVote  ? '<span class="pli-status-icon">👻</span>' : '',
+        s.usedVote   ? '<span class="pli-status-icon">👻</span>' : '',
       ].join('');
-      return `<div class="pli${selected===i?' selected':''}" data-idx="${i}">
+      return `<div class="pli${selected===i?' selected':''}${s.suspicious?' pli-suspicious':''}" data-idx="${i}">
         <span class="pli-num">${i+1}</span>
         <span class="pli-dot${s.dead?' dead':''}"></span>
         <span class="pli-name${s.name?'':' empty'}">${s.name ? esc(s.name) : 'Empty'}</span>
@@ -1990,6 +2035,7 @@
 
   function startNomMode() {
     if (moveMode) return;
+    if (phase === 'night') return;
     closeModal('edit');
     closeModal('list');
     closeModal('nominations');
@@ -2018,6 +2064,7 @@
   }
 
   function renderNominationsModal() {
+    document.getElementById('btn-nom-new').style.display = phase === 'night' ? 'none' : '';
     const list = document.getElementById('nominations-list');
     const allKeys = Object.keys(nominations)
       .filter(k => nominations[k].length > 0)
@@ -2103,6 +2150,10 @@
     // Keep legacy element references alive (notes modal uses them)
     document.getElementById('center-icon').textContent  = phase === 'day' ? '☀️' : '🌙';
     document.getElementById('center-round').textContent = (phase === 'day' ? 'Day ' : 'Night ') + round;
+    // Hide nominate button on night
+    const btnNom = document.getElementById('btn-nom');
+    if (btnNom) btnNom.style.display = phase === 'night' ? 'none' : '';
+    if (phase === 'night' && nomMode) cancelNomMode();
   }
 
   function setPhase(p) {
@@ -2125,6 +2176,7 @@
     round = pr.round;
     updateCycleUI();
     updateNomBadge();
+    renderCircle();
     saveState();
   }
 
@@ -2132,10 +2184,28 @@
   document.getElementById('btn-cycle-next').addEventListener('click', () => advanceCycle(+1));
 
   // ── Toggle buttons ─────────────────────────────────
-  ['tog-dead','tog-nominated','tog-vote'].forEach(id => {
+  ['tog-dead','tog-vote','tog-suspicious'].forEach(id => {
     document.getElementById(id).addEventListener('click', function () {
       this._active = !this._active;
       this.className = 'tog' + (this._active ? ' ' + this.dataset.on : '');
+      if (id === 'tog-dead') {
+        const voteBtn = document.getElementById('tog-vote');
+        voteBtn.style.display = this._active ? '' : 'none';
+        if (!this._active) { voteBtn._active = false; voteBtn.className = 'tog'; }
+      }
+    });
+  });
+  // Drunk and Poisoned are mutually exclusive
+  ['tog-drunk','tog-poisoned'].forEach(id => {
+    const otherId = id === 'tog-drunk' ? 'tog-poisoned' : 'tog-drunk';
+    document.getElementById(id).addEventListener('click', function () {
+      this._active = !this._active;
+      this.className = 'tog' + (this._active ? ' ' + this.dataset.on : '');
+      if (this._active) {
+        const other = document.getElementById(otherId);
+        other._active = false;
+        other.className = 'tog';
+      }
     });
   });
 
