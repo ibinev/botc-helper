@@ -198,34 +198,38 @@
       -webkit-tap-highlight-color: transparent;
     }
 
-    .phase-toggle {
+    .phase-toggle { display: none; }
+
+    .cycle-controls {
       display: flex;
+      align-items: center;
+      gap: 2px;
+      background: var(--bg-surface);
       border: 0.5px solid var(--border);
       border-radius: var(--radius-md);
       overflow: hidden;
     }
-    .phase-btn {
-      padding: 5px 10px;
-      background: var(--bg-surface);
-      border: none;
-      cursor: pointer;
-      font-family: var(--font-sans);
-      font-size: 11px;
-      color: var(--text-secondary);
-      transition: background 0.12s, color 0.12s;
+    .cycle-btn {
+      width: 30px; height: 30px;
+      display: flex; align-items: center; justify-content: center;
+      background: none; border: none; cursor: pointer;
+      color: var(--gold); font-size: 16px;
       -webkit-tap-highlight-color: transparent;
+      transition: background 0.1s;
+      flex-shrink: 0;
     }
-    .phase-btn.active-day   { background: rgba(201,151,58,0.2); color: var(--gold-light); }
-    .phase-btn.active-night { background: rgba(24,95,165,0.22); color: var(--info-text); }
+    .cycle-btn:active { background: rgba(201,151,58,0.15); }
+    .cycle-btn:disabled { color: var(--text-muted); cursor: default; }
+    .cycle-label {
+      padding: 0 8px;
+      font-size: 12px; font-weight: 600;
+      white-space: nowrap;
+      min-width: 68px; text-align: center;
+    }
+    .cycle-label.phase-day   { color: var(--gold-light); }
+    .cycle-label.phase-night { color: var(--info-text); }
 
-    .round-controls {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      font-size: 11px;
-      color: var(--text-secondary);
-    }
-    .round-controls span { color: var(--text-primary); font-weight: 600; }
+    .round-controls { display: none; }
 
     .btn-sm {
       padding: 5px 10px;
@@ -966,17 +970,11 @@
   <div id="topbar">
     <span class="bar-title">Town Square</span>
 
-    <!-- Day/Night toggle -->
-    <div class="phase-toggle">
-      <button class="phase-btn active-day" id="btn-day">☀ Day</button>
-      <button class="phase-btn"            id="btn-night">🌙 Night</button>
-    </div>
-
-    <!-- Round counter -->
-    <div class="round-controls">
-      <button class="btn-sm" id="btn-round-minus">−</button>
-      R<span id="round-display">1</span>
-      <button class="btn-sm" id="btn-round-plus">+</button>
+    <!-- Day/Night cycle control -->
+    <div class="cycle-controls">
+      <button class="cycle-btn" id="btn-cycle-prev" title="Previous">&#8249;</button>
+      <span class="cycle-label phase-day" id="cycle-label">Day 1</span>
+      <button class="cycle-btn" id="btn-cycle-next" title="Next">&#8250;</button>
     </div>
 
     <!-- Move seats -->
@@ -2067,21 +2065,58 @@
     });
   }
 
-  // ── Phase & round ──────────────────────────────────
+  // ── Phase & round (unified cycle) ───────────────────
+  // Sequence: Day1, Night1, Day2, Night2, … Day17, Night17
+  // step = 0-based index into that sequence.
+  const MAX_STEP = 33; // Night 17 = index 33
+
+  function stepToPhaseRound(step) {
+    return { phase: step % 2 === 0 ? 'day' : 'night', round: Math.floor(step / 2) + 1 };
+  }
+  function phaseRoundToStep(p, r) {
+    return (r - 1) * 2 + (p === 'night' ? 1 : 0);
+  }
+
+  function updateCycleUI() {
+    const label = document.getElementById('cycle-label');
+    if (label) {
+      label.textContent = (phase === 'day' ? 'Day ' : 'Night ') + round;
+      label.className = 'cycle-label ' + (phase === 'day' ? 'phase-day' : 'phase-night');
+    }
+    const step = phaseRoundToStep(phase, round);
+    const prev = document.getElementById('btn-cycle-prev');
+    const next = document.getElementById('btn-cycle-next');
+    if (prev) prev.disabled = step === 0;
+    if (next) next.disabled = step === MAX_STEP;
+    // Keep legacy element references alive (notes modal uses them)
+    document.getElementById('center-icon').textContent  = phase === 'day' ? '☀️' : '🌙';
+    document.getElementById('center-round').textContent = (phase === 'day' ? 'Day ' : 'Night ') + round;
+  }
+
   function setPhase(p) {
     phase = p;
-    document.getElementById('btn-day').className   = 'phase-btn' + (p === 'day'   ? ' active-day'   : '');
-    document.getElementById('btn-night').className = 'phase-btn' + (p === 'night' ? ' active-night' : '');
-    document.getElementById('center-icon').textContent  = p === 'day' ? '☀️' : '🌙';
-    document.getElementById('center-round').textContent = (p === 'day' ? 'Day ' : 'Night ') + round;
+    updateCycleUI();
     saveState();
   }
 
   function setRound(r) {
     round = Math.max(1, r);
-    document.getElementById('round-display').textContent = round;
-    document.getElementById('center-round').textContent  = (phase === 'day' ? 'Day ' : 'Night ') + round;
+    updateCycleUI();
   }
+
+  function advanceCycle(dir) {
+    const step = phaseRoundToStep(phase, round);
+    const next = Math.max(0, Math.min(MAX_STEP, step + dir));
+    if (next === step) return;
+    const pr = stepToPhaseRound(next);
+    phase = pr.phase;
+    round = pr.round;
+    updateCycleUI();
+    saveState();
+  }
+
+  document.getElementById('btn-cycle-prev').addEventListener('click', () => advanceCycle(-1));
+  document.getElementById('btn-cycle-next').addEventListener('click', () => advanceCycle(+1));
 
   // ── Toggle buttons ─────────────────────────────────
   ['tog-dead','tog-nominated','tog-vote'].forEach(id => {
@@ -2095,10 +2130,10 @@
   // Player count controls moved to Settings modal
 
   // ── Round ──────────────────────────────────────────
-  document.getElementById('btn-round-minus').addEventListener('click', () => { setRound(round - 1); saveState(); });
-  document.getElementById('btn-round-plus').addEventListener('click',  () => { setRound(round + 1); saveState(); });
-  document.getElementById('btn-day').addEventListener('click',   () => setPhase('day'));
-  document.getElementById('btn-night').addEventListener('click', () => setPhase('night'));
+  document.getElementById('btn-round-minus') && document.getElementById('btn-round-minus').addEventListener('click', () => { setRound(round - 1); saveState(); });
+  document.getElementById('btn-round-plus')  && document.getElementById('btn-round-plus').addEventListener('click',  () => { setRound(round + 1); saveState(); });
+  document.getElementById('btn-day')   && document.getElementById('btn-day').addEventListener('click',   () => setPhase('day'));
+  document.getElementById('btn-night') && document.getElementById('btn-night').addEventListener('click', () => setPhase('night'));
 
   // ── Panel actions ──────────────────────────────────
   document.getElementById('btn-save').addEventListener('click', saveSeat);
@@ -2605,12 +2640,8 @@
   while (seatPositions.length < seatCount) seatPositions.push(null);
   // setPhase/setRound without saveState side-effects on first paint
   (function applyPhase(p) {
-    document.getElementById('btn-day').className   = 'phase-btn' + (p === 'day'   ? ' active-day'   : '');
-    document.getElementById('btn-night').className = 'phase-btn' + (p === 'night' ? ' active-night' : '');
-    document.getElementById('center-icon').textContent  = p === 'day' ? '☀️' : '🌙';
-    document.getElementById('center-round').textContent = (p === 'day' ? 'Day ' : 'Night ') + round;
+    updateCycleUI();
   })(phase);
-  document.getElementById('round-display').textContent = round;
   document.getElementById('center-round').textContent  = (phase === 'day' ? 'Day ' : 'Night ') + round;
   // Defer renderCircle until the browser has finished layout so offsetWidth is valid
   requestAnimationFrame(() => requestAnimationFrame(renderCircle));
