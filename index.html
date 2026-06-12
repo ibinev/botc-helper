@@ -415,8 +415,27 @@
     .seat.dead.suspicious .seat-inner {
       box-shadow: 0 0 0 3px #9b4dca, 0 2px 8px rgba(0,0,0,0.4);
     }
-    /* Suspicious tint in player list */
-    .pli-suspicious .pli-name { color: #d08ef0 !important; }
+    /* Suspicious badge in player list — same pattern as good/evil */
+    .badge-suspicious { background: rgba(160,60,200,0.2); color: #d08ef0; }
+    /* Alignment ring: good = green, evil = red (mirrors suspicious purple) */
+    .seat.align-good .seat-inner {
+      box-shadow:
+        0 0 0 3px #5a9e2f,
+        0 2px 12px rgba(0,0,0,0.5),
+        inset 0 1px 0 rgba(255,255,255,0.08);
+    }
+    .seat.dead.align-good .seat-inner {
+      box-shadow: 0 0 0 3px #5a9e2f, 0 2px 8px rgba(0,0,0,0.4);
+    }
+    .seat.align-evil .seat-inner {
+      box-shadow:
+        0 0 0 3px #c0392b,
+        0 2px 12px rgba(0,0,0,0.5),
+        inset 0 1px 0 rgba(255,255,255,0.08);
+    }
+    .seat.align-evil.dead .seat-inner {
+      box-shadow: 0 0 0 3px #c0392b, 0 2px 8px rgba(0,0,0,0.4);
+    }
 
     /* drag mode */
     .move-mode .seat        { cursor: grab; }
@@ -441,7 +460,7 @@
       text-shadow: 0 1px 2px rgba(0,0,0,0.9);
     }
     .seat-dot {
-      position: absolute; bottom: 6px; right: 6px;
+      position: absolute; bottom: 10px; right: 10px;
       width: 7px; height: 7px; border-radius: 50%;
       background: #5a9e2f; border: 1.5px solid var(--bg-card);
     }
@@ -474,9 +493,11 @@
     }
     @media (max-width: 479px) {
       .seat-drunk-icon { width: 45px; height: 45px; top: -13px; right: -13px; }
+      .seat-dot { bottom: 6px; right: 6px; }
     }
     @media (min-width: 520px) {
       .seat-drunk-icon { width: 60px; height: 60px; top: -16px; right: -16px; }
+      .seat-dot { bottom: 11px; right: 11px; }
     }
     /* Role icon — centered on the NW point of the circle edge (halfway in, halfway out).
        For seat-size 90px: r=45, NW edge ≈ (13,13) from bounding-box corner.
@@ -683,12 +704,18 @@
     .pli-num  { font-size: 10px; color: var(--text-muted); min-width: 16px; text-align: right; }
     .pli-dot  { width: 8px; height: 8px; border-radius: 50%; background: #5a9e2f; flex-shrink: 0; }
     .pli-dot.dead { background: var(--blood-light); }
+    /* Alignment ring on list dot — mirrors seat circle rings */
+    .pli-dot.align-good { outline: 2px solid #5a9e2f; outline-offset: 1px; }
+    .pli-dot.align-evil { outline: 2px solid #c0392b; outline-offset: 1px; }
+    .pli-dot.susp       { outline: 2px solid #9b4dca; outline-offset: 1px; }
     .pli-name { flex: 1; font-size: 14px; font-weight: 500; color: var(--text-primary); }
     .pli-name.empty { color: var(--text-muted); font-style: italic; font-weight: 400; }
     .pli-role { font-size: 12px; color: var(--text-secondary); }
     .pli-badge { font-size: 10px; padding: 2px 8px; border-radius: 999px; font-weight: 500; }
     .no-players { text-align: center; padding: 2rem; color: var(--text-muted); font-style: italic; font-size: 13px; }
     .divider { height: 0.5px; background: var(--border); margin: 14px 0; }
+    /* Bluff marker — shown when claimed role ≠ true role (both must be set) */
+    .bluff-mark { color: #ffffff; font-weight: 700; font-style: normal; margin-right: 1px; }
 
     /* ── Combobox ───────────────────────────────────── */
     .combo-wrap { position: relative; }
@@ -1089,6 +1116,7 @@
               <option value="unknown">Unknown</option>
               <option value="good">Good</option>
               <option value="evil">Evil</option>
+              <option value="suspicious">Suspicious</option>
             </select>
           </div>
           <div class="field">
@@ -1117,7 +1145,6 @@
             <button class="tog" id="tog-dead"       data-on="on-dead">☠ Dead</button>
             <button class="tog" id="tog-drunk" data-on="on-drunk"><img src="https://wiki.bloodontheclocktower.com/images/4/4a/Icon_drunk.png" alt="Drunk" style="width:18px;height:18px;object-fit:contain;vertical-align:middle;margin-right:4px;">Drunk</button>
             <button class="tog" id="tog-poisoned" data-on="on-poisoned"><img src="https://wiki.bloodontheclocktower.com/images/b/b1/Icon_poisoner.png" alt="Poisoned" style="width:18px;height:18px;object-fit:contain;vertical-align:middle;margin-right:4px;">Poisoned</button>
-            <button class="tog" id="tog-suspicious" data-on="on-suspicious">🔍 Suspicious</button>
             <button class="tog" id="tog-vote"       data-on="on-vote">🗳 Ghost vote</button>
           </div>
         </div>
@@ -1716,21 +1743,22 @@
       const voteList = (nomMode === 'votes' && nomVoteKey && nomVoteIdx !== null)
         ? ((nominations[nomVoteKey]?.[nomVoteIdx]?.votes) || []) : [];
       el.className = 'seat' +
-        (s.dead                                  ? ' dead'       : '') +
-        (s.suspicious                            ? ' suspicious' : '') +
-        (selected === i                          ? ' selected'   : '') +
-        (nomMode === 'to' && nomFrom === i       ? ' nom-from'   : '') +
-        (nomMode === 'votes' && voteList.includes(i) ? ' nom-voted'  : '');
+        (s.dead                                         ? ' dead'       : '') +
+        (s.alignment === 'suspicious'                   ? ' suspicious' : '') +
+        (s.alignment === 'good'                         ? ' align-good' : '') +
+        (s.alignment === 'evil'                         ? ' align-evil' : '') +
+        (selected === i                                 ? ' selected'   : '') +
+        (nomMode === 'to' && nomFrom === i              ? ' nom-from'   : '') +
+        (nomMode === 'votes' && voteList.includes(i)    ? ' nom-voted'  : '');
       el.style.left = pos.x + 'px';
       el.style.top  = pos.y + 'px';
       el.dataset.idx = i;
 
       const roleData = s.role ? ROLES.find(r => r.name === s.role) : null;
-      const badgeHtml = s.alignment !== 'unknown'
-        ? `<span class="seat-badge badge-${s.alignment}">${s.alignment === 'good' ? 'G' : 'E'}</span>`
-        : '';
+      const badgeHtml = '';
+      const isBluff = !!(s.role && s.trueRole && s.role !== s.trueRole);
       const nameHtml = s.name
-        ? `<span class="seat-name">${esc(s.name)}</span>`
+        ? `<span class="seat-name">${isBluff ? '<span class="bluff-mark">*</span>' : ''}${esc(s.name)}</span>`
         : `<span class="seat-name empty">Empty</span>`;
       const iconSrc = s.role && ROLE_ICONS[s.role] ? ROLE_ICONS[s.role] : null;
       const roleIconHtml = iconSrc
@@ -1761,7 +1789,7 @@
         ${nameHtml}
         ${roleHtml}
         ${statusStrip}
-        <span class="seat-dot${dotClass}"></span>
+        ${roleData ? `<span class="seat-dot${dotClass}"></span>` : ''}
       </div>`;
 
       if (moveMode) {
@@ -1859,7 +1887,6 @@
     document.getElementById('tog-vote').style.display = s.dead ? '' : 'none';
     setTog('tog-drunk',     s.drunk,     'on-drunk');
     setTog('tog-poisoned',  s.poisoned,  'on-poisoned');
-    setTog('tog-suspicious',s.suspicious,'on-suspicious');
     openModal('edit');
   }
 
@@ -1881,7 +1908,7 @@
     s.usedVote  = !!document.getElementById('tog-vote')._active;
     s.drunk     = !!document.getElementById('tog-drunk')._active;
     s.poisoned  = !!document.getElementById('tog-poisoned')._active;
-    s.suspicious= !!document.getElementById('tog-suspicious')._active;
+    s.suspicious= (s.alignment === 'suspicious');
     closePanel();
   }
 
@@ -1919,13 +1946,17 @@
       const alignBadge = s.alignment !== 'unknown'
         ? `<span class="pli-badge badge-${s.alignment}">${s.alignment}</span>`
         : '';
+      const dotExtra = s.alignment === 'suspicious' ? ' susp'
+        : s.alignment === 'good' ? ' align-good'
+        : s.alignment === 'evil' ? ' align-evil' : '';
+      const isBluff = !!(s.role && s.trueRole && s.role !== s.trueRole);
       const statusIcons = [
         s.usedVote   ? '<span class="pli-status-icon">👻</span>' : '',
       ].join('');
-      return `<div class="pli${selected===i?' selected':''}${s.suspicious?' pli-suspicious':''}" data-idx="${i}">
+      return `<div class="pli${selected===i?' selected':''}" data-idx="${i}">
         <span class="pli-num">${i+1}</span>
-        <span class="pli-dot${s.dead?' dead':''}"></span>
-        <span class="pli-name${s.name?'':' empty'}">${s.name ? esc(s.name) : 'Empty'}</span>
+        <span class="pli-dot${s.dead?' dead':''}${dotExtra}"></span>
+        <span class="pli-name${s.name?'':' empty'}">${s.name ? (isBluff ? '<span class="bluff-mark">*</span>' : '') + esc(s.name) : 'Empty'}</span>
         ${statusIcons}
         ${roleIconHtml}${roleBadge}
         ${alignBadge}
@@ -1974,10 +2005,10 @@
       nominations[key].push({ from: nomFrom, to: i, votes: [] });
       saveNominations();
       cancelNomMode();
-      // Flash the nominated seat briefly
-      const seats = document.querySelectorAll('.seat');
-      seats.forEach(el => { if (parseInt(el.dataset.idx) === i) el.classList.add('selected'); });
-      setTimeout(() => { renderCircle(); updateNomBadge(); }, 600);
+      updateNomBadge();
+      // Automatically start vote-picking for the nomination just added
+      const newIdx = nominations[key].length - 1;
+      startVoteMode(key, newIdx);
     } else if (nomMode === 'votes') {
       const entry = nominations[nomVoteKey]?.[nomVoteIdx];
       if (!entry) return;
@@ -2184,7 +2215,7 @@
   document.getElementById('btn-cycle-next').addEventListener('click', () => advanceCycle(+1));
 
   // ── Toggle buttons ─────────────────────────────────
-  ['tog-dead','tog-vote','tog-suspicious'].forEach(id => {
+  ['tog-dead','tog-vote'].forEach(id => {
     document.getElementById(id).addEventListener('click', function () {
       this._active = !this._active;
       this.className = 'tog' + (this._active ? ' ' + this.dataset.on : '');
