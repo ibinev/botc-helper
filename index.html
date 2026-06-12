@@ -2232,13 +2232,18 @@
       const groups = {};
       dead.forEach(({ s, i }) => {
         const label = (s.diedAt.phase === 'day' ? 'Day ' : 'Night ') + s.diedAt.round;
-        if (!groups[label]) groups[label] = [];
-        groups[label].push({ s, i });
+        if (!groups[label]) groups[label] = { phase: s.diedAt.phase, round: s.diedAt.round, entries: [] };
+        groups[label].entries.push({ s, i });
       });
-      deathsList.innerHTML = Object.entries(groups).map(([label, entries]) =>
+      const sortedKeys = Object.keys(groups).sort((a, b) => {
+        const ga = groups[a], gb = groups[b];
+        if (ga.round !== gb.round) return ga.round - gb.round;
+        return ga.phase === 'day' ? -1 : 1; // day before night
+      });
+      deathsList.innerHTML = sortedKeys.map(label =>
         `<div class="death-group">
           <div class="death-cycle-label">${label}</div>
-          ${entries.map(({ s, i }) => logEntryHtml(s, i, '☠')).join('')}
+          ${groups[label].entries.map(({ s, i }) => logEntryHtml(s, i, '☠')).join('')}
         </div>`
       ).join('');
       deathsSection.style.display = '';
@@ -2258,13 +2263,18 @@
       const groups = {};
       poisonedSeats.forEach(({ s, i }) => {
         const label = (s.poisonedAt.phase === 'day' ? 'Day ' : 'Night ') + s.poisonedAt.round;
-        if (!groups[label]) groups[label] = [];
-        groups[label].push({ s, i });
+        if (!groups[label]) groups[label] = { phase: s.poisonedAt.phase, round: s.poisonedAt.round, entries: [] };
+        groups[label].entries.push({ s, i });
       });
-      poisonedList.innerHTML = Object.entries(groups).map(([label, entries]) =>
+      const sortedKeys = Object.keys(groups).sort((a, b) => {
+        const ga = groups[a], gb = groups[b];
+        if (ga.round !== gb.round) return ga.round - gb.round;
+        return ga.phase === 'day' ? -1 : 1;
+      });
+      poisonedList.innerHTML = sortedKeys.map(label =>
         `<div class="death-group">
           <div class="death-cycle-label">${label}</div>
-          ${entries.map(({ s, i }) => logEntryHtml(s, i, '🧪')).join('')}
+          ${groups[label].entries.map(({ s, i }) => logEntryHtml(s, i, '🧪')).join('')}
         </div>`
       ).join('');
       poisonedSection.style.display = '';
@@ -2421,7 +2431,7 @@
       .sort((a, b) => {
         const na = parseInt(a.split('-')[1]);
         const nb = parseInt(b.split('-')[1]);
-        return nb - na;
+        return nb - na; // desc by day number
       });
     if (!allKeys.length) {
       list.innerHTML = '<div class="nom-empty">No nominations recorded yet.<br>Use ⚖ Nominate on the circle to add one.</div>';
@@ -2429,8 +2439,10 @@
     }
     list.innerHTML = allKeys.map(key => {
       const dayNum = key.split('-')[1];
-      const entries = nominations[key];
-      const rows = entries.map((e, idx) => {
+      const entries = nominations[key]
+        .map((e, idx) => ({ e, idx }))
+        .reverse(); // newest nomination first, original idx preserved
+      const rows = entries.map(({ e, idx }) => {
         const votes = e.votes || [];
         const voterChips = votes.length
           ? votes.map(vi => `<span class="nom-voter-chip">${esc(seatLabel(vi))}</span>`).join('')
