@@ -2955,7 +2955,7 @@
 
   // ── Extended hints toggle ────────────────────────
   const alignHintsBtn = document.getElementById('btn-align-hints');
-  let alignHints = localStorage.getItem('botc_align_hints') !== 'off';
+  let alignHints = localStorage.getItem('botc_align_hints') === 'on';
   function applyAlignHints() {
     document.body.classList.toggle('align-hints', alignHints);
     alignHintsBtn.textContent = alignHints ? 'On' : 'Off';
