@@ -1,4 +1,5 @@
-const CACHE = 'botc-v1';
+const VERSION = 'v2';
+const CACHE = 'botc-' + VERSION;
 // Derive base path so this works at root (localhost) or a subpath (GitHub Pages)
 const BASE = self.location.pathname.replace(/\/sw\.js$/, '') || '';
 const LOCAL_ASSETS = [
@@ -12,6 +13,7 @@ const LOCAL_ASSETS = [
   BASE + '/src/app.js',
   BASE + '/src/data.js',
   BASE + '/src/utils.js',
+  BASE + '/src/version.js',
   BASE + '/src/components/botc-app.js',
   BASE + '/src/components/botc-combo.js',
   BASE + '/src/components/botc-circle.js',

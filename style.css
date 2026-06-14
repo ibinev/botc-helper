@@ -470,6 +470,7 @@ body.align-hints .seat.nom-voted.suspicious .seat-inner { background: rgba(155,7
 .btn-hints            { min-width: 52px; }
 .btn-hints.active     { border-color: var(--gold); color: var(--gold-light); }
 .settings-label--danger { color: var(--evil-text); }
+.settings-version { text-align: center; font-size: 11px; color: var(--text-muted, #6b5c45); margin-top: 12px; letter-spacing: 0.08em; }
 
 /* ── Confirm dialogs ──────────────────────────────────── */
 .modal-sheet--compact  { max-height: none; }

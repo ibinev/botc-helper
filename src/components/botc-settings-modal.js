@@ -1,5 +1,6 @@
 import { LitElement, html, nothing } from 'lit';
 import { MIN, MAX } from '../utils.js';
+import { APP_VERSION } from '../version.js';
 
 /**
  * <botc-settings-modal>
@@ -199,6 +200,8 @@ export class BotcSettingsModal extends LitElement {
                   @click="${() => { this._onClose(); this._fire('reset', {}); }}">↺ Reset all</button>
               </div>
             </div>
+
+            <div class="settings-version">${APP_VERSION}</div>
 
           </div>
         </div>
