@@ -327,7 +327,7 @@ export class BotcApp extends LitElement {
       const key = this._nomKey();
       const noms = { ...this.nominations };
       if (!noms[key]) noms[key] = [];
-      noms[key] = [...noms[key], { from: this.nomFrom, to: idx, votes: [] }];
+      noms[key] = [...noms[key], { from: this.nomFrom, to: idx, votes: [], aliveCount: this.seats.filter(s => !s.dead).length }];
       this.nominations = noms;
       this._saveNominations();
       const newIdx = noms[key].length - 1;
@@ -361,10 +361,7 @@ export class BotcApp extends LitElement {
     this.nomVoteIdx = idx;
     const noms = { ...this.nominations };
     noms[key] = [...noms[key]];
-    noms[key][idx] = {
-      ...noms[key][idx],
-      aliveCount: this.seats.filter(s => !s.dead).length,
-    };
+    noms[key][idx] = { ...noms[key][idx] };
     this.nominations = noms;
     this._saveNominations();
     this.requestUpdate();

@@ -144,7 +144,7 @@ export class BotcSettingsModal extends LitElement {
             <div class="settings-row">
               <div>
                 <div class="settings-label">Extended hints</div>
-                <div class="settings-sub">Show coloured ring on seats when alignment is set and dot for the role</div>
+                <div class="settings-sub">Show coloured ring on seats when alignment is set</div>
               </div>
               <div class="settings-control">
                 <button class="btn-sm btn-hints ${this.alignHints ? 'active' : ''}"

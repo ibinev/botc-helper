@@ -41,11 +41,13 @@ self.addEventListener('activate', e => {
   );
 });
 
-// Fetch: cache-first for local assets, network-first for CDN (Lit)
+// Fetch: network-first for local assets (always get latest, fall back to cache offline)
+// CDN resources: cache-first after first load
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
-  // Always go network for CDN (esm.sh) on first load, cache thereafter
+
   if (url.hostname === 'esm.sh' || url.hostname === 'wiki.bloodontheclocktower.com') {
+    // CDN: cache-first, update cache in background
     e.respondWith(
       caches.open(CACHE).then(cache =>
         cache.match(e.request).then(cached => {
@@ -59,18 +61,17 @@ self.addEventListener('fetch', e => {
     );
     return;
   }
-  // Cache-first for local assets
+
+  // Local assets: network-first so updates are picked up immediately
   e.respondWith(
-    caches.match(e.request).then(cached =>
-      cached || fetch(e.request).then(res => {
+    fetch(e.request)
+      .then(res => {
         if (res.ok) {
-          // Clone synchronously before any async operation —
-          // the body may be consumed by the time caches.open resolves.
           const resClone = res.clone();
           caches.open(CACHE).then(c => c.put(e.request, resClone));
         }
         return res;
       })
-    )
+      .catch(() => caches.match(e.request)) // offline fallback
   );
 });

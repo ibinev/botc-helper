@@ -214,12 +214,12 @@ botc-circle { display: block; position: absolute; inset: 0; }
 .seat.dead:active .seat-inner { opacity: 0.85; }
 @media (hover: hover) and (pointer: fine) { .seat.dead:hover .seat-inner { opacity: 0.85; } }
 
-body.align-hints .seat.suspicious .seat-inner { box-shadow: 0 0 0 3px #9b4dca, 0 2px 12px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08); }
-body.align-hints .seat.dead.suspicious .seat-inner { box-shadow: 0 0 0 3px #9b4dca, 0 2px 8px rgba(0,0,0,0.4); }
-body.align-hints .seat.align-good .seat-inner { box-shadow: 0 0 0 3px #5a9e2f, 0 2px 12px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08); }
-body.align-hints .seat.dead.align-good .seat-inner { box-shadow: 0 0 0 3px #5a9e2f, 0 2px 8px rgba(0,0,0,0.4); }
-body.align-hints .seat.align-evil .seat-inner { box-shadow: 0 0 0 3px #c0392b, 0 2px 12px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08); }
-body.align-hints .seat.align-evil.dead .seat-inner { box-shadow: 0 0 0 3px #c0392b, 0 2px 8px rgba(0,0,0,0.4); }
+body.align-hints .seat.suspicious .seat-inner { box-shadow: 0 2px 12px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08); }
+body.align-hints .seat.dead.suspicious .seat-inner { box-shadow: 0 2px 8px rgba(0,0,0,0.4); }
+body.align-hints .seat.align-good .seat-inner { box-shadow: 0 2px 12px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08); }
+body.align-hints .seat.dead.align-good .seat-inner { box-shadow: 0 2px 8px rgba(0,0,0,0.4); }
+body.align-hints .seat.align-evil .seat-inner { box-shadow: 0 2px 12px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08); }
+body.align-hints .seat.align-evil.dead .seat-inner { box-shadow: 0 2px 8px rgba(0,0,0,0.4); }
 
 .move-mode .seat { cursor: grab; }
 .move-mode .seat:active { cursor: grabbing; }
@@ -231,7 +231,6 @@ body.align-hints .seat.align-evil.dead .seat-inner { box-shadow: 0 0 0 3px #c039
 .seat-role { font-size: 11px; color: #e0c880; max-width: 78px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; text-align: center; text-shadow: 0 1px 2px rgba(0,0,0,0.9); }
 
 .seat-dot { position: absolute; bottom: 10px; right: 10px; width: 7px; height: 7px; border-radius: 50%; background: #5a9e2f; border: 1.5px solid var(--bg-card); display: none; }
-body.align-hints .seat-dot { display: block; }
 .seat.dead .seat-dot { background: var(--blood-light); }
 
 .seat-status-strip { position: absolute; bottom: 7px; left: 50%; transform: translateX(-50%); display: flex; gap: 3px; align-items: center; pointer-events: none; }
@@ -287,7 +286,7 @@ body.align-hints .seat-dot { display: block; }
 #nom-step-bar.visible { display: block; }
 .nom-mode .seat .seat-inner { border-color: rgba(201,151,58,0.35); }
 .seat.nom-from .seat-inner { border-color: var(--gold-light) !important; box-shadow: 0 0 0 3px var(--gold), 0 4px 20px rgba(201,151,58,0.45), inset 0 0 20px rgba(201,151,58,0.1) !important; }
-.seat.nom-voted .seat-inner { border-color: #5a9e2f !important; box-shadow: 0 0 0 6px #5a9e2f, 0 4px 28px rgba(90,158,47,0.75), inset 0 0 28px rgba(90,158,47,0.18) !important; }
+.seat.nom-voted .seat-inner { border-color: #5a9e2f !important; box-shadow: 0 0 0 4px #5a9e2f, 0 4px 28px rgba(90,158,47,0.75), inset 0 0 28px rgba(90,158,47,0.18) !important; }
 body.align-hints .seat.nom-voted.align-good .seat-inner { background: rgba(63,158,17,0.28) !important; }
 body.align-hints .seat.nom-voted.align-evil .seat-inner { background: rgba(192,57,43,0.35) !important; }
 body.align-hints .seat.nom-voted.suspicious .seat-inner { background: rgba(155,77,202,0.3) !important; }
@@ -360,9 +359,6 @@ body.align-hints .seat.nom-voted.suspicious .seat-inner { background: rgba(155,7
 .pli-num  { font-size: 10px; color: var(--text-secondary); min-width: 16px; text-align: right; font-weight: 600; }
 .pli-dot  { width: 8px; height: 8px; border-radius: 50%; background: #5a9e2f; flex-shrink: 0; }
 .pli-dot.dead { background: var(--blood-light); }
-body.align-hints .pli-dot.align-good { outline: 2px solid #5a9e2f; outline-offset: 1px; }
-body.align-hints .pli-dot.align-evil { outline: 2px solid #c0392b; outline-offset: 1px; }
-body.align-hints .pli-dot.susp       { outline: 2px solid #9b4dca; outline-offset: 1px; }
 .pli-name { flex: 1; font-size: 14px; font-weight: 500; color: var(--text-primary); }
 .pli-name.empty { color: var(--text-muted); font-style: italic; font-weight: 400; }
 .pli-role { font-size: 12px; color: var(--text-secondary); }
