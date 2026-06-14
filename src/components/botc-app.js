@@ -31,6 +31,7 @@ export class BotcApp extends LitElement {
     dayMode:           { type: Boolean },
     alignHints:        { type: Boolean },
     storyView:         { type: Boolean },
+    compactMode:       { type: Boolean },
     deathsCollapsed:   { type: Boolean },
     poisonedCollapsed: { type: Boolean },
     allseatsCollapsed: { type: Boolean },
@@ -67,6 +68,7 @@ export class BotcApp extends LitElement {
     this.dayMode           = false;
     this.alignHints        = false;
     this.storyView         = false;
+    this.compactMode       = false;
     this.deathsCollapsed   = false;
     this.poisonedCollapsed = false;
     this.allseatsCollapsed = false;
@@ -105,6 +107,7 @@ export class BotcApp extends LitElement {
     this._loadTheme();
     this._loadAlignHints();
     this._loadStoryView();
+    this._loadCompactMode();
     const restored = this._loadState();
     if (!restored) {
       this._initSeats(this.seatCount);
@@ -113,6 +116,7 @@ export class BotcApp extends LitElement {
     this._applyTheme();
     this._applyAlignHints();
     this._applyStoryView();
+    this._applyCompactMode();
     requestAnimationFrame(() => requestAnimationFrame(() => this.requestUpdate()));
   }
 
@@ -230,6 +234,17 @@ export class BotcApp extends LitElement {
 
   _loadStoryView() {
     this.storyView = localStorage.getItem('botc_story_view') === 'on';
+  }
+
+  _loadCompactMode() {
+    this.compactMode = localStorage.getItem('botc_compact_mode') === 'on';
+  }
+
+  _applyCompactMode() {
+    document.body.classList.toggle('compact-mode', this.compactMode);
+    try {
+      localStorage.setItem('botc_compact_mode', this.compactMode ? 'on' : 'off');
+    } catch(e) {}
   }
 
   _applyStoryView() {
@@ -733,6 +748,7 @@ export class BotcApp extends LitElement {
         .alignHints="${this.alignHints}"
         .dayMode="${this.dayMode}"
         .storyView="${this.storyView}"
+        .compactMode="${this.compactMode}"
         @count-change="${e => {
           this.seatCount = e.detail.count;
           this._initSeats(this.seatCount);
@@ -751,6 +767,11 @@ export class BotcApp extends LitElement {
         @story-view-toggle="${() => {
           this.storyView = !this.storyView;
           this._applyStoryView();
+          this.requestUpdate();
+        }}"
+        @compact-mode-toggle="${() => {
+          this.compactMode = !this.compactMode;
+          this._applyCompactMode();
           this.requestUpdate();
         }}"
         @theme-toggle="${() => {

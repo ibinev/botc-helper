@@ -30,6 +30,7 @@ export class BotcSettingsModal extends LitElement {
     alignHints: { type: Boolean },
     dayMode:    { type: Boolean },
     storyView:  { type: Boolean },
+    compactMode:{ type: Boolean },
   };
 
   createRenderRoot() { return this; }
@@ -41,6 +42,7 @@ export class BotcSettingsModal extends LitElement {
     this.alignHints = false;
     this.dayMode    = false;
     this.storyView  = false;
+    this.compactMode= false;
   }
 
   updated(changed) {
@@ -163,6 +165,18 @@ export class BotcSettingsModal extends LitElement {
                 <button class="btn-sm btn-hints ${this.storyView ? 'active' : ''}"
                   @click="${() => this._fire('story-view-toggle', {})}"
                 >${this.storyView ? 'On' : 'Off'}</button>
+              </div>
+            </div>
+
+            <div class="settings-row">
+              <div>
+                <div class="settings-label">Compact mode</div>
+                <div class="settings-sub">Shrink seats ~40% — hides role text, keeps icons and name</div>
+              </div>
+              <div class="settings-control">
+                <button class="btn-sm btn-hints ${this.compactMode ? 'active' : ''}"
+                  @click="${() => this._fire('compact-mode-toggle', {})}"
+                >${this.compactMode ? 'On' : 'Off'}</button>
               </div>
             </div>
 

@@ -276,6 +276,31 @@ body.align-hints .seat.align-evil.dead .seat-inner { box-shadow: 0 0 0 3px #c039
   .seat-dot { bottom: 11px; right: 11px; }
 }
 
+/* ── Compact mode ─────────────────────────────────── */
+body.compact-mode { --seat-size: 54px; }
+@media (max-width: 479px) { body.compact-mode { --seat-size: 41px; } }
+@media (min-width: 520px) { body.compact-mode { --seat-size: 58px; } }
+
+body.compact-mode .seat-role { display: none; }
+body.compact-mode .seat-name { font-size: 9px; max-width: 44px; }
+body.compact-mode .seat-num  { font-size: 7px; }
+body.compact-mode .seat-status-icon { font-size: 7px; }
+body.compact-mode .seat-status-strip { bottom: 4px; }
+body.compact-mode .seat-role-icon  { width: 32px; height: 32px; top: -8px; left:  -8px; }
+body.compact-mode .seat-drunk-icon { width: 32px; height: 32px; top: -8px; right: -8px; }
+
+@media (max-width: 479px) {
+  body.compact-mode .seat-name { font-size: 7px; max-width: 33px; }
+  body.compact-mode .seat-num  { font-size: 6px; }
+  body.compact-mode .seat-role-icon  { width: 24px; height: 24px; top: -6px; left:  -6px; }
+  body.compact-mode .seat-drunk-icon { width: 24px; height: 24px; top: -6px; right: -6px; }
+}
+@media (min-width: 520px) {
+  body.compact-mode .seat-name { font-size: 10px; max-width: 48px; }
+  body.compact-mode .seat-role-icon  { width: 34px; height: 34px; top: -9px; left:  -9px; }
+  body.compact-mode .seat-drunk-icon { width: 34px; height: 34px; top: -9px; right: -9px; }
+}
+
 /* ── Nomination mode ──────────────────────────────── */
 #nom-step-bar {
   position: absolute; top: 12px; left: 50%; transform: translateX(-50%); z-index: 30;
