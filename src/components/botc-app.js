@@ -713,6 +713,7 @@ export class BotcApp extends LitElement {
         .seats="${this.seats}"
         .phase="${this.phase}"
         .round="${this.round}"
+        .alignHints="${this.alignHints}"
         @nom-delete="${e => this._deleteNom(e.detail.key, e.detail.idx)}"
         @vote-mode-start="${e => this._startVoteMode(e.detail.key, e.detail.idx)}"
         @new-nom="${() => {

@@ -25,6 +25,7 @@ export class BotcNominationsModal extends LitElement {
     seats:       { type: Array   },
     phase:       { type: String  },
     round:       { type: Number  },
+    alignHints:  { type: Boolean },
   };
 
   createRenderRoot() { return this; }
@@ -36,6 +37,7 @@ export class BotcNominationsModal extends LitElement {
     this.seats       = [];
     this.phase       = 'day';
     this.round       = 1;
+    this.alignHints  = false;
   }
 
   updated(changed) {
@@ -84,6 +86,15 @@ export class BotcNominationsModal extends LitElement {
   _seatLabel(idx) {
     const s = this.seats[idx];
     return (s && s.name) ? s.name : 'Seat ' + (idx + 1);
+  }
+
+  _alignClass(idx) {
+    if (!this.alignHints) return '';
+    const a = this.seats[idx]?.alignment;
+    if (a === 'good') return 'align-good';
+    if (a === 'evil') return 'align-evil';
+    if (a === 'suspicious') return 'align-susp';
+    return 'align-none';
   }
 
   _onClose() {
@@ -174,7 +185,7 @@ export class BotcNominationsModal extends LitElement {
                         </div>
                         <div class="nom-voters">
                           ${votes.length ? votes.map(vi => html`
-                            <span class="nom-voter-chip">${this._seatLabel(vi)}</span>
+                            <span class="nom-voter-chip ${this._alignClass(vi)}">${this._seatLabel(vi)}</span>
                           `) : html`
                             <span class="nom-no-votes">No votes recorded</span>
                           `}
