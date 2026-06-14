@@ -30,6 +30,7 @@ export class BotcApp extends LitElement {
     gameNotes:         { type: Object  },
     dayMode:           { type: Boolean },
     alignHints:        { type: Boolean },
+    storyView:         { type: Boolean },
     deathsCollapsed:   { type: Boolean },
     poisonedCollapsed: { type: Boolean },
     allseatsCollapsed: { type: Boolean },
@@ -65,6 +66,7 @@ export class BotcApp extends LitElement {
     this.gameNotes         = {};
     this.dayMode           = false;
     this.alignHints        = false;
+    this.storyView         = false;
     this.deathsCollapsed   = false;
     this.poisonedCollapsed = false;
     this.allseatsCollapsed = false;
@@ -102,6 +104,7 @@ export class BotcApp extends LitElement {
     this._loadCollapsePrefs();
     this._loadTheme();
     this._loadAlignHints();
+    this._loadStoryView();
     const restored = this._loadState();
     if (!restored) {
       this._initSeats(this.seatCount);
@@ -109,6 +112,7 @@ export class BotcApp extends LitElement {
     while (this.seatPositions.length < this.seatCount) this.seatPositions.push(null);
     this._applyTheme();
     this._applyAlignHints();
+    this._applyStoryView();
     requestAnimationFrame(() => requestAnimationFrame(() => this.requestUpdate()));
   }
 
@@ -129,15 +133,21 @@ export class BotcApp extends LitElement {
       const raw = localStorage.getItem(LS_KEY);
       if (!raw) return false;
       const s = JSON.parse(raw);
-      this.seatCount     = Math.min(MAX, Math.max(MIN, s.seatCount || 12));
-      this.round         = Math.max(1, s.round || 1);
-      this.phase         = s.phase === 'night' ? 'night' : 'day';
-      this.seats         = Array.from({length: this.seatCount}, (_, i) => Object.assign(blankSeat(), s.seats?.[i] || {}));
-      this.seatPositions = Array.from({length: this.seatCount}, (_, i) =>
-        (s.seatPositions && s.seatPositions[i]) ? s.seatPositions[i] : null
+      this.seatCount = Math.min(MAX, Math.max(MIN, s.seatCount || 12));
+      this.round     = Math.max(1, s.round || 1);
+      this.phase     = s.phase === 'night' ? 'night' : 'day';
+      this.seats = Array.from(
+        { length: this.seatCount },
+        (_, i) => Object.assign(blankSeat(), s.seats?.[i] || {})
+      );
+      this.seatPositions = Array.from(
+        { length: this.seatCount },
+        (_, i) => (s.seatPositions?.[i]) ? s.seatPositions[i] : null
       );
       return true;
-    } catch(e) { return false; }
+    } catch(e) {
+      return false;
+    }
   }
 
   _clearStorage() {
@@ -145,19 +155,35 @@ export class BotcApp extends LitElement {
   }
 
   _saveNominations() {
-    try { localStorage.setItem('botc_nominations', JSON.stringify(this.nominations)); } catch(e) {}
+    try {
+      localStorage.setItem('botc_nominations', JSON.stringify(this.nominations));
+    } catch(e) {}
   }
+
   _loadNominations() {
-    try { const r = localStorage.getItem('botc_nominations'); if (r) this.nominations = JSON.parse(r); } catch(e) {}
+    try {
+      const r = localStorage.getItem('botc_nominations');
+      if (r) this.nominations = JSON.parse(r);
+    } catch(e) {}
   }
+
   _savePoisonSnapshots() {
-    try { localStorage.setItem('botc_poison_snaps', JSON.stringify(this.poisonSnapshots)); } catch(e) {}
+    try {
+      localStorage.setItem('botc_poison_snaps', JSON.stringify(this.poisonSnapshots));
+    } catch(e) {}
   }
+
   _loadPoisonSnapshots() {
-    try { const r = localStorage.getItem('botc_poison_snaps'); if (r) this.poisonSnapshots = JSON.parse(r); } catch(e) {}
+    try {
+      const r = localStorage.getItem('botc_poison_snaps');
+      if (r) this.poisonSnapshots = JSON.parse(r);
+    } catch(e) {}
   }
+
   _saveGameNotes() {
-    try { localStorage.setItem('botc_game_notes', JSON.stringify(this.gameNotes)); } catch(e) {}
+    try {
+      localStorage.setItem('botc_game_notes', JSON.stringify(this.gameNotes));
+    } catch(e) {}
   }
   _loadGameNotes() {
     try {
@@ -181,6 +207,7 @@ export class BotcApp extends LitElement {
       }));
     } catch(e) {}
   }
+
   _loadCollapsePrefs() {
     try {
       const r = localStorage.getItem('botc_collapse_prefs');
@@ -192,19 +219,38 @@ export class BotcApp extends LitElement {
       }
     } catch(e) {}
   }
+
   _loadTheme() {
     this.dayMode = localStorage.getItem('botc_theme') === 'day';
   }
+
   _loadAlignHints() {
     this.alignHints = localStorage.getItem('botc_align_hints') === 'on';
   }
+
+  _loadStoryView() {
+    this.storyView = localStorage.getItem('botc_story_view') === 'on';
+  }
+
+  _applyStoryView() {
+    document.body.classList.toggle('story-view', this.storyView);
+    try {
+      localStorage.setItem('botc_story_view', this.storyView ? 'on' : 'off');
+    } catch(e) {}
+  }
+
   _applyTheme() {
     document.body.classList.toggle('day-mode', this.dayMode);
-    try { localStorage.setItem('botc_theme', this.dayMode ? 'day' : 'dark'); } catch(e) {}
+    try {
+      localStorage.setItem('botc_theme', this.dayMode ? 'day' : 'dark');
+    } catch(e) {}
   }
+
   _applyAlignHints() {
     document.body.classList.toggle('align-hints', this.alignHints);
-    try { localStorage.setItem('botc_align_hints', this.alignHints ? 'on' : 'off'); } catch(e) {}
+    try {
+      localStorage.setItem('botc_align_hints', this.alignHints ? 'on' : 'off');
+    } catch(e) {}
   }
 
   // ── Seat helpers ─────────────────────────────────────────────────────
@@ -291,6 +337,9 @@ export class BotcApp extends LitElement {
     } else if (this.nomMode === 'votes') {
       const entry = this.nominations[this.nomVoteKey]?.[this.nomVoteIdx];
       if (!entry) return;
+      const seat = this.seats[idx];
+      // Dead players who already used their ghost vote cannot vote again
+      if (seat?.dead && seat?.usedVote) return;
       const votes = [...(entry.votes || [])];
       const pos = votes.indexOf(idx);
       if (pos === -1) votes.push(idx);
@@ -322,6 +371,22 @@ export class BotcApp extends LitElement {
   }
 
   _finishVoteMode() {
+    // Mark dead players who voted in this nomination as having used their ghost vote
+    const entry = this.nominations[this.nomVoteKey]?.[this.nomVoteIdx];
+    if (entry?.votes?.length) {
+      const seats = [...this.seats];
+      let changed = false;
+      entry.votes.forEach(vi => {
+        if (seats[vi]?.dead && !seats[vi].usedVote) {
+          seats[vi] = { ...seats[vi], usedVote: true };
+          changed = true;
+        }
+      });
+      if (changed) {
+        this.seats = seats;
+        this._saveState();
+      }
+    }
     this.nomMode    = false;
     this.nomVoteKey = null;
     this.nomVoteIdx = null;
@@ -387,41 +452,61 @@ export class BotcApp extends LitElement {
   // ── Reset ────────────────────────────────────────────────────────────
   _doReset() {
     this._clearStorage();
-    this.gameNotes       = {};
-    this.nominations     = {};
-    this.poisonSnapshots = {};
-    this.deathsCollapsed = false; this.poisonedCollapsed = false; this.allseatsCollapsed = false;
-    ['botc_game_notes','botc_night_notes','botc_nominations','botc_poison_snaps','botc_collapse_prefs']
-      .forEach(k => { try { localStorage.removeItem(k); } catch(e) {} });
-    this.seats         = Array.from({length: this.seatCount}, () => blankSeat());
-    this.seatPositions = Array.from({length: this.seatCount}, () => null);
+
+    this.gameNotes         = {};
+    this.nominations       = {};
+    this.poisonSnapshots   = {};
+    this.deathsCollapsed   = false;
+    this.poisonedCollapsed = false;
+    this.allseatsCollapsed = false;
+
+    const EXTRA_KEYS = [
+      'botc_game_notes', 'botc_night_notes', 'botc_nominations',
+      'botc_poison_snaps', 'botc_collapse_prefs',
+    ];
+    EXTRA_KEYS.forEach(k => { try { localStorage.removeItem(k); } catch(e) {} });
+
+    this.seats         = Array.from({ length: this.seatCount }, () => blankSeat());
+    this.seatPositions = Array.from({ length: this.seatCount }, () => null);
     this.selected      = null;
     this.moveMode      = false;
     this.nomMode       = false;
     this.nomFrom       = null;
     this.round         = 1;
     this.phase         = 'day';
-    this._confirmOpen  = false;
-    this._editOpen     = false;
-    this._listOpen     = false;
-    this._nomsOpen     = false;
+
+    this._confirmOpen = false;
+    this._editOpen    = false;
+    this._listOpen    = false;
+    this._nomsOpen    = false;
+
     this.requestUpdate();
   }
 
   _doSoftReset() {
-    this.seats         = this.seats.map(s => Object.assign(blankSeat(), { name: s.name }));
-    this.gameNotes     = {};
-    this.poisonSnapshots = {};
-    this.deathsCollapsed = false; this.poisonedCollapsed = false; this.allseatsCollapsed = false;
-    this.nominations   = {};
-    ['botc_game_notes','botc_night_notes','botc_nominations','botc_poison_snaps','botc_collapse_prefs']
-      .forEach(k => { try { localStorage.removeItem(k); } catch(e) {} });
+    this.seats = this.seats.map(s => Object.assign(blankSeat(), { name: s.name }));
+
+    this.gameNotes         = {};
+    this.nominations       = {};
+    this.poisonSnapshots   = {};
+    this.deathsCollapsed   = false;
+    this.poisonedCollapsed = false;
+    this.allseatsCollapsed = false;
+
+    const EXTRA_KEYS = [
+      'botc_game_notes', 'botc_night_notes', 'botc_nominations',
+      'botc_poison_snaps', 'botc_collapse_prefs',
+    ];
+    EXTRA_KEYS.forEach(k => { try { localStorage.removeItem(k); } catch(e) {} });
+
     this.selected = null;
     this.round    = 1;
     this.phase    = 'day';
+
     this._confirmSoftOpen = false;
-    this._editOpen  = false;
-    this._nomsOpen  = false;
+    this._editOpen        = false;
+    this._nomsOpen        = false;
+
     this._saveState();
     this.requestUpdate();
   }
@@ -461,7 +546,10 @@ export class BotcApp extends LitElement {
     if (this.nomMode === 'to')   return '⚖ ' + this._seatLabel(this.nomFrom) + ' is nominating… pick target';
     if (this.nomMode === 'votes') {
       const entry = this.nominations[this.nomVoteKey]?.[this.nomVoteIdx];
-      return '🗳 Tap voters for ' + this._seatLabel(entry?.to) + ' · tap again to deselect';
+      const alive = entry?.aliveCount ?? this.seats.filter(s => !s.dead).length;
+      const needed = Math.ceil(alive / 2);
+
+      return '🗳 Voters for ' + this._seatLabel(entry?.to) + ' (needed: ' + needed + ')';
     }
     return '';
   }
@@ -471,7 +559,8 @@ export class BotcApp extends LitElement {
       const entry = this.nominations[this.nomVoteKey]?.[this.nomVoteIdx];
       const n = entry?.votes?.length || 0;
       const alive = entry?.aliveCount ?? this.seats.filter(s => !s.dead).length;
-      return html`✓ <span class="btn-label">Done · </span><span class="nom-day-count">${n}/${alive} votes</span>`;
+      
+      return html`✓ <span class="btn-label">Done · </span><span class="nom-day-count">${n}/${alive} votes`;
     }
     if (this.nomMode) {
       const count = (this.nominations[this._nomKey()] || []).length;
@@ -539,6 +628,7 @@ export class BotcApp extends LitElement {
           .seatPositions="${this.seatPositions}"
           .selected="${this.selected}"
           .moveMode="${this.moveMode}"
+          .storyView="${this.storyView}"
           .nomMode="${this.nomMode}"
           .nomFrom="${this.nomFrom}"
           .nominations="${this.nominations}"
@@ -597,7 +687,10 @@ export class BotcApp extends LitElement {
           this._saveCollapsePrefs();
           this.requestUpdate();
         }}"
-        @modal-close="${() => { this._listOpen = false; this.requestUpdate(); }}"
+        @modal-close="${() => {
+          this._listOpen = false;
+          this.requestUpdate();
+        }}"
       ></botc-list-modal>
 
       <!-- Notes modal -->
@@ -610,7 +703,10 @@ export class BotcApp extends LitElement {
           this.gameNotes = { ...this.gameNotes, [e.detail.key]: e.detail.value };
           this._saveGameNotes();
         }}"
-        @modal-close="${() => { this._notesOpen = false; this.requestUpdate(); }}"
+        @modal-close="${() => {
+          this._notesOpen = false;
+          this.requestUpdate();
+        }}"
       ></botc-notes-modal>
 
       <!-- Nominations modal -->
@@ -622,8 +718,14 @@ export class BotcApp extends LitElement {
         .round="${this.round}"
         @nom-delete="${e => this._deleteNom(e.detail.key, e.detail.idx)}"
         @vote-mode-start="${e => this._startVoteMode(e.detail.key, e.detail.idx)}"
-        @new-nom="${() => { this._nomsOpen = false; this._startNomMode(); }}"
-        @modal-close="${() => { this._nomsOpen = false; this.requestUpdate(); }}"
+        @new-nom="${() => {
+          this._nomsOpen = false;
+          this._startNomMode();
+        }}"
+        @modal-close="${() => {
+          this._nomsOpen = false;
+          this.requestUpdate();
+        }}"
       ></botc-nominations-modal>
 
       <!-- Settings modal -->
@@ -632,47 +734,92 @@ export class BotcApp extends LitElement {
         .seatCount="${this.seatCount}"
         .alignHints="${this.alignHints}"
         .dayMode="${this.dayMode}"
+        .storyView="${this.storyView}"
         @count-change="${e => {
           this.seatCount = e.detail.count;
           this._initSeats(this.seatCount);
           if (this.selected !== null && this.selected >= this.seatCount) {
-            this.selected = null; this._editOpen = false;
+            this.selected  = null;
+            this._editOpen = false;
           }
-          this._saveState(); this.requestUpdate();
+          this._saveState();
+          this.requestUpdate();
         }}"
-        @align-hints-toggle="${() => { this.alignHints = !this.alignHints; this._applyAlignHints(); this.requestUpdate(); }}"
-        @theme-toggle="${() => { this.dayMode = !this.dayMode; this._applyTheme(); this.requestUpdate(); }}"
-        @move-mode="${() => { this.moveMode = true; this._editOpen = false; this.selected = null; this.requestUpdate(); }}"
-        @clear-table="${() => { this._settingsOpen = false; this._confirmSoftOpen = true; this.requestUpdate(); }}"
-        @reset="${() => { this._settingsOpen = false; this._confirmOpen = true; this.requestUpdate(); }}"
+        @align-hints-toggle="${() => {
+          this.alignHints = !this.alignHints;
+          this._applyAlignHints();
+          this.requestUpdate();
+        }}"
+        @story-view-toggle="${() => {
+          this.storyView = !this.storyView;
+          this._applyStoryView();
+          this.requestUpdate();
+        }}"
+        @theme-toggle="${() => {
+          this.dayMode = !this.dayMode;
+          this._applyTheme();
+          this.requestUpdate();
+        }}"
+        @move-mode="${() => {
+          this.moveMode  = true;
+          this._editOpen = false;
+          this.selected  = null;
+          this.requestUpdate();
+        }}"
+        @clear-table="${() => {
+          this._settingsOpen    = false;
+          this._confirmSoftOpen = true;
+          this.requestUpdate();
+        }}"
+        @reset="${() => {
+          this._settingsOpen = false;
+          this._confirmOpen  = true;
+          this.requestUpdate();
+        }}"
         @autoname="${() => this._doAutoname()}"
-        @modal-close="${() => { this._settingsOpen = false; this.requestUpdate(); }}"
+        @modal-close="${() => {
+          this._settingsOpen = false;
+          this.requestUpdate();
+        }}"
       ></botc-settings-modal>
 
       <!-- Character count modal -->
       <botc-charcount-modal
         .open="${this._charcountOpen}"
         .seatCount="${this.seatCount}"
-        @modal-close="${() => { this._charcountOpen = false; this.requestUpdate(); }}"
+        @modal-close="${() => {
+          this._charcountOpen = false;
+          this.requestUpdate();
+        }}"
       ></botc-charcount-modal>
 
       <!-- PDF / role image modal -->
       <botc-pdf-modal
         .open="${this._pdfOpen}"
-        @modal-close="${() => { this._pdfOpen = false; this.requestUpdate(); }}"
+        @modal-close="${() => {
+          this._pdfOpen = false;
+          this.requestUpdate();
+        }}"
       ></botc-pdf-modal>
 
       <!-- Confirm reset dialog -->
       ${this._confirmOpen ? html`
         <div class="modal-overlay visible"
-          @click="${e => { if (e.target.classList.contains('modal-overlay')) { this._confirmOpen = false; this.requestUpdate(); } }}">
+          @click="${e => {
+            if (e.target.classList.contains('modal-overlay')) {
+              this._confirmOpen = false;
+              this.requestUpdate();
+            }
+          }}">
           <div class="modal-sheet modal-sheet--compact">
             <div class="modal-inner modal-inner--confirm">
               <div class="confirm-title confirm-title--danger">↺ Reset game?</div>
               <div class="confirm-desc">This will clear all player data, roles, notes, and custom seat positions. This cannot be undone.</div>
               <div class="confirm-btn-row">
-                <button class="btn" @click="${() => { this._confirmOpen = false; this.requestUpdate(); }}">Cancel</button>
-                <button class="btn btn-danger btn-confirm-danger" @click="${() => this._doReset()}">Reset everything</button>
+                <button class="btn"
+                  @click="${() => { this._confirmOpen = false; this.requestUpdate(); }}">Cancel</button>
+                <button class="btn btn-danger btn-confirm-danger"
+                  @click="${() => this._doReset()}">Reset everything</button>
               </div>
             </div>
           </div>
@@ -682,14 +829,21 @@ export class BotcApp extends LitElement {
       <!-- Confirm soft-reset dialog -->
       ${this._confirmSoftOpen ? html`
         <div class="modal-overlay visible"
-          @click="${e => { if (e.target.classList.contains('modal-overlay')) { this._confirmSoftOpen = false; this.requestUpdate(); } }}">
+          @click="${e => {
+            if (e.target.classList.contains('modal-overlay')) {
+              this._confirmSoftOpen = false;
+              this.requestUpdate();
+            }
+          }}">
           <div class="modal-sheet modal-sheet--compact">
             <div class="modal-inner modal-inner--confirm">
               <div class="confirm-title confirm-title--warn">⟳ Clear table?</div>
               <div class="confirm-desc">This will reset the table, all night notes, and all player roles and comments. Player names and seat positions will be kept.</div>
               <div class="confirm-btn-row">
-                <button class="btn" @click="${() => { this._confirmSoftOpen = false; this.requestUpdate(); }}">Cancel</button>
-                <button class="btn btn-confirm-primary" @click="${() => this._doSoftReset()}">Clear table</button>
+                <button class="btn"
+                  @click="${() => { this._confirmSoftOpen = false; this.requestUpdate(); }}">Cancel</button>
+                <button class="btn btn-confirm-primary"
+                  @click="${() => this._doSoftReset()}">Clear table</button>
               </div>
             </div>
           </div>

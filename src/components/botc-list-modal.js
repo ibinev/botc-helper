@@ -62,19 +62,28 @@ export class BotcListModal extends LitElement {
     if (!overlay || !sheet || !dragbar) return;
 
     let ty0 = 0, dragging = false, startedNearTop = false;
+
     dragbar.addEventListener('click', () => this._onClose());
+
     overlay.addEventListener('touchstart', e => {
       startedNearTop = dragbar.contains(e.target) || (inner && inner.scrollTop <= 4);
-      ty0 = e.touches[0].clientY; dragging = false;
+      ty0 = e.touches[0].clientY;
+      dragging = false;
     }, { passive: true });
+
     overlay.addEventListener('touchmove', e => {
       if (!startedNearTop) return;
       const dy = e.touches[0].clientY - ty0;
       if (dy > 6) dragging = true;
-      if (dragging && dy > 0) { sheet.style.transition = 'none'; sheet.style.transform = 'translateY(' + dy + 'px)'; }
+      if (dragging && dy > 0) {
+        sheet.style.transition = 'none';
+        sheet.style.transform  = 'translateY(' + dy + 'px)';
+      }
     }, { passive: true });
+
     overlay.addEventListener('touchend', e => {
-      sheet.style.transition = ''; sheet.style.transform = '';
+      sheet.style.transition = '';
+      sheet.style.transform  = '';
       if (dragging && (e.changedTouches[0].clientY - ty0) > 72) this._onClose();
       dragging = false;
     });

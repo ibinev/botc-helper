@@ -138,20 +138,24 @@ export class BotcCombo extends LitElement {
   }
 
   _positionDropdown() {
-    const input = this._input();
+    const input    = this._input();
     const dropdown = this._dropdown;
     if (!input || !dropdown) return;
+
     const rect = input.getBoundingClientRect();
     if (!rect.width) return;
+
     const spaceBelow = window.innerHeight - rect.bottom - 8;
     const spaceAbove = rect.top - 8;
-    const vw = window.innerWidth;
-    const desiredW = Math.max(rect.width, 220);
-    const clampedW = Math.min(desiredW, vw - 16);
-    const rawLeft  = rect.left;
+    const vw         = window.innerWidth;
+    const desiredW   = Math.max(rect.width, 220);
+    const clampedW   = Math.min(desiredW, vw - 16);
+    const rawLeft    = rect.left;
     const clampedLeft = Math.max(8, Math.min(rawLeft, vw - clampedW - 8));
+
     dropdown.style.width = clampedW + 'px';
     dropdown.style.left  = clampedLeft + 'px';
+
     if (spaceBelow >= 150 || spaceBelow >= spaceAbove) {
       dropdown.style.top       = (rect.bottom + 4) + 'px';
       dropdown.style.bottom    = 'auto';
@@ -220,7 +224,7 @@ export class BotcCombo extends LitElement {
 
     if (!input) return;
 
-    // Toggle button
+    // ── Toggle button ────────────────────────────────────────────────
     if (toggleBtn) {
       let togTouchMoved = false;
       toggleBtn.addEventListener('mousedown', e => e.preventDefault());
@@ -236,10 +240,11 @@ export class BotcCombo extends LitElement {
       });
     }
 
-    // Input focus/input/blur/keyboard
+    // ── Input ────────────────────────────────────────────────────────
     input.addEventListener('focus', () => {
       if (!this._isOpen) this._open();
     });
+
     input.addEventListener('input', () => {
       this._currentVal = '';
       this._buildDropdown(input.value);
@@ -251,6 +256,7 @@ export class BotcCombo extends LitElement {
       this._positionDropdown();
       this._updateClearBtn();
     });
+
     input.addEventListener('blur', () => {
       setTimeout(() => {
         const af = document.activeElement;
@@ -258,10 +264,17 @@ export class BotcCombo extends LitElement {
         this._close();
       }, 200);
     });
+
     input.addEventListener('keydown', e => {
       switch (e.key) {
-        case 'ArrowDown': e.preventDefault(); this._isOpen ? this._moveActive(1)  : this._open(''); break;
-        case 'ArrowUp':   e.preventDefault(); this._isOpen ? this._moveActive(-1) : this._open(''); break;
+        case 'ArrowDown':
+          e.preventDefault();
+          this._isOpen ? this._moveActive(1) : this._open('');
+          break;
+        case 'ArrowUp':
+          e.preventDefault();
+          this._isOpen ? this._moveActive(-1) : this._open('');
+          break;
         case 'Enter':
           e.preventDefault();
           if (this._isOpen) {
@@ -277,9 +290,10 @@ export class BotcCombo extends LitElement {
       }
     });
 
-    // Clear button
+    // ── Clear button ─────────────────────────────────────────────────
     if (clearBtn) {
       clearBtn.addEventListener('mousedown', e => e.preventDefault());
+
       clearBtn.addEventListener('click', () => {
         this._currentVal = '';
         input.value = '';
@@ -290,6 +304,7 @@ export class BotcCombo extends LitElement {
           detail: { value: '' }, bubbles: true, composed: true
         }));
       });
+
       clearBtn.addEventListener('touchend', e => {
         e.preventDefault();
         this._currentVal = '';

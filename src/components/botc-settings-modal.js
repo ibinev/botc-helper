@@ -28,6 +28,7 @@ export class BotcSettingsModal extends LitElement {
     seatCount:  { type: Number  },
     alignHints: { type: Boolean },
     dayMode:    { type: Boolean },
+    storyView:  { type: Boolean },
   };
 
   createRenderRoot() { return this; }
@@ -38,6 +39,7 @@ export class BotcSettingsModal extends LitElement {
     this.seatCount  = 12;
     this.alignHints = false;
     this.dayMode    = false;
+    this.storyView  = false;
   }
 
   updated(changed) {
@@ -54,22 +56,32 @@ export class BotcSettingsModal extends LitElement {
     if (!overlay || !sheet || !dragbar) return;
 
     let ty0 = 0, dragging = false, startedNearTop = false;
+
     dragbar.addEventListener('click', () => this._onClose());
+
     overlay.addEventListener('touchstart', e => {
       startedNearTop = dragbar.contains(e.target) || (inner && inner.scrollTop <= 4);
-      ty0 = e.touches[0].clientY; dragging = false;
+      ty0 = e.touches[0].clientY;
+      dragging = false;
     }, { passive: true });
+
     overlay.addEventListener('touchmove', e => {
       if (!startedNearTop) return;
       const dy = e.touches[0].clientY - ty0;
       if (dy > 6) dragging = true;
-      if (dragging && dy > 0) { sheet.style.transition = 'none'; sheet.style.transform = 'translateY(' + dy + 'px)'; }
+      if (dragging && dy > 0) {
+        sheet.style.transition = 'none';
+        sheet.style.transform  = 'translateY(' + dy + 'px)';
+      }
     }, { passive: true });
+
     overlay.addEventListener('touchend', e => {
-      sheet.style.transition = ''; sheet.style.transform = '';
+      sheet.style.transition = '';
+      sheet.style.transform  = '';
       if (dragging && (e.changedTouches[0].clientY - ty0) > 72) this._onClose();
       dragging = false;
     });
+
     overlay.addEventListener('click', e => { if (e.target === overlay) this._onClose(); });
   }
 
@@ -138,6 +150,18 @@ export class BotcSettingsModal extends LitElement {
                 <button class="btn-sm btn-hints ${this.alignHints ? 'active' : ''}"
                   @click="${() => this._fire('align-hints-toggle', {})}"
                 >${this.alignHints ? 'On' : 'Off'}</button>
+              </div>
+            </div>
+
+            <div class="settings-row">
+              <div>
+                <div class="settings-label">Storyteller view</div>
+                <div class="settings-sub">Flip the circle 180° to match the Storyteller's perspective</div>
+              </div>
+              <div class="settings-control">
+                <button class="btn-sm btn-hints ${this.storyView ? 'active' : ''}"
+                  @click="${() => this._fire('story-view-toggle', {})}"
+                >${this.storyView ? 'On' : 'Off'}</button>
               </div>
             </div>
 

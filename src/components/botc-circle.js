@@ -38,6 +38,7 @@ export class BotcCircle extends LitElement {
     nomVoteIdx:    { type: Number  },
     round:         { type: Number  },
     phase:         { type: String  },
+    storyView:     { type: Boolean },
     _w:            { state: true   },
     _h:            { state: true   },
   };
@@ -57,6 +58,7 @@ export class BotcCircle extends LitElement {
     this.nomVoteIdx    = null;
     this.round         = 1;
     this.phase         = 'day';
+    this.storyView     = false;
     this._w            = 400;
     this._h            = 400;
     this._ro           = null;
@@ -128,9 +130,11 @@ export class BotcCircle extends LitElement {
       if (!this.moveMode) return;
       e.preventDefault();
       dragged = false;
+
       const clientX = e.touches ? e.touches[0].clientX : e.clientX;
       const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-      startPx = clientX; startPy = clientY;
+      startPx = clientX;
+      startPy = clientY;
       startEx = parseFloat(el.style.left);
       startEy = parseFloat(el.style.top);
       el.classList.add('dragging');
@@ -139,11 +143,14 @@ export class BotcCircle extends LitElement {
       const onMove = (e2) => {
         const cx2 = e2.touches ? e2.touches[0].clientX : e2.clientX;
         const cy2 = e2.touches ? e2.touches[0].clientY : e2.clientY;
-        const dx = cx2 - startPx, dy = cy2 - startPy;
+        const dir = this.storyView ? -1 : 1;
+        const dx = (cx2 - startPx) * dir;
+        const dy = (cy2 - startPy) * dir;
         if (Math.abs(dx) + Math.abs(dy) > 3) dragged = true;
         el.style.left = (startEx + dx) + 'px';
         el.style.top  = (startEy + dy) + 'px';
       };
+
       const onEnd = (e2) => {
         el.classList.remove('dragging');
         el.style.zIndex = '';
@@ -159,6 +166,7 @@ export class BotcCircle extends LitElement {
           }));
         }
       };
+
       document.addEventListener('mousemove', onMove);
       document.addEventListener('mouseup',   onEnd);
       document.addEventListener('touchmove', onMove, { passive: false });
@@ -183,19 +191,21 @@ export class BotcCircle extends LitElement {
   }
 
   _renderSeat(s, i) {
-    const n        = this.seats.length;
     const pos      = this._pos(i);
     const roleData = s.role ? ROLES.find(r => r.name === s.role) : null;
     const isBluff  = !!(s.role && s.trueRole && s.role !== s.trueRole);
+
     const displayRole     = s.trueRole || s.role;
     const displayRoleData = displayRole ? ROLES.find(r => r.name === displayRole) : null;
-    const iconSrc  = displayRole && ROLE_ICONS[displayRole] ? ROLE_ICONS[displayRole] : null;
-    const drunkIconSrc = s.poisoned
+    const iconSrc         = displayRole && ROLE_ICONS[displayRole] ? ROLE_ICONS[displayRole] : null;
+    const drunkIconSrc    = s.poisoned
       ? 'https://wiki.bloodontheclocktower.com/images/b/b1/Icon_poisoner.png'
       : s.drunk ? ROLE_ICONS['Drunk'] : null;
-    const dotClass = displayRoleData ? ` dot-${displayRoleData.cat}` : (roleData ? ` dot-${roleData.cat}` : '');
+    const dotClass = displayRoleData
+      ? ` dot-${displayRoleData.cat}`
+      : (roleData ? ` dot-${roleData.cat}` : '');
 
-    const dayNoms = this.nominations['day-' + this.round] || [];
+    const dayNoms    = this.nominations['day-' + this.round] || [];
     const isNominated = this.phase === 'day' && dayNoms.some(n => n.to === i);
 
     const statusIcons = [
@@ -204,19 +214,20 @@ export class BotcCircle extends LitElement {
     ].filter(Boolean).join('');
 
     const cls = this._seatClass(s, i);
-    const clickHandler = this.moveMode
-      ? nothing
-      : (this.nomMode
-          ? html`@click="${() => this._onClick(i)}"`
-          : html`@click="${() => this._onClick(i)}"`);
 
     return html`
       <div class="${cls}"
         style="left:${pos.x}px;top:${pos.y}px"
         data-idx="${i}"
         @click="${this.moveMode ? null : () => this._onClick(i)}">
-        ${iconSrc ? html`<img class="seat-role-icon" src="${iconSrc}" alt="${displayRole}" title="${displayRole}">` : nothing}
-        ${drunkIconSrc ? html`<img class="seat-drunk-icon" src="${drunkIconSrc}" alt="${s.poisoned ? 'Poisoned' : 'Drunk'}" title="${s.poisoned ? 'Poisoned' : 'Drunk'}">` : nothing}
+        ${iconSrc
+          ? html`<img class="seat-role-icon" src="${iconSrc}" alt="${displayRole}" title="${displayRole}">`
+          : nothing}
+        ${drunkIconSrc
+          ? html`<img class="seat-drunk-icon" src="${drunkIconSrc}"
+              alt="${s.poisoned ? 'Poisoned' : 'Drunk'}"
+              title="${s.poisoned ? 'Poisoned' : 'Drunk'}">`
+          : nothing}
         <div class="seat-inner">
           <span class="seat-num">${i + 1}</span>
           ${s.name
@@ -234,7 +245,7 @@ export class BotcCircle extends LitElement {
     const isNomMode = !!this.nomMode;
     return html`
       <div id="circle-stage">
-        <div id="circle-inner" class="${isNomMode ? 'nom-mode' : ''} ${this.moveMode ? 'move-mode' : ''}">
+        <div id="circle-inner" class="${isNomMode ? 'nom-mode' : ''} ${this.moveMode ? 'move-mode' : ''} ${this.storyView ? 'story-view' : ''}">
           <div class="center-label">
             <div class="phase-icon">${this.phase === 'day' ? '☀️' : '🌙'}</div>
             <div class="round-label">${this.phase === 'day' ? 'Day' : 'Night'} ${this.round}</div>
