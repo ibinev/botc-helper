@@ -185,7 +185,7 @@ export class BotcNominationsModal extends LitElement {
                         </div>
                         <div class="nom-voters">
                           ${votes.length ? votes.map(vi => html`
-                            <span class="nom-voter-chip ${this._alignClass(vi)}">${this._seatLabel(vi)}</span>
+                            <span class="nom-voter-chip ${this._alignClass(vi)}">${this._seatLabel(vi)}${(e.ghostVoters || []).includes(vi) ? html` <span class="nom-ghost-icon">👻</span>` : nothing}</span>
                           `) : html`
                             <span class="nom-no-votes">No votes recorded</span>
                           `}

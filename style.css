@@ -416,6 +416,8 @@ body.align-hints .seat.nom-voted.suspicious .seat-inner { background: rgba(155,7
 /* ── Settings ─────────────────────────────────────────── */
 .settings-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 0.5px solid var(--border); gap: 12px; }
 .settings-row:last-child { border-bottom: none; }
+.settings-group { background: var(--bg-input); border: 0.5px solid var(--border-strong); border-radius: var(--radius-md); padding: 0 14px; margin-bottom: 12px; }
+.settings-group--danger { border-color: rgba(192,57,43,0.25); background: rgba(192,57,43,0.06); }
 .settings-label { font-size: 14px; color: var(--text-primary); }
 .settings-sub   { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
 .settings-control { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
@@ -434,6 +436,7 @@ body.align-hints .seat.nom-voted.suspicious .seat-inner { background: rgba(155,7
 .nom-empty  { font-size: 13px; color: var(--text-muted); font-style: italic; text-align: center; padding: 20px 0; }
 .nom-voters { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; padding-top: 6px; border-top: 0.5px solid var(--border); }
 .nom-voter-chip { font-size: 11px; padding: 2px 8px; border-radius: 999px; background: rgba(90,158,47,0.18); color: #8fca4b; border: 0.5px solid rgba(90,158,47,0.3); }
+.nom-ghost-icon { font-size: 10px; margin-left: 2px; opacity: 0.9; }
 .nom-voter-chip.align-good { background: rgba(90,158,47,0.18); color: #8fca4b; border-color: rgba(90,158,47,0.3); }
 .nom-voter-chip.align-evil { background: rgba(192,57,43,0.18); color: #e06060; border-color: rgba(192,57,43,0.3); }
 .nom-voter-chip.align-susp { background: rgba(155,77,202,0.18); color: #d08ef0; border-color: rgba(155,77,202,0.3); }

@@ -388,16 +388,26 @@ export class BotcApp extends LitElement {
     if (entry?.votes?.length) {
       const seats = [...this.seats];
       let changed = false;
+      const ghostVoters = [];
       entry.votes.forEach(vi => {
-        if (seats[vi]?.dead && !seats[vi].usedVote) {
-          seats[vi] = { ...seats[vi], usedVote: true };
-          changed = true;
+        if (seats[vi]?.dead) {
+          ghostVoters.push(vi);
+          if (!seats[vi].usedVote) {
+            seats[vi] = { ...seats[vi], usedVote: true };
+            changed = true;
+          }
         }
       });
+      // Stamp ghost voters onto the nomination entry for historical display
+      const noms = { ...this.nominations };
+      noms[this.nomVoteKey] = [...noms[this.nomVoteKey]];
+      noms[this.nomVoteKey][this.nomVoteIdx] = { ...entry, ghostVoters };
+      this.nominations = noms;
       if (changed) {
         this.seats = seats;
         this._saveState();
       }
+      this._saveNominations();
     }
     this.nomMode    = false;
     this.nomVoteKey = null;

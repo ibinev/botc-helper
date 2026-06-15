@@ -43,6 +43,8 @@ export class BotcSettingsModal extends LitElement {
     this.dayMode    = false;
     this.storyView  = false;
     this.compactMode= false;
+    this._versionTaps = 0;
+    this._versionTapTimer = null;
   }
 
   updated(changed) {
@@ -92,6 +94,17 @@ export class BotcSettingsModal extends LitElement {
     this.dispatchEvent(new CustomEvent('modal-close', { bubbles: true, composed: true }));
   }
 
+  _onVersionTap() {
+    clearTimeout(this._versionTapTimer);
+    this._versionTaps++;
+    if (this._versionTaps >= 5) {
+      this._versionTaps = 0;
+      this._fire('autoname', {});
+    } else {
+      this._versionTapTimer = setTimeout(() => { this._versionTaps = 0; }, 1500);
+    }
+  }
+
   _fire(name, detail) {
     this.dispatchEvent(new CustomEvent(name, {
       detail, bubbles: true, composed: true
@@ -106,6 +119,7 @@ export class BotcSettingsModal extends LitElement {
           <div class="modal-inner">
             <div class="modal-title modal-title--spaced">⚙️ Settings</div>
 
+            <div class="settings-group">
             <div class="settings-row">
               <div>
                 <div class="settings-label">Players</div>
@@ -129,18 +143,22 @@ export class BotcSettingsModal extends LitElement {
               </div>
               <div class="settings-control">
                 <button class="btn btn-gold"
-                  @click="${() => { this._onClose(); this._fire('move-mode', {}); }}">⣿ Move seats</button>
+                  @click="${() => { this._onClose(); this._fire('move-mode', {}); }}">⣿ Move</button>
               </div>
             </div>
+            </div>
 
+            <div class="settings-group">
             <div class="settings-row">
               <div>
-                <div class="settings-label">Autoname</div>
-                <div class="settings-sub">Populates empty seats with random Bulgarian names</div>
+                <div class="settings-label">Appearance</div>
+                <div class="settings-sub">Switch between dark and day mode</div>
               </div>
               <div class="settings-control">
-                <button class="btn btn-gold"
-                  @click="${() => this._fire('autoname', {})}">Populate</button>
+                <button class="btn-sm btn-theme" title="${this.dayMode ? 'Dark mode' : 'Day mode'}"
+                  @click="${() => this._fire('theme-toggle', {})}">
+                  ${this.dayMode ? '🕯' : '🔆'}
+                </button>
               </div>
             </div>
 
@@ -158,18 +176,6 @@ export class BotcSettingsModal extends LitElement {
 
             <div class="settings-row">
               <div>
-                <div class="settings-label">Storyteller view</div>
-                <div class="settings-sub">Flip the circle 180° to match the Storyteller's perspective</div>
-              </div>
-              <div class="settings-control">
-                <button class="btn-sm btn-hints ${this.storyView ? 'active' : ''}"
-                  @click="${() => this._fire('story-view-toggle', {})}"
-                >${this.storyView ? 'On' : 'Off'}</button>
-              </div>
-            </div>
-
-            <div class="settings-row">
-              <div>
                 <div class="settings-label">Compact mode</div>
                 <div class="settings-sub">Shrink seats ~40% — hides role text, keeps icons and name</div>
               </div>
@@ -182,17 +188,18 @@ export class BotcSettingsModal extends LitElement {
 
             <div class="settings-row">
               <div>
-                <div class="settings-label">Appearance</div>
-                <div class="settings-sub">Switch between dark and day mode</div>
+                <div class="settings-label">Storyteller view</div>
+                <div class="settings-sub">Flip the circle 180° to match the Storyteller's perspective</div>
               </div>
               <div class="settings-control">
-                <button class="btn-sm btn-theme" title="${this.dayMode ? 'Dark mode' : 'Day mode'}"
-                  @click="${() => this._fire('theme-toggle', {})}">
-                  ${this.dayMode ? '🕯' : '🔆'}
-                </button>
+                <button class="btn-sm btn-hints ${this.storyView ? 'active' : ''}"
+                  @click="${() => this._fire('story-view-toggle', {})}"
+                >${this.storyView ? 'On' : 'Off'}</button>
               </div>
             </div>
+            </div>
 
+            <div class="settings-group settings-group--danger">
             <div class="settings-row">
               <div>
                 <div class="settings-label">Clear table</div>
@@ -214,8 +221,9 @@ export class BotcSettingsModal extends LitElement {
                   @click="${() => { this._onClose(); this._fire('reset', {}); }}">↺ Reset all</button>
               </div>
             </div>
+            </div>
 
-            <div class="settings-version">${APP_VERSION}</div>
+            <div class="settings-version" @click="${() => this._onVersionTap()}">${APP_VERSION}</div>
 
           </div>
         </div>
