@@ -82,6 +82,37 @@ export const ROLE_ICONS = {
   'Thief':          'https://wiki.bloodontheclocktower.com/images/7/77/Icon_thief.png',
 };
 
+// ── Night order (Trouble Brewing) ─────────────────────
+// st:true  = Storyteller-only step (no player wakes)
+// cond:true = conditional (only wakes if triggered)
+export const NIGHT_ORDER = {
+  first: [
+    { name: 'Minion info',    st: true,   hint: 'Minions learn each other & the Demon' },
+    { name: 'Demon info',     st: true,   hint: 'Demon learns Minions & 3 not-in-play good roles' },
+    { name: 'Poisoner',       hint: 'Chooses a player to poison tonight' },
+    { name: 'Spy',            hint: 'Sees the Grimoire' },
+    { name: 'Washerwoman',    hint: 'Learns that one of two players is a Townsfolk' },
+    { name: 'Librarian',      hint: 'Learns that one of two players is an Outsider (or that there are none)' },
+    { name: 'Investigator',   hint: 'Learns that one of two players is a Minion' },
+    { name: 'Chef',           hint: 'Learns how many pairs of evil players sit adjacent' },
+    { name: 'Empath',         hint: 'Learns how many of their living neighbours are evil' },
+    { name: 'Fortune Teller', hint: 'Picks two players; learns if either is the Demon (or a red herring)' },
+    { name: 'Butler',         hint: 'Chooses their master for tonight' },
+  ],
+  other: [
+    { name: 'Poisoner',       hint: 'Chooses a player to poison tonight' },
+    { name: 'Monk',           hint: 'Chooses a player to protect from the Demon' },
+    { name: 'Scarlet Woman',  hint: 'Becomes the Demon if the Demon dies with ≥5 players alive', cond: true },
+    { name: 'Imp',            hint: 'Chooses a player to kill (can choose self to pass the Imp)' },
+    { name: 'Ravenkeeper',    hint: 'Wakes if killed tonight — learns the role of a player', cond: true },
+    { name: 'Undertaker',     hint: 'Learns the role of the player executed yesterday', cond: true },
+    { name: 'Empath',         hint: 'Learns how many of their living neighbours are evil' },
+    { name: 'Fortune Teller', hint: 'Picks two players; learns if either is the Demon (or a red herring)' },
+    { name: 'Butler',         hint: 'Chooses their master for tonight' },
+    { name: 'Spy',            hint: 'Sees the Grimoire' },
+  ],
+};
+
 export const CAT_LABELS = {
   townsfolk: 'Townsfolk',
   outsider:  'Outsiders',

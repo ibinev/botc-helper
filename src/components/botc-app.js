@@ -9,6 +9,7 @@ import './botc-nominations-modal.js';
 import './botc-settings-modal.js';
 import './botc-charcount-modal.js';
 import './botc-pdf-modal.js';
+import './botc-nightorder-modal.js';
 
 const LS_KEY = 'botc_town_square_v1';
 
@@ -32,6 +33,9 @@ export class BotcApp extends LitElement {
     alignHints:        { type: Boolean },
     storyView:         { type: Boolean },
     compactMode:       { type: Boolean },
+    hideRole:          { type: Boolean },
+    dayTimerEnabled:   { type: Boolean },
+    _daySeconds:       { state: true   },
     deathsCollapsed:   { type: Boolean },
     poisonedCollapsed: { type: Boolean },
     allseatsCollapsed: { type: Boolean },
@@ -43,6 +47,7 @@ export class BotcApp extends LitElement {
     _settingsOpen:     { state: true },
     _charcountOpen:    { state: true },
     _pdfOpen:          { state: true },
+    _nightorderOpen:   { state: true },
     _confirmOpen:      { state: true },
     _confirmSoftOpen:  { state: true },
   };
@@ -69,6 +74,10 @@ export class BotcApp extends LitElement {
     this.alignHints        = false;
     this.storyView         = false;
     this.compactMode       = false;
+    this.hideRole          = false;
+    this.dayTimerEnabled   = false;
+    this._daySeconds       = 0;
+    this._dayTimerInterval = null;
     this.deathsCollapsed   = false;
     this.poisonedCollapsed = false;
     this.allseatsCollapsed = false;
@@ -79,6 +88,7 @@ export class BotcApp extends LitElement {
     this._settingsOpen     = false;
     this._charcountOpen    = false;
     this._pdfOpen          = false;
+    this._nightorderOpen   = false;
     this._confirmOpen      = false;
     this._confirmSoftOpen  = false;
   }
@@ -96,6 +106,7 @@ export class BotcApp extends LitElement {
   disconnectedCallback() {
     super.disconnectedCallback();
     window.removeEventListener('resize', this._onResize);
+    this._stopDayTimer();
   }
 
   // ── Persistence ──────────────────────────────────────────────────────
@@ -108,6 +119,8 @@ export class BotcApp extends LitElement {
     this._loadAlignHints();
     this._loadStoryView();
     this._loadCompactMode();
+    this._loadHideRole();
+    this._loadDayTimerEnabled();
     const restored = this._loadState();
     if (!restored) {
       this._initSeats(this.seatCount);
@@ -117,6 +130,8 @@ export class BotcApp extends LitElement {
     this._applyAlignHints();
     this._applyStoryView();
     this._applyCompactMode();
+    this._applyHideRole();
+    if (this.phase === 'day' && this.dayTimerEnabled) this._startDayTimer();
     requestAnimationFrame(() => requestAnimationFrame(() => this.requestUpdate()));
   }
 
@@ -240,11 +255,49 @@ export class BotcApp extends LitElement {
     this.compactMode = localStorage.getItem('botc_compact_mode') === 'on';
   }
 
+  _loadHideRole() {
+    this.hideRole = localStorage.getItem('botc_hide_role') === 'on';
+  }
+
+  _loadDayTimerEnabled() {
+    const v = localStorage.getItem('botc_day_timer');
+    this.dayTimerEnabled = v === 'on';
+  }
+
   _applyCompactMode() {
     document.body.classList.toggle('compact-mode', this.compactMode);
     try {
       localStorage.setItem('botc_compact_mode', this.compactMode ? 'on' : 'off');
     } catch(e) {}
+  }
+
+  _applyHideRole() {
+    document.body.classList.toggle('hide-role', this.hideRole);
+    try {
+      localStorage.setItem('botc_hide_role', this.hideRole ? 'on' : 'off');
+    } catch(e) {}
+  }
+
+  _startDayTimer() {
+    this._stopDayTimer();
+    this._daySeconds = 0;
+    this._dayTimerInterval = setInterval(() => {
+      this._daySeconds++;
+      this.requestUpdate();
+    }, 1000);
+  }
+
+  _stopDayTimer() {
+    if (this._dayTimerInterval) {
+      clearInterval(this._dayTimerInterval);
+      this._dayTimerInterval = null;
+    }
+  }
+
+  _fmtDayTimer(s) {
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    return String(m).padStart(2, '0') + ':' + String(sec).padStart(2, '0');
   }
 
   _applyStoryView() {
@@ -309,7 +362,12 @@ export class BotcApp extends LitElement {
     this.seats = seats;
     this._savePoisonSnapshots();
     this._saveState();
-    if (this.phase === 'night' && this.nomMode) this._cancelNomMode();
+    if (this.phase === 'night') {
+      this._stopDayTimer();
+      if (this.nomMode) this._cancelNomMode();
+    } else {
+      if (this.dayTimerEnabled) this._startDayTimer();
+    }
     this.requestUpdate();
   }
 
@@ -570,8 +628,9 @@ export class BotcApp extends LitElement {
       const entry = this.nominations[this.nomVoteKey]?.[this.nomVoteIdx];
       const alive = entry?.aliveCount ?? this.seats.filter(s => !s.dead).length;
       const needed = Math.ceil(alive / 2);
-
-      return '🗳 Voters for ' + this._seatLabel(entry?.to) + ' (needed: ' + needed + ')';
+      const voteCount = (entry?.votes || []).length;
+      const reached = voteCount >= needed;
+      return (reached ? '✓ Threshold reached! ' : '🗳 Voters for ') + this._seatLabel(entry?.to) + ' (' + voteCount + '/' + needed + ' needed)';
     }
     return '';
   }
@@ -592,6 +651,14 @@ export class BotcApp extends LitElement {
     return html`⚖ <span class="btn-label">Nominate </span><span class="nom-day-count">${count}</span>`;
   }
 
+  _voteThresholdReached() {
+    if (this.nomMode !== 'votes') return false;
+    const entry = this.nominations[this.nomVoteKey]?.[this.nomVoteIdx];
+    if (!entry) return false;
+    const needed = entry.aliveCount ? Math.ceil(entry.aliveCount / 2) : null;
+    return needed !== null && (entry.votes || []).length >= needed;
+  }
+
   // ── Render ───────────────────────────────────────────────────────────
   render() {
     const step   = phaseRoundToStep(this.phase, this.round);
@@ -599,6 +666,7 @@ export class BotcApp extends LitElement {
     const named  = this.seats.filter(s => s.name).length;
     const nomBarText = this._nomBarText();
     const nomActive  = !!this.nomMode;
+    const thresholdReached = this._voteThresholdReached();
     const hasRolesImg = !!ROLES_IMG_URL;
 
     return html`
@@ -612,6 +680,9 @@ export class BotcApp extends LitElement {
           <span class="cycle-label ${this.phase === 'day' ? 'phase-day' : 'phase-night'}">
             ${this.phase === 'day' ? 'Day' : 'Night'} ${this.round}
           </span>
+          ${this.phase === 'day' && this.dayTimerEnabled
+            ? html`<span class="day-timer">${this._fmtDayTimer(this._daySeconds)}</span>`
+            : nothing}
           <button class="cycle-btn" ?disabled="${step === MAX_STEP}"
             @click="${() => this.advanceCycle(+1)}">&#8250;</button>
         </div>
@@ -638,6 +709,8 @@ export class BotcApp extends LitElement {
           ` : nothing}
           <button class="topbar-icon-btn" title="Character count"
             @click="${() => { this._charcountOpen = true; this.requestUpdate(); }}">📊</button>
+          <button class="topbar-icon-btn" title="Night order"
+            @click="${() => { this._nightorderOpen = true; this.requestUpdate(); }}">🌙</button>
           <button class="topbar-icon-btn" title="Settings"
             @click="${() => { this._settingsOpen = true; this.requestUpdate(); }}">⚙️</button>
         </div>
@@ -664,11 +737,11 @@ export class BotcApp extends LitElement {
         ></botc-circle>
 
         <!-- Nomination step bar -->
-        <div id="nom-step-bar" class="${nomBarText ? 'visible' : ''}">${nomBarText}</div>
+        <div id="nom-step-bar" class="${nomBarText ? 'visible' : ''} ${thresholdReached ? 'threshold-reached' : ''}">${nomBarText}</div>
 
         <!-- Nominate / cancel button -->
         ${this.phase !== 'night' ? html`
-          <button id="btn-nom" class="${nomActive ? 'nom-active' : ''}"
+          <button id="btn-nom" class="${nomActive ? 'nom-active' : ''} ${thresholdReached ? 'threshold-reached' : ''}"
             @click="${() => nomActive ? this._cancelNomMode() : this._startNomMode()}">
             ${this._nomBtnLabel()}
           </button>
@@ -759,6 +832,8 @@ export class BotcApp extends LitElement {
         .dayMode="${this.dayMode}"
         .storyView="${this.storyView}"
         .compactMode="${this.compactMode}"
+        .hideRole="${this.hideRole}"
+        .dayTimerEnabled="${this.dayTimerEnabled}"
         @count-change="${e => {
           this.seatCount = e.detail.count;
           this._initSeats(this.seatCount);
@@ -782,6 +857,18 @@ export class BotcApp extends LitElement {
         @compact-mode-toggle="${() => {
           this.compactMode = !this.compactMode;
           this._applyCompactMode();
+          this.requestUpdate();
+        }}"
+        @hide-role-toggle="${() => {
+          this.hideRole = !this.hideRole;
+          this._applyHideRole();
+          this.requestUpdate();
+        }}"
+        @day-timer-toggle="${() => {
+          this.dayTimerEnabled = !this.dayTimerEnabled;
+          try { localStorage.setItem('botc_day_timer', this.dayTimerEnabled ? 'on' : 'off'); } catch(e) {}
+          if (this.dayTimerEnabled && this.phase === 'day') this._startDayTimer();
+          else this._stopDayTimer();
           this.requestUpdate();
         }}"
         @theme-toggle="${() => {
@@ -830,6 +917,18 @@ export class BotcApp extends LitElement {
           this.requestUpdate();
         }}"
       ></botc-pdf-modal>
+
+      <!-- Night order modal -->
+      <botc-nightorder-modal
+        .open="${this._nightorderOpen}"
+        .seats="${this.seats}"
+        .phase="${this.phase}"
+        .round="${this.round}"
+        @modal-close="${() => {
+          this._nightorderOpen = false;
+          this.requestUpdate();
+        }}"
+      ></botc-nightorder-modal>
 
       <!-- Confirm reset dialog -->
       ${this._confirmOpen ? html`

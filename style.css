@@ -147,6 +147,7 @@ body.day-mode .combo-dropdown { box-shadow: 0 8px 32px rgba(100,60,0,0.25); }
 .cycle-label { padding: 0 8px; font-size: 12px; font-weight: 700; white-space: nowrap; min-width: 68px; text-align: center; }
 .cycle-label.phase-day   { color: var(--gold-light); text-shadow: 0 0 8px rgba(201,151,58,0.6); }
 .cycle-label.phase-night { color: var(--info-text);  text-shadow: 0 0 8px rgba(122,184,245,0.5); }
+.day-timer { font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--gold-light); padding: 0 6px; min-width: 38px; text-align: center; opacity: 0.8; }
 .bar-meta { font-size: 11px; color: var(--text-secondary); margin-left: auto; white-space: nowrap; }
 .bar-meta strong { color: var(--text-primary); }
 .meta-good { color: var(--good-text); }
@@ -303,6 +304,14 @@ body.compact-mode .seat-drunk-icon { width: 32px; height: 32px; top: -8px; right
   body.compact-mode .seat-drunk-icon { width: 34px; height: 34px; top: -9px; right: -9px; }
 }
 
+/* ── Hide role ────────────────────────────────────── */
+body.hide-role .seat-role-icon  { display: none; }
+body.hide-role .seat-drunk-icon { display: none; }
+body.hide-role .seat-role       { display: none; }
+body.hide-role .pli-role-icon   { display: none; }
+body.hide-role .pli-badge[class*="tag-"] { display: none; }
+body.hide-role .pli-role        { display: none; }
+
 /* ── Nomination mode ──────────────────────────────── */
 #nom-step-bar {
   position: absolute; top: 12px; left: 50%; transform: translateX(-50%); z-index: 30;
@@ -311,6 +320,8 @@ body.compact-mode .seat-drunk-icon { width: 32px; height: 32px; top: -8px; right
   box-shadow: 0 3px 14px rgba(0,0,0,0.45); display: none; letter-spacing: 0.02em;
 }
 #nom-step-bar.visible { display: block; }
+#nom-step-bar.threshold-reached { background: rgba(90,158,47,0.93); color: #0d1f07; }
+#btn-nom.threshold-reached { border-color: #5a9e2f; color: #8fca4b; background: rgba(90,158,47,0.18); }
 .nom-mode .seat .seat-inner { border-color: rgba(201,151,58,0.35); }
 .seat.nom-from .seat-inner { border-color: var(--gold-light) !important; box-shadow: 0 0 0 3px var(--gold), 0 4px 20px rgba(201,151,58,0.45), inset 0 0 20px rgba(201,151,58,0.1) !important; }
 .seat.nom-voted .seat-inner { border-color: #5a9e2f !important; box-shadow: 0 0 0 4px #5a9e2f, 0 4px 28px rgba(90,158,47,0.75), inset 0 0 28px rgba(90,158,47,0.18) !important; }
@@ -446,6 +457,36 @@ body.align-hints .seat.nom-voted.suspicious .seat-inner { background: rgba(155,7
 .nom-vote-btn.vote-success { border-color: #5a9e2f; color: #8fca4b; background: rgba(90,158,47,0.12); }
 .nom-vote-btn.vote-fail    { border-color: #c0392b; color: #e06060; background: rgba(192,57,43,0.12); }
 .nom-entry-main { display: flex; align-items: center; gap: 8px; width: 100%; }
+
+/* ── Night order modal ────────────────────────────────── */
+.no-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.no-progress { font-size: 12px; color: var(--text-secondary); background: rgba(201,151,58,0.15); border-radius: 999px; padding: 3px 10px; font-weight: 600; }
+.no-tabs { display: flex; gap: 6px; margin-bottom: 14px; }
+.no-tab { flex: 1; background: var(--bg-card); border: 0.5px solid var(--border); border-radius: var(--radius-sm); color: var(--text-secondary); font-size: 13px; font-weight: 600; padding: 8px 0; cursor: pointer; transition: background 0.12s, color 0.12s, border-color 0.12s; -webkit-tap-highlight-color: transparent; }
+.no-tab--active { background: rgba(201,151,58,0.18); border-color: var(--gold); color: var(--gold-light); }
+.no-list { display: flex; flex-direction: column; gap: 6px; }
+.no-row { display: flex; align-items: flex-start; gap: 10px; background: var(--bg-card); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 10px 12px; cursor: pointer; transition: background 0.1s, opacity 0.15s, border-color 0.12s; -webkit-tap-highlight-color: transparent; user-select: none; }
+.no-row:active { background: rgba(255,255,255,0.06); }
+.no-row--active { border-color: rgba(201,151,58,0.45); background: rgba(201,151,58,0.07); }
+.no-row--st { border-color: var(--border); opacity: 0.8; }
+.no-row--done { opacity: 0.38; }
+.no-row--done .no-name { text-decoration: line-through; }
+.no-row--cond { border-style: dashed; }
+.no-step { min-width: 20px; font-size: 11px; color: var(--text-secondary); font-weight: 700; padding-top: 2px; text-align: right; }
+.no-check { min-width: 16px; font-size: 13px; color: #5a9e2f; font-weight: 700; padding-top: 1px; }
+.no-icon { width: 32px; height: 32px; object-fit: contain; flex-shrink: 0; filter: drop-shadow(0 1px 3px rgba(0,0,0,0.7)); }
+.no-icon--st { display: inline-flex; align-items: center; justify-content: center; font-size: 18px; width: 32px; height: 32px; }
+.no-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.no-name { font-size: 14px; font-weight: 700; color: var(--text); }
+.no-name--st { color: var(--gold-light); }
+.no-name.no-cat-townsfolk { color: #8fca4b; }
+.no-name.no-cat-outsider  { color: #7ab8f5; }
+.no-name.no-cat-minion    { color: #e06060; }
+.no-name.no-cat-demon     { color: #ff8080; }
+.no-name.no-cat-traveler  { color: #e6b85a; }
+.no-players { font-size: 12px; font-weight: 600; color: var(--gold-light); }
+.no-hint { font-size: 11px; color: var(--text-secondary); line-height: 1.4; }
+.no-cond-tag { font-size: 10px; color: #9b6dca; background: rgba(155,109,202,0.15); border-radius: 999px; padding: 1px 6px; align-self: flex-start; font-weight: 600; }
 
 /* ── Roles PDF viewer ─────────────────────────────────── */
 #pdf-sheet { position: fixed; inset: 0; display: flex; flex-direction: column; background: var(--bg-surface); z-index: 200; }
