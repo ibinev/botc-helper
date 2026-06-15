@@ -164,6 +164,7 @@ export class BotcReferenceModal extends LitElement {
           ${entry.cond ? html`<span class="no-cond-tag">conditional</span>` : nothing}
           ${hasPlayers ? html`<span class="no-players">${players.map(p => p.name).join(', ')}</span>` : nothing}
           <span class="no-hint">${entry.hint}</span>
+          ${roleData?.ability ? html`<span class="no-ability">${roleData.ability}</span>` : nothing}
         </div>
       </div>
     `;

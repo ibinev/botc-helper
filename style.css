@@ -486,6 +486,7 @@ body.align-hints .seat.nom-voted.suspicious .seat-inner { background: rgba(155,7
 .no-name.no-cat-traveler  { color: #e6b85a; }
 .no-players { font-size: 12px; font-weight: 600; color: var(--gold-light); }
 .no-hint { font-size: 13px; color: var(--text-secondary); line-height: 1.4; }
+.no-ability { font-size: 11px; color: var(--text-secondary); line-height: 1.4; font-style: italic; opacity: 0.7; }
 .no-cond-tag { font-size: 10px; color: #9b6dca; background: rgba(155,109,202,0.15); border-radius: 999px; padding: 1px 6px; align-self: flex-start; font-weight: 600; }
 
 /* ── Roles PDF viewer ─────────────────────────────────── */
@@ -538,13 +539,13 @@ body.align-hints .seat.nom-voted.suspicious .seat-inner { background: rgba(155,7
 @media (max-width: 600px) { .rc-two-col { grid-template-columns: 1fr; } }
 .rc-two-col-left, .rc-two-col-right { min-width: 0; }
 
-.rc-card { display: flex; align-items: flex-start; gap: 9px; background: var(--bg-card); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 8px 10px; transition: border-color 0.15s, background 0.15s; }
-.rc-card--active { border-color: rgba(201,151,58,0.5); background: rgba(201,151,58,0.07); }
-.rc-cat-townsfolk.rc-card--active { border-color: rgba(90,158,47,0.5);   background: rgba(90,158,47,0.07); }
-.rc-cat-outsider.rc-card--active  { border-color: rgba(90,158,200,0.5);  background: rgba(90,158,200,0.07); }
-.rc-cat-minion.rc-card--active    { border-color: rgba(192,57,43,0.5);   background: rgba(192,57,43,0.07); }
-.rc-cat-demon.rc-card--active     { border-color: rgba(192,57,43,0.6);   background: rgba(192,57,43,0.1); }
-.rc-cat-traveler.rc-card--active  { border-color: rgba(186,117,23,0.5);  background: rgba(186,117,23,0.07); }
+.rc-card { display: flex; align-items: flex-start; gap: 9px; background: var(--bg-card); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 8px 10px; transition: border-color 0.15s, background 0.15s; border-left-width: 3px; }
+.rc-card--active { border-left-width: 4px; }
+.rc-cat-townsfolk.rc-card--active { border-color: #8fca4b;  background: rgba(90,158,47,0.18); }
+.rc-cat-outsider.rc-card--active  { border-color: #7ab8f5;  background: rgba(90,158,200,0.18); }
+.rc-cat-minion.rc-card--active    { border-color: #e06060;  background: rgba(192,57,43,0.18); }
+.rc-cat-demon.rc-card--active     { border-color: #ff8080;  background: rgba(192,57,43,0.22); }
+.rc-cat-traveler.rc-card--active  { border-color: #e6b85a;  background: rgba(186,117,23,0.18); }
 
 .rc-icon { width: 36px; height: 36px; object-fit: contain; flex-shrink: 0; filter: drop-shadow(0 1px 3px rgba(0,0,0,0.7)); margin-top: 1px; }
 .rc-icon--fallback { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; font-size: 18px; color: var(--text-secondary); }
