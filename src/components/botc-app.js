@@ -10,6 +10,8 @@ import './botc-settings-modal.js';
 import './botc-charcount-modal.js';
 import './botc-pdf-modal.js';
 import './botc-nightorder-modal.js';
+import './botc-roles-modal.js';
+import './botc-reference-modal.js';
 
 const LS_KEY = 'botc_town_square_v1';
 
@@ -48,6 +50,9 @@ export class BotcApp extends LitElement {
     _charcountOpen:    { state: true },
     _pdfOpen:          { state: true },
     _nightorderOpen:   { state: true },
+    _rolesOpen:        { state: true },
+    _referenceOpen:    { state: true },
+    _referenceTab:     { state: true },
     _confirmOpen:      { state: true },
     _confirmSoftOpen:  { state: true },
   };
@@ -89,6 +94,9 @@ export class BotcApp extends LitElement {
     this._charcountOpen    = false;
     this._pdfOpen          = false;
     this._nightorderOpen   = false;
+    this._rolesOpen        = false;
+    this._referenceOpen    = false;
+    this._referenceTab     = 'roles';
     this._confirmOpen      = false;
     this._confirmSoftOpen  = false;
   }
@@ -703,14 +711,8 @@ export class BotcApp extends LitElement {
             @click="${() => { this._notesOpen = true; this.requestUpdate(); }}">📜</button>
           <button class="topbar-icon-btn" title="Nominations"
             @click="${() => { this._nomsOpen = true; this.requestUpdate(); }}">⚖</button>
-          ${hasRolesImg ? html`
-            <button class="topbar-icon-btn" title="Role reference"
-              @click="${() => { this._pdfOpen = true; this.requestUpdate(); }}">📖</button>
-          ` : nothing}
-          <button class="topbar-icon-btn" title="Character count"
-            @click="${() => { this._charcountOpen = true; this.requestUpdate(); }}">📊</button>
-          <button class="topbar-icon-btn" title="Night order"
-            @click="${() => { this._nightorderOpen = true; this.requestUpdate(); }}">🌙</button>
+          <button class="topbar-icon-btn" title="Reference"
+            @click="${() => { this._referenceOpen = true; this._referenceTab = 'roles'; this.requestUpdate(); }}">📖</button>
           <button class="topbar-icon-btn" title="Settings"
             @click="${() => { this._settingsOpen = true; this.requestUpdate(); }}">⚙️</button>
         </div>
@@ -899,6 +901,20 @@ export class BotcApp extends LitElement {
         }}"
       ></botc-settings-modal>
 
+      <!-- Unified reference modal (Roles / Night Order / Char Count) -->
+      <botc-reference-modal
+        .open="${this._referenceOpen}"
+        .initialTab="${this._referenceTab}"
+        .seats="${this.seats}"
+        .seatCount="${this.seatCount}"
+        .phase="${this.phase}"
+        .round="${this.round}"
+        @modal-close="${() => {
+          this._referenceOpen = false;
+          this.requestUpdate();
+        }}"
+      ></botc-reference-modal>
+
       <!-- Character count modal -->
       <botc-charcount-modal
         .open="${this._charcountOpen}"
@@ -929,6 +945,16 @@ export class BotcApp extends LitElement {
           this.requestUpdate();
         }}"
       ></botc-nightorder-modal>
+
+      <!-- Roles reference modal -->
+      <botc-roles-modal
+        .open="${this._rolesOpen}"
+        .seats="${this.seats}"
+        @modal-close="${() => {
+          this._rolesOpen = false;
+          this.requestUpdate();
+        }}"
+      ></botc-roles-modal>
 
       <!-- Confirm reset dialog -->
       ${this._confirmOpen ? html`
