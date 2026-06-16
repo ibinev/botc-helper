@@ -237,12 +237,12 @@ export class BotcEditModal extends LitElement {
                   @click="${() => this._onToggle('tog-vote')}">🗳 Ghost vote</button>
                 <button class="tog" id="tog-drunk" data-on="on-drunk"
                   @click="${() => this._onToggle('tog-drunk')}">
-                  <img src="https://wiki.bloodontheclocktower.com/images/4/4a/Icon_drunk.png"
+                  <img src="assets/roles/Icon_drunk.png"
                     alt="Drunk" class="tog-icon">Drunk
                 </button>
                 <button class="tog" id="tog-poisoned" data-on="on-poisoned"
                   @click="${() => this._onToggle('tog-poisoned')}">
-                  <img src="https://wiki.bloodontheclocktower.com/images/b/b1/Icon_poisoner.png"
+                  <img src="assets/roles/Icon_poisoner.png"
                     alt="Poisoned" class="tog-icon">Poisoned
                 </button>
               </div>

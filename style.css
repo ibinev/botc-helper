@@ -147,7 +147,6 @@ body.day-mode .combo-dropdown { box-shadow: 0 8px 32px rgba(100,60,0,0.25); }
 .cycle-label { padding: 0 8px; font-size: 12px; font-weight: 700; white-space: nowrap; min-width: 68px; text-align: center; }
 .cycle-label.phase-day   { color: var(--gold-light); text-shadow: 0 0 8px rgba(201,151,58,0.6); }
 .cycle-label.phase-night { color: var(--info-text);  text-shadow: 0 0 8px rgba(122,184,245,0.5); }
-.day-timer { font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--gold-light); padding: 0 6px; min-width: 38px; text-align: center; opacity: 0.8; }
 .bar-meta { font-size: 11px; color: var(--text-secondary); margin-left: auto; white-space: nowrap; }
 .bar-meta strong { color: var(--text-primary); }
 .meta-good { color: var(--good-text); }

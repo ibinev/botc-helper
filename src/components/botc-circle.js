@@ -199,7 +199,7 @@ export class BotcCircle extends LitElement {
     const displayRoleData = displayRole ? ROLES.find(r => r.name === displayRole) : null;
     const iconSrc         = displayRole && ROLE_ICONS[displayRole] ? ROLE_ICONS[displayRole] : null;
     const drunkIconSrc    = s.poisoned
-      ? 'https://wiki.bloodontheclocktower.com/images/b/b1/Icon_poisoner.png'
+      ? 'assets/roles/Icon_poisoner.png'
       : s.drunk ? ROLE_ICONS['Drunk'] : null;
     const dotClass = displayRoleData
       ? ` dot-${displayRoleData.cat}`

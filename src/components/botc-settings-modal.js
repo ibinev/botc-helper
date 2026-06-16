@@ -32,7 +32,6 @@ export class BotcSettingsModal extends LitElement {
     storyView:  { type: Boolean },
     compactMode:{ type: Boolean },
     hideRole:   { type: Boolean },
-    dayTimerEnabled: { type: Boolean },
   };
 
   createRenderRoot() { return this; }
@@ -46,7 +45,6 @@ export class BotcSettingsModal extends LitElement {
     this.storyView  = false;
     this.compactMode= false;
     this.hideRole   = false;
-    this.dayTimerEnabled = false;
     this._versionTaps = 0;
     this._versionTapTimer = null;
   }
@@ -168,18 +166,6 @@ export class BotcSettingsModal extends LitElement {
 
             <div class="settings-row">
               <div>
-                <div class="settings-label">Hide role</div>
-                <div class="settings-sub">Hide role icons and text everywhere</div>
-              </div>
-              <div class="settings-control">
-                <button class="btn-sm btn-hints ${this.hideRole ? 'active' : ''}"
-                  @click="${() => this._fire('hide-role-toggle', {})}"
-                >${this.hideRole ? 'On' : 'Off'}</button>
-              </div>
-            </div>
-
-            <div class="settings-row">
-              <div>
                 <div class="settings-label">Extended hints</div>
                 <div class="settings-sub">Show coloured ring on seats when alignment is set</div>
               </div>
@@ -204,13 +190,13 @@ export class BotcSettingsModal extends LitElement {
 
             <div class="settings-row">
               <div>
-                <div class="settings-label">Day timer</div>
-                <div class="settings-sub">Show a running timer during the day phase</div>
+                <div class="settings-label">Hide roles</div>
+                <div class="settings-sub">Hide role icons and text everywhere</div>
               </div>
               <div class="settings-control">
-                <button class="btn-sm btn-hints ${this.dayTimerEnabled ? 'active' : ''}"
-                  @click="${() => this._fire('day-timer-toggle', {})}"
-                >${this.dayTimerEnabled ? 'On' : 'Off'}</button>
+                <button class="btn-sm btn-hints ${this.hideRole ? 'active' : ''}"
+                  @click="${() => this._fire('hide-role-toggle', {})}"
+                >${this.hideRole ? 'On' : 'Off'}</button>
               </div>
             </div>
 

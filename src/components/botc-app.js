@@ -36,8 +36,6 @@ export class BotcApp extends LitElement {
     storyView:         { type: Boolean },
     compactMode:       { type: Boolean },
     hideRole:          { type: Boolean },
-    dayTimerEnabled:   { type: Boolean },
-    _daySeconds:       { state: true   },
     deathsCollapsed:   { type: Boolean },
     poisonedCollapsed: { type: Boolean },
     allseatsCollapsed: { type: Boolean },
@@ -80,9 +78,6 @@ export class BotcApp extends LitElement {
     this.storyView         = false;
     this.compactMode       = false;
     this.hideRole          = false;
-    this.dayTimerEnabled   = false;
-    this._daySeconds       = 0;
-    this._dayTimerInterval = null;
     this.deathsCollapsed   = false;
     this.poisonedCollapsed = false;
     this.allseatsCollapsed = false;
@@ -114,7 +109,6 @@ export class BotcApp extends LitElement {
   disconnectedCallback() {
     super.disconnectedCallback();
     window.removeEventListener('resize', this._onResize);
-    this._stopDayTimer();
   }
 
   // ── Persistence ──────────────────────────────────────────────────────
@@ -128,7 +122,6 @@ export class BotcApp extends LitElement {
     this._loadStoryView();
     this._loadCompactMode();
     this._loadHideRole();
-    this._loadDayTimerEnabled();
     const restored = this._loadState();
     if (!restored) {
       this._initSeats(this.seatCount);
@@ -139,7 +132,6 @@ export class BotcApp extends LitElement {
     this._applyStoryView();
     this._applyCompactMode();
     this._applyHideRole();
-    if (this.phase === 'day' && this.dayTimerEnabled) this._startDayTimer();
     requestAnimationFrame(() => requestAnimationFrame(() => this.requestUpdate()));
   }
 
@@ -267,11 +259,6 @@ export class BotcApp extends LitElement {
     this.hideRole = localStorage.getItem('botc_hide_role') === 'on';
   }
 
-  _loadDayTimerEnabled() {
-    const v = localStorage.getItem('botc_day_timer');
-    this.dayTimerEnabled = v === 'on';
-  }
-
   _applyCompactMode() {
     document.body.classList.toggle('compact-mode', this.compactMode);
     try {
@@ -284,28 +271,6 @@ export class BotcApp extends LitElement {
     try {
       localStorage.setItem('botc_hide_role', this.hideRole ? 'on' : 'off');
     } catch(e) {}
-  }
-
-  _startDayTimer() {
-    this._stopDayTimer();
-    this._daySeconds = 0;
-    this._dayTimerInterval = setInterval(() => {
-      this._daySeconds++;
-      this.requestUpdate();
-    }, 1000);
-  }
-
-  _stopDayTimer() {
-    if (this._dayTimerInterval) {
-      clearInterval(this._dayTimerInterval);
-      this._dayTimerInterval = null;
-    }
-  }
-
-  _fmtDayTimer(s) {
-    const m = Math.floor(s / 60);
-    const sec = s % 60;
-    return String(m).padStart(2, '0') + ':' + String(sec).padStart(2, '0');
   }
 
   _applyStoryView() {
@@ -371,10 +336,7 @@ export class BotcApp extends LitElement {
     this._savePoisonSnapshots();
     this._saveState();
     if (this.phase === 'night') {
-      this._stopDayTimer();
       if (this.nomMode) this._cancelNomMode();
-    } else {
-      if (this.dayTimerEnabled) this._startDayTimer();
     }
     this.requestUpdate();
   }
@@ -688,9 +650,6 @@ export class BotcApp extends LitElement {
           <span class="cycle-label ${this.phase === 'day' ? 'phase-day' : 'phase-night'}">
             ${this.phase === 'day' ? 'Day' : 'Night'} ${this.round}
           </span>
-          ${this.phase === 'day' && this.dayTimerEnabled
-            ? html`<span class="day-timer">${this._fmtDayTimer(this._daySeconds)}</span>`
-            : nothing}
           <button class="cycle-btn" ?disabled="${step === MAX_STEP}"
             @click="${() => this.advanceCycle(+1)}">&#8250;</button>
         </div>
@@ -835,7 +794,6 @@ export class BotcApp extends LitElement {
         .storyView="${this.storyView}"
         .compactMode="${this.compactMode}"
         .hideRole="${this.hideRole}"
-        .dayTimerEnabled="${this.dayTimerEnabled}"
         @count-change="${e => {
           this.seatCount = e.detail.count;
           this._initSeats(this.seatCount);
@@ -864,13 +822,6 @@ export class BotcApp extends LitElement {
         @hide-role-toggle="${() => {
           this.hideRole = !this.hideRole;
           this._applyHideRole();
-          this.requestUpdate();
-        }}"
-        @day-timer-toggle="${() => {
-          this.dayTimerEnabled = !this.dayTimerEnabled;
-          try { localStorage.setItem('botc_day_timer', this.dayTimerEnabled ? 'on' : 'off'); } catch(e) {}
-          if (this.dayTimerEnabled && this.phase === 'day') this._startDayTimer();
-          else this._stopDayTimer();
           this.requestUpdate();
         }}"
         @theme-toggle="${() => {

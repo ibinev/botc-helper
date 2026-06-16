@@ -48,7 +48,7 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
 
-  if (url.hostname === 'esm.sh' || url.hostname === 'wiki.bloodontheclocktower.com') {
+  if (url.hostname === 'esm.sh') {
     // CDN: cache-first, update cache in background
     e.respondWith(
       caches.open(CACHE).then(cache =>
