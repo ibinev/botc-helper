@@ -18,9 +18,15 @@ import './botc-combo.js';
  */
 export class BotcEditModal extends LitElement {
   static properties = {
-    open:    { type: Boolean },
-    seat:    { type: Object  },
-    seatIdx: { type: Number  },
+    open:              { type: Boolean },
+    seat:              { type: Object  },
+    seatIdx:           { type: Number  },
+    playerPool:        { type: Array   },
+    fullPool:          { type: Array   },
+    _poolOpen:         { state: true   },
+    _poolManageOpen:   { state: true   },
+    _poolManageAdding: { state: true   },
+    _poolManageName:   { state: true   },
   };
 
   createRenderRoot() { return this; }
@@ -28,8 +34,16 @@ export class BotcEditModal extends LitElement {
   constructor() {
     super();
     this.open    = false;
-    this.seat    = null;
-    this.seatIdx = null;
+    this.seat       = null;
+    this.seatIdx    = null;
+    this.playerPool        = [];
+    this.fullPool           = [];
+    this._poolOpen          = false;
+    this._poolManageOpen    = false;
+    this._poolManageAdding  = false;
+    this._poolManageName    = '';
+    this._poolLpTimer       = null;
+    this._poolLpFired       = false;
     // Internal toggle state (not in seat object — updated imperatively)
     this._deadActive     = false;
     this._voteActive     = false;
@@ -41,6 +55,10 @@ export class BotcEditModal extends LitElement {
     if (changed.has('open')) {
       const overlay = this.querySelector('#modal-edit');
       overlay?.classList.toggle('visible', this.open);
+      if (!this.open) {
+        this._poolOpen = false;
+        this._poolManageOpen = false;
+      }
     }
     if (changed.has('seat') && this.seat) {
       this._populateForm(this.seat);
@@ -103,7 +121,52 @@ export class BotcEditModal extends LitElement {
     this._syncToggles();
   }
 
+  _pickPoolName(name) {
+    const input = this.querySelector('#f-name');
+    if (input) input.value = name;
+    this._poolOpen = false;
+  }
+
+  _startLongPress() {
+    this._poolLpFired = false;
+    clearTimeout(this._poolLpTimer);
+    this._poolLpTimer = setTimeout(() => {
+      this._poolLpFired = true;
+      this._poolOpen = false;
+      this._poolManageOpen = true;
+    }, 5000);
+  }
+
+  _endLongPress(wasRelease) {
+    clearTimeout(this._poolLpTimer);
+    if (wasRelease && !this._poolLpFired) {
+      this._poolManageOpen = false;
+      this._poolOpen = !this._poolOpen;
+    }
+    this._poolLpFired = false;
+  }
+
+  _addToPool() {
+    const name = this._poolManageName.trim();
+    if (!name) return;
+    this.dispatchEvent(new CustomEvent('player-pool-change', {
+      detail: { pool: [...(this.fullPool || []), name] },
+      bubbles: true, composed: true
+    }));
+    this._poolManageName   = '';
+    this._poolManageAdding = false;
+  }
+
+  _removeFromPool(idx) {
+    this.dispatchEvent(new CustomEvent('player-pool-change', {
+      detail: { pool: (this.fullPool || []).filter((_, i) => i !== idx) },
+      bubbles: true, composed: true
+    }));
+  }
+
   _onSave() {
+    this._poolOpen = false;
+    this._poolManageOpen = false;
     const roleCombo = this.querySelector('#combo-role');
     const trueCombo = this.querySelector('#combo-true-role');
     const alignment = this.querySelector('#f-alignment')?.value ?? 'unknown';
@@ -125,6 +188,8 @@ export class BotcEditModal extends LitElement {
   }
 
   _onClear() {
+    this._poolOpen = false;
+    this._poolManageOpen = false;
     this.dispatchEvent(new CustomEvent('seat-clear', {
       detail: { idx: this.seatIdx }, bubbles: true, composed: true
     }));
@@ -195,9 +260,55 @@ export class BotcEditModal extends LitElement {
 
             <div class="field-grid">
               <div class="field">
-                <label>Player name</label>
+                <label class="name-label">
+                  Player name
+                  ${this.fullPool?.length ? html`
+                    <button class="pool-icon-btn" type="button"
+                      @mousedown="${e => { e.preventDefault(); this._startLongPress(); }}"
+                      @touchstart="${e => { e.preventDefault(); this._startLongPress(); }}"
+                      @mouseup="${() => this._endLongPress(true)}"
+                      @touchend="${e => { e.stopPropagation(); this._endLongPress(true); }}"
+                      @mouseleave="${() => this._endLongPress(false)}"
+                      @touchcancel="${() => this._endLongPress(false)}">&#x1f465;</button>
+                  ` : nothing}
+                </label>
+                ${this._poolOpen && this.playerPool?.length ? html`
+                  <div class="pool-float">
+                    ${this.playerPool.map(n => html`
+                      <button class="pool-float-item" type="button"
+                        @click="${e => { e.stopPropagation(); this._pickPoolName(n); }}">${n}</button>
+                    `)}
+                  </div>
+                ` : nothing}
+                ${this._poolManageOpen ? html`
+                  <div class="pool-float pool-float--manage">
+                    ${(this.fullPool || []).map((name, i) => html`
+                      <div class="pool-row">
+                        <span class="pool-name">${name}</span>
+                        <button class="pool-remove" @click="${e => { e.stopPropagation(); this._removeFromPool(i); }}">✕</button>
+                      </div>
+                    `)}
+                    ${this._poolManageAdding ? html`
+                      <div class="pool-row">
+                        <input class="pool-add-input" type="text" .value="${this._poolManageName}"
+                          placeholder="Name…"
+                          @input="${e => { this._poolManageName = e.target.value; }}"
+                          @click="${e => e.stopPropagation()}"
+                          @keydown="${e => {
+                            if (e.key === 'Enter') this._addToPool();
+                            else if (e.key === 'Escape') { this._poolManageAdding = false; this._poolManageName = ''; }
+                          }}">
+                        <button class="pool-confirm" @click="${e => { e.stopPropagation(); this._addToPool(); }}">✓</button>
+                        <button class="pool-remove" @click="${e => { e.stopPropagation(); this._poolManageAdding = false; this._poolManageName = ''; }}">✕</button>
+                      </div>
+                    ` : html`
+                      <button class="pool-add-btn" @click="${e => { e.stopPropagation(); this._poolManageAdding = true; }}">+ Add</button>
+                    `}
+                  </div>
+                ` : nothing}
                 <input type="text" id="f-name" placeholder="e.g. Alice" autocomplete="off"
-                  @keydown="${e => { if (e.key === 'Enter') this._onSave(); }}">
+                  @keydown="${e => { if (e.key === 'Enter') this._onSave(); }}"
+                  @focus="${() => { this._poolOpen = false; this._poolManageOpen = false; }}">
               </div>
               <div class="field">
                 <label>Role claimed</label>

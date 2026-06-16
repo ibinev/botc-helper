@@ -31,7 +31,7 @@ export class BotcSettingsModal extends LitElement {
     dayMode:    { type: Boolean },
     storyView:  { type: Boolean },
     compactMode:{ type: Boolean },
-    hideRole:   { type: Boolean },
+    hideRole:       { type: Boolean },
   };
 
   createRenderRoot() { return this; }
@@ -44,7 +44,7 @@ export class BotcSettingsModal extends LitElement {
     this.dayMode    = false;
     this.storyView  = false;
     this.compactMode= false;
-    this.hideRole   = false;
+    this.hideRole       = false;
     this._versionTaps = 0;
     this._versionTapTimer = null;
   }

@@ -619,6 +619,32 @@ body.align-hints .seat.nom-voted.suspicious .seat-inner { background: rgba(155,7
 .btn-close-sm { padding: 6px 12px; }
 .d-none       { display: none; }
 .tog-icon     { width: 18px; height: 18px; object-fit: contain; vertical-align: middle; margin-right: 4px; }
+.name-label   { display: flex; align-items: center; gap: 5px; font-size: 10px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px; }
+.pool-icon-btn { background: none; border: none; cursor: pointer; font-size: 13px; padding: 0; line-height: 1; opacity: 0.6; -webkit-tap-highlight-color: transparent; }
+.pool-icon-btn:hover { opacity: 1; }
+.field { position: relative; }
+.pool-float { position: absolute; top: 100%; left: 0; right: 0; z-index: 200; background: var(--bg-card); border: 0.5px solid var(--border-strong); border-radius: var(--radius-md); box-shadow: 0 6px 24px rgba(0,0,0,0.5); overflow: hidden; margin-top: 2px; }
+.pool-float--manage { border-color: rgba(201,151,58,0.3); }
+/* ── Pool manage popup (from btn-list long-press) ─────── */
+.pool-manage-overlay { position: fixed; inset: 0; z-index: 150; background: rgba(10,7,4,0.7); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); display: flex; align-items: center; justify-content: center; pointer-events: all; padding: 16px; }
+.pool-manage-sheet { background: var(--bg-surface); border: 0.5px solid var(--border-strong); border-radius: 20px; width: 100%; max-width: 480px; max-height: 80dvh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 8px 48px rgba(0,0,0,0.6); }
+.pool-manage-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px 12px; border-bottom: 0.5px solid var(--border); flex-shrink: 0; }
+.pool-manage-title { font-size: 17px; font-weight: 500; color: var(--gold-light); font-family: var(--font-serif); }
+.pool-float-item { display: block; width: 100%; padding: 9px 12px; background: none; border: none; border-bottom: 0.5px solid var(--border); text-align: left; font-family: var(--font-sans); font-size: 14px; color: var(--text-primary); cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.pool-float-item:last-child { border-bottom: none; }
+.pool-float-item:active { background: rgba(201,151,58,0.1); color: var(--gold-light); }
+/* ── List modal pool ──────────────────────────────────── */
+.pool-list { padding: 4px 0 max(16px, env(safe-area-inset-bottom)); overflow-y: auto; flex: 1; }
+.pool-row { display: flex; align-items: center; gap: 8px; padding: 7px 16px; border-bottom: 0.5px solid var(--border); }
+.pool-row:last-child { border-bottom: none; }
+.pool-name { flex: 1; font-size: 14px; color: var(--text-primary); }
+.pool-remove { background: none; border: none; cursor: pointer; color: var(--text-muted); font-size: 13px; padding: 2px 4px; -webkit-tap-highlight-color: transparent; flex-shrink: 0; }
+.pool-remove:hover { color: var(--evil-text); }
+.pool-confirm { background: none; border: none; cursor: pointer; color: var(--gold); font-size: 13px; padding: 2px 4px; -webkit-tap-highlight-color: transparent; flex-shrink: 0; }
+.pool-add-input { flex: 1; min-width: 0; padding: 6px 10px; background: var(--bg-input); border: 0.5px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font-sans); font-size: 14px; color: var(--text-primary); outline: none; }
+.pool-add-input:focus { border-color: var(--gold); box-shadow: 0 0 0 2px rgba(201,151,58,0.15); }
+.pool-add-btn { display: block; width: 100%; padding: 10px 16px; background: none; border: none; color: var(--gold); font-size: 14px; font-family: var(--font-sans); cursor: pointer; text-align: left; -webkit-tap-highlight-color: transparent; }
+.pool-add-btn:hover { color: var(--gold-light); }
 
 /* ── Notes modal ──────────────────────────────────────── */
 .modal-title--sm   { font-size: 16px; }

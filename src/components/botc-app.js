@@ -36,6 +36,7 @@ export class BotcApp extends LitElement {
     storyView:         { type: Boolean },
     compactMode:       { type: Boolean },
     hideRole:          { type: Boolean },
+    playerPool:        { type: Array   },
     deathsCollapsed:   { type: Boolean },
     poisonedCollapsed: { type: Boolean },
     allseatsCollapsed: { type: Boolean },
@@ -53,6 +54,9 @@ export class BotcApp extends LitElement {
     _referenceTab:     { state: true },
     _confirmOpen:      { state: true },
     _confirmSoftOpen:  { state: true },
+    _poolManageOpen:   { state: true },
+    _poolManageAdding: { state: true },
+    _poolManageName:   { state: true },
   };
 
   createRenderRoot() { return this; }
@@ -78,6 +82,7 @@ export class BotcApp extends LitElement {
     this.storyView         = false;
     this.compactMode       = false;
     this.hideRole          = false;
+    this.playerPool        = [];
     this.deathsCollapsed   = false;
     this.poisonedCollapsed = false;
     this.allseatsCollapsed = false;
@@ -94,6 +99,11 @@ export class BotcApp extends LitElement {
     this._referenceTab     = 'roles';
     this._confirmOpen      = false;
     this._confirmSoftOpen  = false;
+    this._poolManageOpen   = false;
+    this._poolManageAdding = false;
+    this._poolManageName   = '';
+    this._poolTapCount     = 0;
+    this._poolTapTimer     = null;
   }
 
   // ── Lifecycle ────────────────────────────────────────────────────────
@@ -122,6 +132,7 @@ export class BotcApp extends LitElement {
     this._loadStoryView();
     this._loadCompactMode();
     this._loadHideRole();
+    this._loadPlayerPool();
     const restored = this._loadState();
     if (!restored) {
       this._initSeats(this.seatCount);
@@ -257,6 +268,19 @@ export class BotcApp extends LitElement {
 
   _loadHideRole() {
     this.hideRole = localStorage.getItem('botc_hide_role') === 'on';
+  }
+
+  _loadPlayerPool() {
+    try {
+      const r = localStorage.getItem('botc_player_pool');
+      if (r) this.playerPool = JSON.parse(r);
+    } catch(e) {}
+  }
+
+  _savePlayerPool() {
+    try {
+      localStorage.setItem('botc_player_pool', JSON.stringify(this.playerPool));
+    } catch(e) {}
   }
 
   _applyCompactMode() {
@@ -512,10 +536,11 @@ export class BotcApp extends LitElement {
 
     const EXTRA_KEYS = [
       'botc_game_notes', 'botc_night_notes', 'botc_nominations',
-      'botc_poison_snaps', 'botc_collapse_prefs',
+      'botc_poison_snaps', 'botc_collapse_prefs', 'botc_player_pool',
     ];
     EXTRA_KEYS.forEach(k => { try { localStorage.removeItem(k); } catch(e) {} });
 
+    this.playerPool    = [];
     this.seats         = Array.from({ length: this.seatCount }, () => blankSeat());
     this.seatPositions = Array.from({ length: this.seatCount }, () => null);
     this.selected      = null;
@@ -642,7 +667,17 @@ export class BotcApp extends LitElement {
     return html`
       <!-- Top bar -->
       <div id="topbar">
-        <span class="bar-title">Town Square</span>
+        <span class="bar-title" @click="${() => {
+            this._poolTapCount = (this._poolTapCount || 0) + 1;
+            clearTimeout(this._poolTapTimer);
+            if (this._poolTapCount >= 3) {
+              this._poolTapCount = 0;
+              this._poolManageOpen = true;
+              this.requestUpdate();
+            } else {
+              this._poolTapTimer = setTimeout(() => { this._poolTapCount = 0; }, 500);
+            }
+          }}">Town Square</span>
 
         <div class="cycle-controls">
           <button class="cycle-btn" ?disabled="${step === 0}"
@@ -709,19 +744,63 @@ export class BotcApp extends LitElement {
         ` : nothing}
 
         <!-- Player list button -->
-        <button id="btn-list"
-          @click="${() => { this._listOpen = true; this.requestUpdate(); }}">
+        <button id="btn-list" @click="${() => { this._listOpen = true; this.requestUpdate(); }}">
           👥 <span class="btn-label">Players </span><span class="list-count">${named}</span>
         </button>
       </div>
+
+      <!-- Pool manage popup -->
+      ${this._poolManageOpen ? html`
+        <div class="pool-manage-overlay" @click="${e => { if (e.target.classList.contains('pool-manage-overlay')) { this._poolManageOpen = false; this._poolManageAdding = false; this._poolManageName = ''; this.requestUpdate(); } }}">
+          <div class="pool-manage-sheet">
+            <div class="pool-manage-header">
+              <span class="pool-manage-title">👥 Player pool</span>
+              <button class="btn-sm" @click="${() => { this._poolManageOpen = false; this._poolManageAdding = false; this._poolManageName = ''; this.requestUpdate(); }}">✕</button>
+            </div>
+            <div class="pool-list">
+              ${this.playerPool.map((name, i) => html`
+                <div class="pool-row">
+                  <span class="pool-name">${name}</span>
+                  <button class="pool-remove" @click="${() => { this.playerPool = this.playerPool.filter((_, j) => j !== i); this._savePlayerPool(); this.requestUpdate(); }}">✕</button>
+                </div>
+              `)}
+              ${this._poolManageAdding ? html`
+                <div class="pool-row">
+                  <input class="pool-add-input" type="text" .value="${this._poolManageName}"
+                    placeholder="Name…"
+                    @input="${e => { this._poolManageName = e.target.value; }}"
+                    @keydown="${e => {
+                      if (e.key === 'Enter') {
+                        const n = this._poolManageName.trim();
+                        if (n) { this.playerPool = [...this.playerPool, n]; this._savePlayerPool(); }
+                        this._poolManageName = ''; this._poolManageAdding = false; this.requestUpdate();
+                      } else if (e.key === 'Escape') { this._poolManageAdding = false; this._poolManageName = ''; this.requestUpdate(); }
+                    }}">
+                  <button class="pool-confirm" @click="${() => {
+                    const n = this._poolManageName.trim();
+                    if (n) { this.playerPool = [...this.playerPool, n]; this._savePlayerPool(); }
+                    this._poolManageName = ''; this._poolManageAdding = false; this.requestUpdate();
+                  }}">✓</button>
+                  <button class="pool-remove" @click="${() => { this._poolManageAdding = false; this._poolManageName = ''; this.requestUpdate(); }}">✕</button>
+                </div>
+              ` : html`
+                <button class="pool-add-btn" @click="${() => { this._poolManageAdding = true; this.updateComplete.then(() => this.querySelector('.pool-add-input')?.focus()); }}">+ Add name</button>
+              `}
+            </div>
+          </div>
+        </div>
+      ` : nothing}
 
       <!-- Edit modal -->
       <botc-edit-modal
         .open="${this._editOpen}"
         .seat="${this.selected !== null ? this.seats[this.selected] : null}"
         .seatIdx="${this.selected}"
+        .playerPool="${this.playerPool.filter(n => !this.seats.some((s, i) => i !== this.selected && s.name === n))}"
+        .fullPool="${this.playerPool}"
         @seat-save="${e => this._saveSeat(e.detail)}"
         @seat-clear="${e => this._clearSeat(e.detail.idx)}"
+        @player-pool-change="${e => { this.playerPool = e.detail.pool; this._savePlayerPool(); this.requestUpdate(); }}"
         @modal-close="${() => { this.selected = null; this._editOpen = false; this._saveState(); this.requestUpdate(); }}"
       ></botc-edit-modal>
 
