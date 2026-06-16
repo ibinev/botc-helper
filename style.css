@@ -61,7 +61,7 @@ html, body {
 }
 /* pan-x pan-y allows scrolling when zoomed in; manipulation alone blocks panning */
 * { touch-action: manipulation; }
-html, body { touch-action: pan-x pan-y; }
+html, body { touch-action: manipulation; }
 #circle-wrap, #circle-stage, #circle-inner, #seats-container { touch-action: pan-x pan-y pinch-zoom; }
 
 /* ── App shell ─────────────────────────────────────── */
@@ -641,7 +641,7 @@ body.align-hints .seat.nom-voted.suspicious .seat-inner { background: rgba(155,7
 .pool-remove { background: none; border: none; cursor: pointer; color: var(--text-muted); font-size: 13px; padding: 2px 4px; -webkit-tap-highlight-color: transparent; flex-shrink: 0; }
 .pool-remove:hover { color: var(--evil-text); }
 .pool-confirm { background: none; border: none; cursor: pointer; color: var(--gold); font-size: 13px; padding: 2px 4px; -webkit-tap-highlight-color: transparent; flex-shrink: 0; }
-.pool-add-input { flex: 1; min-width: 0; padding: 6px 10px; background: var(--bg-input); border: 0.5px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font-sans); font-size: 14px; color: var(--text-primary); outline: none; }
+.pool-add-input { flex: 1; min-width: 0; padding: 6px 10px; background: var(--bg-input); border: 0.5px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font-sans); font-size: 16px; color: var(--text-primary); outline: none; }
 .pool-add-input:focus { border-color: var(--gold); box-shadow: 0 0 0 2px rgba(201,151,58,0.15); }
 .pool-add-btn { display: block; width: 100%; padding: 10px 16px; background: none; border: none; color: var(--gold); font-size: 14px; font-family: var(--font-sans); cursor: pointer; text-align: left; -webkit-tap-highlight-color: transparent; }
 .pool-add-btn:hover { color: var(--gold-light); }
