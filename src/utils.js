@@ -30,25 +30,27 @@ export function defaultPos(i, n, W, H) {
   const count = Math.max(1, n || 1);
   const cx = W / 2;
   const cy = H / 2;
+  const seatW = Math.max(40, W * 0.11);
 
-  // Keep seats near the edges but safely inset from touching the frame.
-  const insetX = Math.max(34, W * 0.09);
-  const insetBottom = Math.max(26, H * 0.06);
-  const topGapY = Math.max(74, H * 0.20);
+  // Reserve bottom corners for action buttons and use top space more aggressively.
+  const sideInset = Math.max(seatW * 0.52 + 10, W * 0.10);
+  const bottomCornerReserve = Math.max(seatW * 0.5 + 56, W * 0.24);
+  const edgeX = Math.max(sideInset, bottomCornerReserve);
+  const topY = Math.max(seatW * 0.55, H * 0.03);
+  const prefBottomInset = Math.max(seatW * 0.75 + 48, H * 0.19);
+  const maxBottomY = H - Math.max(seatW * 0.55 + 8, 20);
+  const minBottomY = topY + Math.max(70, seatW * 1.15);
+  const bottomY = Math.min(maxBottomY, Math.max(minBottomY, H - prefBottomInset));
 
-  const leftX = insetX;
-  const rightX = W - insetX;
-  const topY = topGapY;
-  const bottomY = H - insetBottom;
+  const leftX = edgeX;
+  const rightX = W - edgeX;
   const curvePeak = Math.max(10, Math.min(W, H) * 0.06);
 
-  const seatW = Math.max(40, W * 0.11);
-  const edgePadX = Math.max(12, W * 0.05);
-  const edgePadY = Math.max(10, H * 0.04);
+  const edgePadX = Math.max(8, W * 0.03);
   const minX = seatW * 0.5 + edgePadX;
   const maxX = W - seatW * 0.5 - edgePadX;
-  const minY = topGapY * 0.5 + edgePadY;
-  const maxY = H - insetBottom * 0.5 - edgePadY;
+  const minY = seatW * 0.5 + 6;
+  const maxY = H - seatW * 0.5 - 8;
 
   const pullAwayFromCenter = (x, y, p) => {
     const curve = 4 * p * (1 - p);
@@ -62,26 +64,26 @@ export function defaultPos(i, n, W, H) {
     };
   };
 
-  // Distribute seats by equal distance along the full U perimeter so
-  // neighboring seats have near-uniform spacing across corners and sides.
-  const leftLen = Math.max(1, bottomY - topY);
+  // Seat order starts on the right side (seat 1), then goes along bottom to left.
+  // Distances are equalized along the full U perimeter.
+  const rightLen = Math.max(1, bottomY - topY);
   const bottomLen = Math.max(1, rightX - leftX);
-  const rightLen = leftLen;
-  const totalLen = leftLen + bottomLen + rightLen;
+  const leftLen = Math.max(1, bottomY - topY);
+  const totalLen = rightLen + bottomLen + leftLen;
   const d = ((i + 0.5) / count) * totalLen;
 
-  if (d < leftLen) {
-    const p = d / leftLen;
-    return pullAwayFromCenter(leftX, topY + p * leftLen, p);
+  if (d < rightLen) {
+    const p = d / rightLen;
+    return pullAwayFromCenter(rightX, topY + p * rightLen, p);
   }
 
-  if (d < leftLen + bottomLen) {
-    const p = (d - leftLen) / bottomLen;
-    return pullAwayFromCenter(leftX + p * bottomLen, bottomY, p);
+  if (d < rightLen + bottomLen) {
+    const p = (d - rightLen) / bottomLen;
+    return pullAwayFromCenter(rightX - p * bottomLen, bottomY, p);
   }
 
-  const p = (d - leftLen - bottomLen) / rightLen;
-  return pullAwayFromCenter(rightX, bottomY - p * rightLen, p);
+  const p = (d - rightLen - bottomLen) / leftLen;
+  return pullAwayFromCenter(leftX, bottomY - p * leftLen, p);
 }
 
 /** Convert a 0-based cycle step to { phase, round }. */
