@@ -28,62 +28,76 @@ export function blankSeat() {
  */
 export function defaultPos(i, n, W, H) {
   const count = Math.max(1, n || 1);
-  const cx = W / 2;
-  const cy = H / 2;
   const seatW = Math.max(40, W * 0.11);
+  const halfSeat = seatW * 0.5;
 
-  // Reserve bottom corners for action buttons and use top space more aggressively.
-  const sideInset = Math.max(seatW * 0.52 + 10, W * 0.10);
-  const bottomCornerReserve = Math.max(seatW * 0.5 + 56, W * 0.24);
-  const edgeX = Math.max(sideInset, bottomCornerReserve);
-  const topY = Math.max(seatW * 0.55, H * 0.03);
-  const prefBottomInset = Math.max(seatW * 0.75 + 48, H * 0.19);
-  const maxBottomY = H - Math.max(seatW * 0.55 + 8, 20);
-  const minBottomY = topY + Math.max(70, seatW * 1.15);
-  const bottomY = Math.min(maxBottomY, Math.max(minBottomY, H - prefBottomInset));
+  // Keep side columns near edges while preserving full seat visibility.
+  const sideInset = Math.max(halfSeat + 8, W * 0.07);
+  const leftX = sideInset;
+  const rightX = W - sideInset;
 
-  const leftX = edgeX;
-  const rightX = W - edgeX;
-  const curvePeak = Math.max(10, Math.min(W, H) * 0.06);
+  // Start near top and keep bottom row clear of corner action buttons.
+  const topY = Math.max(halfSeat + 6, H * 0.03);
+  const bottomY = Math.min(H - halfSeat - 10, H - Math.max(halfSeat + 26, H * 0.12));
+  const cornerReserve = Math.max(halfSeat + 18, W * 0.14);
 
-  const edgePadX = Math.max(8, W * 0.03);
-  const minX = seatW * 0.5 + edgePadX;
-  const maxX = W - seatW * 0.5 - edgePadX;
-  const minY = seatW * 0.5 + 6;
-  const maxY = H - seatW * 0.5 - 8;
+  let bottomLeftX = leftX + cornerReserve;
+  let bottomRightX = rightX - cornerReserve;
+  if (bottomRightX - bottomLeftX < seatW * 1.8) {
+    const mid = W / 2;
+    bottomLeftX = mid - seatW * 0.9;
+    bottomRightX = mid + seatW * 0.9;
+  }
 
-  const pullAwayFromCenter = (x, y, p) => {
+  const minX = halfSeat + 2;
+  const maxX = W - halfSeat - 2;
+  const minY = halfSeat + 2;
+  const maxY = H - halfSeat - 2;
+  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+
+  // Use a stable 40/20/40 split so 15 players become 6/3/6 by default.
+  let sideCount = Math.round(count * 0.4);
+  if (count >= 5) sideCount = Math.max(2, sideCount);
+  sideCount = Math.min(sideCount, Math.floor((count - 1) / 2));
+  const rightCount = Math.max(1, sideCount);
+  const leftCount = Math.max(1, sideCount);
+  const bottomCount = Math.max(1, count - rightCount - leftCount);
+
+  // If rounding overflowed, pull extras from sides evenly.
+  const overflow = rightCount + leftCount + bottomCount - count;
+  const finalRight = rightCount - Math.ceil(Math.max(0, overflow) / 2);
+  const finalLeft = leftCount - Math.floor(Math.max(0, overflow) / 2);
+  const rCount = Math.max(1, finalRight);
+  const lCount = Math.max(1, finalLeft);
+  const bCount = Math.max(1, count - rCount - lCount);
+
+  const sideBulge = Math.max(8, W * 0.025);
+  const bottomBulge = Math.max(6, H * 0.016);
+
+  // Seat order: right side (top->bottom), bottom (right->left), left (bottom->top).
+  if (i < rCount) {
+    const p = (i + 0.5) / rCount;
     const curve = 4 * p * (1 - p);
-    const dx = cx - x;
-    const dy = cy - y;
-    const len = Math.hypot(dx, dy) || 1;
-    const m = curvePeak * curve;
-    return {
-      x: Math.max(minX, Math.min(maxX, x - (dx / len) * m)),
-      y: Math.max(minY, Math.min(maxY, y - (dy / len) * m))
-    };
-  };
-
-  // Seat order starts on the right side (seat 1), then goes along bottom to left.
-  // Distances are equalized along the full U perimeter.
-  const rightLen = Math.max(1, bottomY - topY);
-  const bottomLen = Math.max(1, rightX - leftX);
-  const leftLen = Math.max(1, bottomY - topY);
-  const totalLen = rightLen + bottomLen + leftLen;
-  const d = ((i + 0.5) / count) * totalLen;
-
-  if (d < rightLen) {
-    const p = d / rightLen;
-    return pullAwayFromCenter(rightX, topY + p * rightLen, p);
+    const x = clamp(rightX + sideBulge * curve, minX, maxX);
+    const y = clamp(topY + p * (bottomY - topY), minY, maxY);
+    return { x, y };
   }
 
-  if (d < rightLen + bottomLen) {
-    const p = (d - rightLen) / bottomLen;
-    return pullAwayFromCenter(rightX - p * bottomLen, bottomY, p);
+  if (i < rCount + bCount) {
+    const j = i - rCount;
+    const p = (j + 0.5) / bCount;
+    const curve = 4 * p * (1 - p);
+    const x = clamp(bottomRightX - p * (bottomRightX - bottomLeftX), minX, maxX);
+    const y = clamp(bottomY + bottomBulge * curve, minY, maxY);
+    return { x, y };
   }
 
-  const p = (d - rightLen - bottomLen) / leftLen;
-  return pullAwayFromCenter(leftX, bottomY - p * leftLen, p);
+  const j = i - rCount - bCount;
+  const p = (j + 0.5) / lCount;
+  const curve = 4 * p * (1 - p);
+  const x = clamp(leftX - sideBulge * curve, minX, maxX);
+  const y = clamp(bottomY - p * (bottomY - topY), minY, maxY);
+  return { x, y };
 }
 
 /** Convert a 0-based cycle step to { phase, round }. */
