@@ -30,9 +30,11 @@ export function defaultPos(i, n, W, H) {
   const count = Math.max(1, n || 1);
   const seatW = Math.max(40, W * 0.11);
   const halfSeat = seatW * 0.5;
+  const iconOverhang = W <= 479 ? 14 : 10;
+  const horizontalPadding = halfSeat + iconOverhang;
 
   // Keep side columns near edges while preserving full seat visibility.
-  const sideInset = Math.max(halfSeat + 8, W * 0.07);
+  const sideInset = Math.max(horizontalPadding, W * 0.08);
   const leftX = sideInset;
   const rightX = W - sideInset;
 
@@ -49,8 +51,8 @@ export function defaultPos(i, n, W, H) {
     bottomRightX = mid + seatW * 0.9;
   }
 
-  const minX = halfSeat + 2;
-  const maxX = W - halfSeat - 2;
+  const minX = horizontalPadding;
+  const maxX = W - horizontalPadding;
   const minY = halfSeat + 2;
   const maxY = H - halfSeat - 2;
   const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
