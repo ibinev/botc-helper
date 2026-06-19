@@ -51,7 +51,9 @@ body.day-mode {
 }
 
 html, body {
-  height: 100%; height: 100dvh;
+  height: 100%;
+  min-height: 100svh;
+  min-height: 100dvh;
   overflow: hidden;
   background: var(--bg-page);
   color: var(--text-primary);
@@ -335,16 +337,19 @@ body.align-hints .seat.nom-voted.suspicious .seat-inner { background: rgba(155,7
   background: rgba(10,7,4,0.7); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
   display: flex; align-items: flex-end; justify-content: center;
   opacity: 0; pointer-events: none; transition: opacity 0.25s ease;
+  contain: paint;
 }
 .modal-overlay.visible { opacity: 1; pointer-events: all; }
 .modal-sheet {
   width: 100%; max-width: 560px; max-height: 88dvh;
   background: var(--bg-surface); border-radius: 20px 20px 0 0;
-  border-top: 0.5px solid var(--border-strong);
+  border-top: 1px solid var(--border-strong);
   display: flex; flex-direction: column;
   transform: translateY(40px);
   transition: transform 0.28s cubic-bezier(0.32, 0.72, 0, 1);
   overflow: hidden;
+  backface-visibility: hidden;
+  will-change: transform;
 }
 .modal-overlay.visible .modal-sheet { transform: translateY(0); }
 .modal-drag-bar { flex-shrink: 0; display: flex; align-items: center; justify-content: center; padding: 10px 0 6px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
@@ -627,8 +632,8 @@ body.align-hints .seat.nom-voted.suspicious .seat-inner { background: rgba(155,7
 .pool-float { position: absolute; top: 100%; left: 0; right: 0; z-index: 200; background: var(--bg-card); border: 0.5px solid var(--border-strong); border-radius: var(--radius-md); box-shadow: 0 6px 24px rgba(0,0,0,0.5); overflow: hidden; margin-top: 2px; }
 .pool-float--manage { border-color: rgba(201,151,58,0.3); }
 /* ── Pool manage popup (from btn-list long-press) ─────── */
-.pool-manage-overlay { position: fixed; inset: 0; z-index: 150; background: rgba(10,7,4,0.7); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); display: flex; align-items: center; justify-content: center; pointer-events: all; padding: 16px; }
-.pool-manage-sheet { background: var(--bg-surface); border: 0.5px solid var(--border-strong); border-radius: 20px; width: 100%; max-width: 480px; max-height: 80dvh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 8px 48px rgba(0,0,0,0.6); }
+.pool-manage-overlay { position: fixed; inset: 0; z-index: 150; background: rgba(10,7,4,0.7); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); display: flex; align-items: center; justify-content: center; pointer-events: all; padding: 16px; contain: paint; }
+.pool-manage-sheet { background: var(--bg-surface); border: 1px solid var(--border-strong); border-radius: 20px; width: 100%; max-width: 480px; max-height: 80dvh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 8px 48px rgba(0,0,0,0.6); backface-visibility: hidden; }
 .pool-manage-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px 12px; border-bottom: 0.5px solid var(--border); flex-shrink: 0; }
 .pool-manage-title { font-size: 17px; font-weight: 500; color: var(--gold-light); font-family: var(--font-serif); }
 .pool-float-item { display: block; width: 100%; padding: 9px 12px; background: none; border: none; border-bottom: 0.5px solid var(--border); text-align: left; font-family: var(--font-sans); font-size: 14px; color: var(--text-primary); cursor: pointer; -webkit-tap-highlight-color: transparent; }
@@ -646,6 +651,21 @@ body.align-hints .seat.nom-voted.suspicious .seat-inner { background: rgba(155,7
 .pool-add-input:focus { border-color: var(--gold); box-shadow: 0 0 0 2px rgba(201,151,58,0.15); }
 .pool-add-btn { display: block; width: 100%; padding: 10px 16px; background: none; border: none; color: var(--gold); font-size: 14px; font-family: var(--font-sans); cursor: pointer; text-align: left; -webkit-tap-highlight-color: transparent; }
 .pool-add-btn:hover { color: var(--gold-light); }
+
+button:focus { outline: none; }
+button:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .modal-overlay,
+  .pool-manage-overlay {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: rgba(10,7,4,0.82);
+  }
+}
 
 /* ── Notes modal ──────────────────────────────────────── */
 .modal-title--sm   { font-size: 16px; }

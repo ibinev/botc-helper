@@ -112,11 +112,17 @@ export class BotcApp extends LitElement {
       clearTimeout(this._resizeTimer);
       this._resizeTimer = setTimeout(() => this.requestUpdate(), 60);
     });
+    document.addEventListener('visibilitychange', this._onVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') this._flushPersistence();
+    });
+    window.addEventListener('pagehide', this._onPageHide = () => this._flushPersistence());
   }
 
   disconnectedCallback() {
     super.disconnectedCallback();
     window.removeEventListener('resize', this._onResize);
+    document.removeEventListener('visibilitychange', this._onVisibilityChange);
+    window.removeEventListener('pagehide', this._onPageHide);
   }
 
   // ── Persistence ──────────────────────────────────────────────────────
@@ -142,6 +148,14 @@ export class BotcApp extends LitElement {
     this._applyCompactMode();
     this._applyHideRole();
     requestAnimationFrame(() => requestAnimationFrame(() => this.requestUpdate()));
+  }
+
+  _flushPersistence() {
+    this._saveState();
+    this._saveNominations();
+    this._savePoisonSnapshots();
+    this._saveGameNotes();
+    this._savePlayerPool();
   }
 
   _saveState() {
