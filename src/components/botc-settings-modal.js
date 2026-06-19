@@ -15,10 +15,12 @@ import { APP_VERSION } from '../version.js';
  *
  * Fires:
  *   count-change       – { detail: { count } }
+ *   open-player-pool   – (no detail)
  *   align-hints-toggle – (no detail)
  *   theme-toggle       – (no detail)
  *   move-mode          – (no detail)
  *   clear-table        – (no detail)
+ *   clear-player-pool  – (no detail)
  *   reset              – (no detail)
  *   autoname           – (no detail)
  *   modal-close        – (no detail)
@@ -31,7 +33,6 @@ export class BotcSettingsModal extends LitElement {
     dayMode:    { type: Boolean },
     storyView:  { type: Boolean },
     compactMode:{ type: Boolean },
-    hideRole:       { type: Boolean },
   };
 
   createRenderRoot() { return this; }
@@ -44,7 +45,6 @@ export class BotcSettingsModal extends LitElement {
     this.dayMode    = false;
     this.storyView  = false;
     this.compactMode= false;
-    this.hideRole       = false;
     this._versionTaps = 0;
     this._versionTapTimer = null;
   }
@@ -140,6 +140,17 @@ export class BotcSettingsModal extends LitElement {
 
             <div class="settings-row">
               <div>
+                <div class="settings-label">Player pool</div>
+                <div class="settings-sub">Open and manage saved player names</div>
+              </div>
+              <div class="settings-control">
+                <button class="btn btn-gold"
+                  @click="${() => { this._onClose(); this._fire('open-player-pool', {}); }}">👥 Open</button>
+              </div>
+            </div>
+
+            <div class="settings-row">
+              <div>
                 <div class="settings-label">Move seats</div>
                 <div class="settings-sub">Drag seats to rearrange the circle</div>
               </div>
@@ -190,18 +201,6 @@ export class BotcSettingsModal extends LitElement {
 
             <div class="settings-row">
               <div>
-                <div class="settings-label">Hide roles</div>
-                <div class="settings-sub">Hide role icons and text everywhere</div>
-              </div>
-              <div class="settings-control">
-                <button class="btn-sm btn-hints ${this.hideRole ? 'active' : ''}"
-                  @click="${() => this._fire('hide-role-toggle', {})}"
-                >${this.hideRole ? 'On' : 'Off'}</button>
-              </div>
-            </div>
-
-            <div class="settings-row">
-              <div>
                 <div class="settings-label">Storyteller view</div>
                 <div class="settings-sub">Flip the circle 180° to match the Storyteller's perspective</div>
               </div>
@@ -227,8 +226,19 @@ export class BotcSettingsModal extends LitElement {
 
             <div class="settings-row">
               <div>
+                <div class="settings-label">Clear player pool</div>
+                <div class="settings-sub">Remove all saved pool names</div>
+              </div>
+              <div class="settings-control">
+                <button class="btn btn-gold"
+                  @click="${() => { this._onClose(); this._fire('clear-player-pool', {}); }}">Clear pool</button>
+              </div>
+            </div>
+
+            <div class="settings-row">
+              <div>
                 <div class="settings-label settings-label--danger">Reset everything</div>
-                <div class="settings-sub">Clear all data including seat positions</div>
+                <div class="settings-sub">Clear all data including seat positions (keeps player pool)</div>
               </div>
               <div class="settings-control">
                 <button class="btn btn-danger btn-gold"

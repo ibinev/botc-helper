@@ -102,8 +102,6 @@ export class BotcApp extends LitElement {
     this._poolManageOpen   = false;
     this._poolManageAdding = false;
     this._poolManageName   = '';
-    this._poolTapCount     = 0;
-    this._poolTapTimer     = null;
   }
 
   // ── Lifecycle ────────────────────────────────────────────────────────
@@ -267,7 +265,8 @@ export class BotcApp extends LitElement {
   }
 
   _loadHideRole() {
-    this.hideRole = localStorage.getItem('botc_hide_role') === 'on';
+    // Default startup behavior: roles are visible.
+    this.hideRole = false;
   }
 
   _loadPlayerPool() {
@@ -536,11 +535,10 @@ export class BotcApp extends LitElement {
 
     const EXTRA_KEYS = [
       'botc_game_notes', 'botc_night_notes', 'botc_nominations',
-      'botc_poison_snaps', 'botc_collapse_prefs', 'botc_player_pool',
+      'botc_poison_snaps', 'botc_collapse_prefs',
     ];
     EXTRA_KEYS.forEach(k => { try { localStorage.removeItem(k); } catch(e) {} });
 
-    this.playerPool    = [];
     this.seats         = Array.from({ length: this.seatCount }, () => blankSeat());
     this.seatPositions = Array.from({ length: this.seatCount }, () => null);
     this.selected      = null;
@@ -667,17 +665,7 @@ export class BotcApp extends LitElement {
     return html`
       <!-- Top bar -->
       <div id="topbar">
-        <span class="bar-title" @click="${() => {
-            this._poolTapCount = (this._poolTapCount || 0) + 1;
-            clearTimeout(this._poolTapTimer);
-            if (this._poolTapCount >= 3) {
-              this._poolTapCount = 0;
-              this._poolManageOpen = true;
-              this.requestUpdate();
-            } else {
-              this._poolTapTimer = setTimeout(() => { this._poolTapCount = 0; }, 500);
-            }
-          }}">Town Square</span>
+        <span class="bar-title">Town Square</span>
 
         <div class="cycle-controls">
           <button class="cycle-btn" ?disabled="${step === 0}"
@@ -697,10 +685,10 @@ export class BotcApp extends LitElement {
         <div class="topbar-right">
           <span class="bar-meta">
             <strong>${meta.alive}</strong> alive
-            (<span class="meta-good">${meta.aliveGood}</span>/<span class="meta-evil">${meta.aliveEvil}</span>)
             · <strong>${meta.dead}</strong> dead
-            (<span class="meta-good">${meta.deadGood}</span>/<span class="meta-evil">${meta.deadEvil}</span>)
           </span>
+          <button class="topbar-icon-btn ${this.hideRole ? 'active' : ''}" title="${this.hideRole ? 'Show roles' : 'Hide roles'}"
+            @click="${() => { this.hideRole = !this.hideRole; this._applyHideRole(); this.requestUpdate(); }}">${this.hideRole ? '👁️' : '🚫'}</button>
           <button class="topbar-icon-btn" title="Notes"
             @click="${() => { this._notesOpen = true; this.requestUpdate(); }}">📜</button>
           <button class="topbar-icon-btn" title="Nominations"
@@ -872,7 +860,6 @@ export class BotcApp extends LitElement {
         .dayMode="${this.dayMode}"
         .storyView="${this.storyView}"
         .compactMode="${this.compactMode}"
-        .hideRole="${this.hideRole}"
         @count-change="${e => {
           this.seatCount = e.detail.count;
           this._initSeats(this.seatCount);
@@ -898,11 +885,6 @@ export class BotcApp extends LitElement {
           this._applyCompactMode();
           this.requestUpdate();
         }}"
-        @hide-role-toggle="${() => {
-          this.hideRole = !this.hideRole;
-          this._applyHideRole();
-          this.requestUpdate();
-        }}"
         @theme-toggle="${() => {
           this.dayMode = !this.dayMode;
           this._applyTheme();
@@ -914,9 +896,19 @@ export class BotcApp extends LitElement {
           this.selected  = null;
           this.requestUpdate();
         }}"
+        @open-player-pool="${() => {
+          this._settingsOpen = false;
+          this._poolManageOpen = true;
+          this.requestUpdate();
+        }}"
         @clear-table="${() => {
           this._settingsOpen    = false;
           this._confirmSoftOpen = true;
+          this.requestUpdate();
+        }}"
+        @clear-player-pool="${() => {
+          this.playerPool = [];
+          this._savePlayerPool();
           this.requestUpdate();
         }}"
         @reset="${() => {
