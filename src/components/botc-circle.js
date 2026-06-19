@@ -1,5 +1,5 @@
 import { LitElement, html, nothing } from 'lit';
-import { ROLES, ROLE_ICONS } from '../data.js';
+import { getRoles, ROLE_ICONS } from '../data.js';
 import { esc, defaultPos } from '../utils.js';
 
 /**
@@ -39,6 +39,7 @@ export class BotcCircle extends LitElement {
     round:         { type: Number  },
     phase:         { type: String  },
     storyView:     { type: Boolean },
+    script:        { type: String  },
     _w:            { state: true   },
     _h:            { state: true   },
   };
@@ -59,6 +60,7 @@ export class BotcCircle extends LitElement {
     this.round         = 1;
     this.phase         = 'day';
     this.storyView     = false;
+    this.script        = 'tb';
     this._w            = 400;
     this._h            = 400;
     this._ro           = null;
@@ -192,11 +194,12 @@ export class BotcCircle extends LitElement {
 
   _renderSeat(s, i) {
     const pos      = this._pos(i);
-    const roleData = s.role ? ROLES.find(r => r.name === s.role) : null;
+    const roles = getRoles(this.script);
+    const roleData = s.role ? roles.find(r => r.name === s.role) : null;
     const isBluff  = !!(s.role && s.trueRole && s.role !== s.trueRole);
 
     const displayRole     = s.trueRole || s.role;
-    const displayRoleData = displayRole ? ROLES.find(r => r.name === displayRole) : null;
+    const displayRoleData = displayRole ? roles.find(r => r.name === displayRole) : null;
     const iconSrc         = displayRole && ROLE_ICONS[displayRole] ? ROLE_ICONS[displayRole] : null;
     const drunkIconSrc    = s.poisoned
       ? 'assets/roles/Icon_poisoner.png'

@@ -1,5 +1,5 @@
 import { LitElement, html, nothing } from 'lit';
-import { ROLES_IMG_URL, BG_NAMES } from '../data.js';
+import { ROLES_IMG_URL, BG_NAMES, normalizeScript } from '../data.js';
 import { blankSeat, MIN, MAX, MAX_STEP, phaseRoundToStep, stepToPhaseRound } from '../utils.js';
 import './botc-circle.js';
 import './botc-edit-modal.js';
@@ -36,6 +36,7 @@ export class BotcApp extends LitElement {
     storyView:         { type: Boolean },
     compactMode:       { type: Boolean },
     hideRole:          { type: Boolean },
+    script:            { type: String  },
     playerPool:        { type: Array   },
     deathsCollapsed:   { type: Boolean },
     poisonedCollapsed: { type: Boolean },
@@ -82,6 +83,7 @@ export class BotcApp extends LitElement {
     this.storyView         = false;
     this.compactMode       = false;
     this.hideRole          = false;
+    this.script            = 'tb';
     this.playerPool        = [];
     this.deathsCollapsed   = false;
     this.poisonedCollapsed = false;
@@ -136,6 +138,7 @@ export class BotcApp extends LitElement {
     this._loadStoryView();
     this._loadCompactMode();
     this._loadHideRole();
+    this._loadScript();
     this._loadPlayerPool();
     const restored = this._loadState();
     if (!restored) {
@@ -147,10 +150,12 @@ export class BotcApp extends LitElement {
     this._applyStoryView();
     this._applyCompactMode();
     this._applyHideRole();
+    this._saveScript();
     requestAnimationFrame(() => requestAnimationFrame(() => this.requestUpdate()));
   }
 
   _flushPersistence() {
+    this._saveScript();
     this._saveState();
     this._saveNominations();
     this._savePoisonSnapshots();
@@ -287,6 +292,16 @@ export class BotcApp extends LitElement {
     try {
       const r = localStorage.getItem('botc_player_pool');
       if (r) this.playerPool = JSON.parse(r);
+    } catch(e) {}
+  }
+
+  _loadScript() {
+    this.script = normalizeScript(localStorage.getItem('botc_script') || 'tb');
+  }
+
+  _saveScript() {
+    try {
+      localStorage.setItem('botc_script', normalizeScript(this.script));
     } catch(e) {}
   }
 
@@ -719,6 +734,7 @@ export class BotcApp extends LitElement {
         <botc-circle
           .seats="${this.seats}"
           .seatPositions="${this.seatPositions}"
+          .script="${this.script}"
           .selected="${this.selected}"
           .moveMode="${this.moveMode}"
           .storyView="${this.storyView}"
@@ -796,6 +812,7 @@ export class BotcApp extends LitElement {
       <!-- Edit modal -->
       <botc-edit-modal
         .open="${this._editOpen}"
+        .script="${this.script}"
         .seat="${this.selected !== null ? this.seats[this.selected] : null}"
         .seatIdx="${this.selected}"
         .playerPool="${this.playerPool.filter(n => !this.seats.some((s, i) => i !== this.selected && s.name === n))}"
@@ -809,6 +826,7 @@ export class BotcApp extends LitElement {
       <!-- List modal -->
       <botc-list-modal
         .open="${this._listOpen}"
+        .script="${this.script}"
         .seats="${this.seats}"
         .selected="${this.selected}"
         .phase="${this.phase}"
@@ -870,6 +888,7 @@ export class BotcApp extends LitElement {
       <botc-settings-modal
         .open="${this._settingsOpen}"
         .seatCount="${this.seatCount}"
+        .script="${this.script}"
         .alignHints="${this.alignHints}"
         .dayMode="${this.dayMode}"
         .storyView="${this.storyView}"
@@ -887,6 +906,11 @@ export class BotcApp extends LitElement {
         @align-hints-toggle="${() => {
           this.alignHints = !this.alignHints;
           this._applyAlignHints();
+          this.requestUpdate();
+        }}"
+        @script-change="${e => {
+          this.script = normalizeScript(e.detail.script);
+          this._saveScript();
           this.requestUpdate();
         }}"
         @story-view-toggle="${() => {
@@ -940,6 +964,7 @@ export class BotcApp extends LitElement {
       <!-- Unified reference modal (Roles / Night Order / Char Count) -->
       <botc-reference-modal
         .open="${this._referenceOpen}"
+        .script="${this.script}"
         .initialTab="${this._referenceTab}"
         .seats="${this.seats}"
         .seatCount="${this.seatCount}"
@@ -954,6 +979,7 @@ export class BotcApp extends LitElement {
       <!-- Character count modal -->
       <botc-charcount-modal
         .open="${this._charcountOpen}"
+        .script="${this.script}"
         .seatCount="${this.seatCount}"
         @modal-close="${() => {
           this._charcountOpen = false;
@@ -973,6 +999,7 @@ export class BotcApp extends LitElement {
       <!-- Night order modal -->
       <botc-nightorder-modal
         .open="${this._nightorderOpen}"
+        .script="${this.script}"
         .seats="${this.seats}"
         .phase="${this.phase}"
         .round="${this.round}"
@@ -985,6 +1012,7 @@ export class BotcApp extends LitElement {
       <!-- Roles reference modal -->
       <botc-roles-modal
         .open="${this._rolesOpen}"
+        .script="${this.script}"
         .seats="${this.seats}"
         @modal-close="${() => {
           this._rolesOpen = false;

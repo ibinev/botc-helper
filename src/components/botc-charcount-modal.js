@@ -1,5 +1,6 @@
 import { LitElement, html } from 'lit';
 import { CHARCOUNT_COLS } from '../utils.js';
+import { getCharacterCount } from '../data.js';
 
 /**
  * <botc-charcount-modal>
@@ -17,6 +18,7 @@ export class BotcCharcountModal extends LitElement {
   static properties = {
     open:      { type: Boolean },
     seatCount: { type: Number  },
+    script:    { type: String  },
   };
 
   createRenderRoot() { return this; }
@@ -25,6 +27,7 @@ export class BotcCharcountModal extends LitElement {
     super();
     this.open      = false;
     this.seatCount = 12;
+    this.script    = 'tb';
   }
 
   updated(changed) {
@@ -47,21 +50,15 @@ export class BotcCharcountModal extends LitElement {
   _thClass(colIdx) { return colIdx === this._activeColIdx() ? 'col-active' : ''; }
   _tdClass(colIdx) { return colIdx === this._activeColIdx() ? 'col-active' : ''; }
 
-  // Character counts: [townsfolk, outsiders, minions, demons] per column (5..15+)
-  static _DATA = [
-    [3,3,5,5,5,7,7,7,9,9,9],   // townsfolk
-    [0,1,0,1,2,0,1,2,0,1,2],   // outsiders
-    [1,1,1,1,1,2,2,2,3,3,3],   // minions
-    [1,1,1,1,1,1,1,1,1,1,1],   // demons
-  ];
-
   render() {
+    const cc = getCharacterCount(this.script);
+    const rowsData = cc.rows;
     const activeIdx = this._activeColIdx();
     const rows = [
-      { cls: 'row-townsfolk', label: 'Townsfolk', data: BotcCharcountModal._DATA[0] },
-      { cls: 'row-outsider',  label: 'Outsiders', data: BotcCharcountModal._DATA[1] },
-      { cls: 'row-minion',    label: 'Minions',   data: BotcCharcountModal._DATA[2] },
-      { cls: 'row-demon',     label: 'Demons',    data: BotcCharcountModal._DATA[3] },
+      { cls: 'row-townsfolk', label: 'Townsfolk', data: rowsData?.[0] || [] },
+      { cls: 'row-outsider',  label: 'Outsiders', data: rowsData?.[1] || [] },
+      { cls: 'row-minion',    label: 'Minions',   data: rowsData?.[2] || [] },
+      { cls: 'row-demon',     label: 'Demons',    data: rowsData?.[3] || [] },
     ];
 
     return html`
@@ -85,18 +82,22 @@ export class BotcCharcountModal extends LitElement {
                   </tr>
                 </thead>
                 <tbody>
-                  ${rows.map(row => html`
+                  ${rowsData ? rows.map(row => html`
                     <tr class="${row.cls}">
                       <td class="row-label">${row.label}</td>
                       ${row.data.map((val, i) => html`
                         <td class="${i === activeIdx ? 'col-active' : ''}">${val}</td>
                       `)}
                     </tr>
-                  `)}
+                  `) : html`
+                    <tr>
+                      <td class="row-label" colspan="12">Character count for this script will be added soon.</td>
+                    </tr>
+                  `}
                 </tbody>
               </table>
             </div>
-            <p class="charcount-note">Based on Trouble Brewing standard distribution. 15+ follows the same pattern as 15 (9/2/3/1).</p>
+            <p class="charcount-note">${cc.note}</p>
           </div>
         </div>
       </div>

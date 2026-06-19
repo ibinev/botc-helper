@@ -1,6 +1,7 @@
 import { LitElement, html, nothing } from 'lit';
 import { MIN, MAX } from '../utils.js';
 import { APP_VERSION } from '../version.js';
+import { SCRIPT_OPTIONS } from '../data.js';
 
 /**
  * <botc-settings-modal>
@@ -15,6 +16,7 @@ import { APP_VERSION } from '../version.js';
  *
  * Fires:
  *   count-change       – { detail: { count } }
+ *   script-change      – { detail: { script } }
  *   open-player-pool   – (no detail)
  *   align-hints-toggle – (no detail)
  *   theme-toggle       – (no detail)
@@ -29,6 +31,7 @@ export class BotcSettingsModal extends LitElement {
   static properties = {
     open:       { type: Boolean },
     seatCount:  { type: Number  },
+    script:     { type: String  },
     alignHints: { type: Boolean },
     dayMode:    { type: Boolean },
     storyView:  { type: Boolean },
@@ -41,6 +44,7 @@ export class BotcSettingsModal extends LitElement {
     super();
     this.open       = false;
     this.seatCount  = 12;
+    this.script     = 'tb';
     this.alignHints = false;
     this.dayMode    = false;
     this.storyView  = false;
@@ -135,6 +139,21 @@ export class BotcSettingsModal extends LitElement {
                 </span>
                 <button class="btn-sm"
                   @click="${() => { if (this.seatCount < MAX) this._fire('count-change', { count: this.seatCount + 1 }); }}">+</button>
+              </div>
+            </div>
+
+            <div class="settings-row">
+              <div>
+                <div class="settings-label">Script</div>
+                <div class="settings-sub">Select script-specific roles and references</div>
+              </div>
+              <div class="settings-control">
+                <select class="btn-sm"
+                  @change="${e => this._fire('script-change', { script: e.target.value })}">
+                  ${SCRIPT_OPTIONS.map(s => html`
+                    <option value="${s.id}" ?selected="${this.script === s.id}">${s.label}</option>
+                  `)}
+                </select>
               </div>
             </div>
 

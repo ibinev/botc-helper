@@ -1,5 +1,25 @@
 import { LitElement, html, nothing } from 'lit';
-import { ROLES, ROLE_ICONS } from '../data.js';
+import { getRoles, ROLE_ICONS } from '../data.js';
+
+const BMR_ROLE_ORDER = {
+  townsfolk: [
+    'Grandmother', 'Sailor', 'Chambermaid', 'Exorcist', 'Innkeeper', 'Gambler', '__spacer__',
+    'Gossip', 'Courtier', 'Professor', 'Minstrel', 'Tea Lady', 'Pacifist', 'Fool'
+  ],
+  outsider: ['Goon', 'Tinker', 'Lunatic', 'Moonchild'],
+  minion: ['Godfather', 'Assassin', 'Devil\'s Advocate', 'Mastermind'],
+  demon: ['Zombuul', 'Shabaloth', 'Pukka', 'Po'],
+};
+
+const SNV_ROLE_ORDER = {
+  townsfolk: [
+    'Clockmaker', 'Dreamer', 'Snake Charmer', 'Mathematician', 'Flowergirl', 'Town Crier', 'Oracle',
+    'Savant', 'Seamstress', 'Philosopher', 'Artist', 'Juggler', 'Sage', '__spacer__'
+  ],
+  outsider: ['Mutant', 'Sweetheart', 'Barber', 'Klutz'],
+  minion: ['Witch', 'Pit-Hag', 'Cerenovus', 'Evil Twin'],
+  demon: ['Fang Gu', 'No Dashii', 'Vigormortis', 'Vortox'],
+};
 
 /**
  * <botc-roles-modal>
@@ -22,6 +42,7 @@ export class BotcRolesModal extends LitElement {
   static properties = {
     open:  { type: Boolean },
     seats: { type: Array   },
+    script:{ type: String  },
   };
 
   createRenderRoot() { return this; }
@@ -30,6 +51,7 @@ export class BotcRolesModal extends LitElement {
     super();
     this.open  = false;
     this.seats = [];
+    this.script = 'tb';
   }
 
   updated(changed) {
@@ -53,6 +75,9 @@ export class BotcRolesModal extends LitElement {
   }
 
   _roleCard(role, inPlay) {
+    if (role.__spacer) {
+      return html`<div class="rc-card rc-card--placeholder" aria-hidden="true"></div>`;
+    }
     const icon   = ROLE_ICONS[role.name];
     const active = inPlay.has(role.name);
     return html`
@@ -68,13 +93,39 @@ export class BotcRolesModal extends LitElement {
     `;
   }
 
+  _orderedRoles(roles, cat) {
+    const orderMap = this.script === 'bmr'
+      ? BMR_ROLE_ORDER
+      : this.script === 'snv'
+        ? SNV_ROLE_ORDER
+        : null;
+    if (!orderMap) return roles;
+    const order = orderMap[cat];
+    if (!order) return roles;
+    const byName = new Map(roles.map(r => [r.name, r]));
+    const ordered = [];
+    order.forEach(name => {
+      if (name === '__spacer__') {
+        ordered.push({ __spacer: true, cat });
+        return;
+      }
+      const role = byName.get(name);
+      if (role) ordered.push(role);
+    });
+    roles.forEach(role => {
+      if (!order.includes(role.name)) ordered.push(role);
+    });
+    return ordered;
+  }
+
   render() {
+    const roles = getRoles(this.script);
     const inPlay     = this._inPlaySet();
-    const townsfolk  = ROLES.filter(r => r.cat === 'townsfolk');
-    const outsiders  = ROLES.filter(r => r.cat === 'outsider');
-    const minions    = ROLES.filter(r => r.cat === 'minion');
-    const demons     = ROLES.filter(r => r.cat === 'demon');
-    const travelers  = ROLES.filter(r => r.cat === 'traveler');
+    const townsfolk  = this._orderedRoles(roles.filter(r => r.cat === 'townsfolk'), 'townsfolk');
+    const outsiders  = this._orderedRoles(roles.filter(r => r.cat === 'outsider'), 'outsider');
+    const minions    = this._orderedRoles(roles.filter(r => r.cat === 'minion'), 'minion');
+    const demons     = this._orderedRoles(roles.filter(r => r.cat === 'demon'), 'demon');
+    const travelers  = roles.filter(r => r.cat === 'traveler');
 
     return html`
       <div class="modal-overlay modal-overlay--fullscreen" id="roles-sheet-overlay"
@@ -114,7 +165,7 @@ export class BotcRolesModal extends LitElement {
             <div class="rc-section-header rc-section-header--demon">
               <span class="rc-section-dot"></span>Demon
             </div>
-            <div class="rc-grid rc-grid--1 rc-grid--demon">
+            <div class="rc-grid ${this.script === 'bmr' || this.script === 'snv' ? 'rc-grid--2' : 'rc-grid--1 rc-grid--demon'}">
               ${demons.map(r => this._roleCard(r, inPlay))}
             </div>
 

@@ -86,8 +86,8 @@ botc-app::before, #app::before {
   z-index: 0;
   pointer-events: none;
   background:
-    radial-gradient(ellipse 100% 80% at 50% 50%, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.72) 100%),
-    linear-gradient(to bottom, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.18) 40%, rgba(0,0,0,0.55) 100%);
+    radial-gradient(ellipse 100% 80% at 50% 50%, rgba(0,0,0,0.24) 0%, rgba(0,0,0,0.56) 100%),
+    linear-gradient(to bottom, rgba(0,0,0,0.30) 0%, rgba(0,0,0,0.12) 40%, rgba(0,0,0,0.40) 100%);
 }
 #topbar, #circle-wrap, .modal-overlay { position: relative; z-index: 1; }
 #topbar { z-index: 10; }
@@ -97,8 +97,8 @@ body.day-mode botc-app, body.day-mode #app {
 }
 body.day-mode botc-app::before, body.day-mode #app::before {
   background:
-    radial-gradient(ellipse 100% 80% at 50% 50%, rgba(255,240,200,0.22) 0%, rgba(220,190,130,0.55) 100%),
-    linear-gradient(to bottom, rgba(255,245,220,0.38) 0%, rgba(200,160,80,0.15) 50%, rgba(180,130,50,0.45) 100%);
+    radial-gradient(ellipse 100% 80% at 50% 50%, rgba(255,240,200,0.14) 0%, rgba(220,190,130,0.36) 100%),
+    linear-gradient(to bottom, rgba(255,245,220,0.24) 0%, rgba(200,160,80,0.10) 50%, rgba(180,130,50,0.30) 100%);
 }
 body.day-mode .seat-inner { border-color: rgba(0,0,0,0.2);
   box-shadow: 0 0 0 1px rgba(120,80,20,0.3), 0 2px 10px rgba(100,60,0,0.2), inset 0 1px 0 rgba(255,255,255,0.6);
@@ -545,6 +545,7 @@ body.align-hints .seat.nom-voted.suspicious .seat-inner { background: rgba(155,7
 .rc-two-col-left, .rc-two-col-right { min-width: 0; }
 
 .rc-card { display: flex; align-items: flex-start; gap: 9px; background: var(--bg-card); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 8px 10px; transition: border-color 0.15s, background 0.15s; border-left-width: 3px; }
+.rc-card--placeholder { background: transparent; border-color: transparent; box-shadow: none; }
 .rc-card--active { border-left-width: 4px; }
 .rc-cat-townsfolk.rc-card--active { border-color: #8fca4b;  background: rgba(90,158,47,0.18); }
 .rc-cat-outsider.rc-card--active  { border-color: #7ab8f5;  background: rgba(90,158,200,0.18); }

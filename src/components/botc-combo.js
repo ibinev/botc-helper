@@ -1,5 +1,5 @@
 import { LitElement, html } from 'lit';
-import { ROLES, ROLE_ICONS, CAT_LABELS, CAT_ORDER } from '../data.js';
+import { getRoles, ROLE_ICONS, CAT_LABELS, CAT_ORDER } from '../data.js';
 import { esc } from '../utils.js';
 
 /**
@@ -18,6 +18,7 @@ export class BotcCombo extends LitElement {
   static properties = {
     value:       { type: String },
     placeholder: { type: String },
+    script:      { type: String },
   };
 
   // Disable shadow DOM so global style.css applies
@@ -27,6 +28,7 @@ export class BotcCombo extends LitElement {
     super();
     this.value       = '';
     this.placeholder = 'Search…';
+    this.script      = 'tb';
     this._dropdown   = null;
     this._currentVal = '';
     this._isOpen     = false;
@@ -90,9 +92,10 @@ export class BotcCombo extends LitElement {
 
   _getFilteredGroups(q) {
     const ql = q.toLowerCase();
+    const roles = getRoles(this.script);
     const groups = [];
     CAT_ORDER.forEach(cat => {
-      const matches = ROLES.filter(r => r.cat === cat && r.name.toLowerCase().includes(ql));
+      const matches = roles.filter(r => r.cat === cat && r.name.toLowerCase().includes(ql));
       if (matches.length) groups.push({ cat, matches });
     });
     return groups;

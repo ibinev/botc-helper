@@ -1,5 +1,5 @@
 import { LitElement, html, nothing } from 'lit';
-import { ROLES, ROLE_ICONS } from '../data.js';
+import { getRoles, ROLE_ICONS } from '../data.js';
 import { esc } from '../utils.js';
 
 /**
@@ -29,6 +29,7 @@ export class BotcListModal extends LitElement {
     selected:          { type: Number  },
     phase:             { type: String  },
     round:             { type: Number  },
+    script:            { type: String  },
     deathsCollapsed:   { type: Boolean },
     poisonedCollapsed: { type: Boolean },
     allseatsCollapsed: { type: Boolean },
@@ -43,6 +44,7 @@ export class BotcListModal extends LitElement {
     this.selected          = null;
     this.phase             = 'day';
     this.round             = 1;
+    this.script            = 'tb';
     this.deathsCollapsed   = false;
     this.poisonedCollapsed = false;
     this.allseatsCollapsed = false;
@@ -112,7 +114,8 @@ export class BotcListModal extends LitElement {
   }
 
   _pliHtml(s, i) {
-    const rd = s.role ? ROLES.find(r => r.name === s.role) : null;
+    const roles = getRoles(this.script);
+    const rd = s.role ? roles.find(r => r.name === s.role) : null;
     const roleIconSrc = s.role && ROLE_ICONS[s.role] ? ROLE_ICONS[s.role] : null;
     const isBluff = !!(s.role && s.trueRole && s.role !== s.trueRole);
     const dotExtra = s.alignment === 'suspicious' ? ' susp'
@@ -140,9 +143,10 @@ export class BotcListModal extends LitElement {
   }
 
   _logEntryHtml(s, i, icon) {
+    const roles = getRoles(this.script);
     const displayRole = s.trueRole || s.role;
     const roleIconSrc = displayRole && ROLE_ICONS[displayRole] ? ROLE_ICONS[displayRole] : null;
-    const rd = displayRole ? ROLES.find(r => r.name === displayRole) : null;
+    const rd = displayRole ? roles.find(r => r.name === displayRole) : null;
 
     return html`
       <div class="death-entry">

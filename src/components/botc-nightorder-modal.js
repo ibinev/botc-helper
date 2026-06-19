@@ -1,5 +1,5 @@
 import { LitElement, html, nothing } from 'lit';
-import { NIGHT_ORDER, ROLE_ICONS, ROLES } from '../data.js';
+import { getNightOrder, getRoles, ROLE_ICONS } from '../data.js';
 
 /**
  * <botc-nightorder-modal>
@@ -22,6 +22,7 @@ export class BotcNightorderModal extends LitElement {
     seats:   { type: Array   },
     phase:   { type: String  },
     round:   { type: Number  },
+    script:  { type: String  },
     _tab:    { state: true   },
     _done:   { state: true   },
   };
@@ -34,6 +35,7 @@ export class BotcNightorderModal extends LitElement {
     this.seats = [];
     this.phase = 'night';
     this.round = 1;
+    this.script = 'tb';
     this._tab  = 'first';
     this._done = new Set();
   }
@@ -117,7 +119,8 @@ export class BotcNightorderModal extends LitElement {
     const players  = entry.st ? [] : (inPlay[entry.name] || []);
     const hasPlayers = players.length > 0;
     const iconSrc  = entry.st ? null : (ROLE_ICONS[entry.name] || null);
-    const roleData = entry.st ? null : ROLES.find(r => r.name === entry.name);
+    const roles = getRoles(this.script);
+    const roleData = entry.st ? null : roles.find(r => r.name === entry.name);
     const catClass = roleData ? 'no-cat-' + roleData.cat : '';
 
     return html`
@@ -141,7 +144,7 @@ export class BotcNightorderModal extends LitElement {
   }
 
   render() {
-    const order = NIGHT_ORDER[this._tab];
+    const order = getNightOrder(this.script)[this._tab] || [];
     const doneCount = [...this._done].filter(k => k.startsWith(this._tab + '-')).length;
     const total = order.length;
 
@@ -168,7 +171,9 @@ export class BotcNightorderModal extends LitElement {
             </div>
 
             <div class="no-list">
-              ${order.map((entry, idx) => this._renderRow(entry, idx))}
+              ${order.length
+                ? order.map((entry, idx) => this._renderRow(entry, idx))
+                : html`<div class="no-players">Night order for this script will be added soon.</div>`}
             </div>
 
           </div>

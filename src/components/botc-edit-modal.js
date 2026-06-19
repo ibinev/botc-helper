@@ -21,6 +21,7 @@ export class BotcEditModal extends LitElement {
     open:              { type: Boolean },
     seat:              { type: Object  },
     seatIdx:           { type: Number  },
+    script:            { type: String  },
     playerPool:        { type: Array   },
     fullPool:          { type: Array   },
     _poolOpen:         { state: true   },
@@ -36,6 +37,7 @@ export class BotcEditModal extends LitElement {
     this.open    = false;
     this.seat       = null;
     this.seatIdx    = null;
+    this.script          = 'tb';
     this.playerPool        = [];
     this.fullPool           = [];
     this._poolOpen          = false;
@@ -312,7 +314,7 @@ export class BotcEditModal extends LitElement {
               </div>
               <div class="field">
                 <label>Role claimed</label>
-                <botc-combo id="combo-role" placeholder="Washerwoman…"></botc-combo>
+                <botc-combo id="combo-role" .script="${this.script}" placeholder="Washerwoman…"></botc-combo>
               </div>
             </div>
 
@@ -328,7 +330,7 @@ export class BotcEditModal extends LitElement {
               </div>
               <div class="field">
                 <label>True role (ST only)</label>
-                <botc-combo id="combo-true-role" placeholder="Actual role…"></botc-combo>
+                <botc-combo id="combo-true-role" .script="${this.script}" placeholder="Actual role…"></botc-combo>
               </div>
             </div>
 
