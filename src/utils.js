@@ -28,78 +28,54 @@ export function blankSeat() {
  */
 export function defaultPos(i, n, W, H) {
   const count = Math.max(1, n || 1);
-  const seatW = Math.max(40, W * 0.11);
+
+  // Approximate rendered seat diameter from responsive CSS breakpoints.
+  const seatW = W <= 479 ? 68 : (W >= 520 ? 96 : 90);
   const halfSeat = seatW * 0.5;
-  const iconOverhang = W <= 479 ? 14 : 10;
-  const horizontalPadding = halfSeat + iconOverhang;
 
-  // Keep side columns near edges while preserving full seat visibility.
-  const sideInset = Math.max(horizontalPadding, W * 0.08);
-  const leftX = sideInset;
-  const rightX = W - sideInset;
+  // Side icons overhang outside the circular seat; reserve that space too.
+  const iconOverhang = W <= 479 ? 14 : 16;
+  const safePadX = halfSeat + iconOverhang + 2;
+  const safePadY = halfSeat + 6;
 
-  // Start near top and keep bottom row clear of corner action buttons.
-  const topY = Math.max(halfSeat + 6, H * 0.03);
-  const bottomY = Math.min(H - halfSeat - 10, H - Math.max(halfSeat + 26, H * 0.12));
-  const cornerReserve = Math.max(halfSeat + 18, W * 0.14);
+  const leftX = safePadX;
+  const rightX = Math.max(leftX + 1, W - safePadX);
 
+  // Keep top open for center label and bottom clear of corner action buttons.
+  const topY = Math.max(safePadY, H * 0.055);
+  const rawBottomY = H - Math.max(safePadY + 6, H * 0.12);
+  const bottomY = Math.max(topY + 1, rawBottomY);
+
+  const cornerReserve = Math.max(halfSeat + 20, W * 0.14);
   let bottomLeftX = leftX + cornerReserve;
   let bottomRightX = rightX - cornerReserve;
-  if (bottomRightX - bottomLeftX < seatW * 1.8) {
+
+  if (bottomRightX - bottomLeftX < seatW * 1.5) {
     const mid = W / 2;
-    bottomLeftX = mid - seatW * 0.9;
-    bottomRightX = mid + seatW * 0.9;
+    const halfBottom = seatW * 0.75;
+    bottomLeftX = mid - halfBottom;
+    bottomRightX = mid + halfBottom;
   }
 
-  const minX = horizontalPadding;
-  const maxX = W - horizontalPadding;
-  const minY = halfSeat + 2;
-  const maxY = H - halfSeat - 2;
-  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+  const sideLen = Math.max(1, bottomY - topY);
+  const bottomLen = Math.max(1, bottomRightX - bottomLeftX);
+  const totalLen = sideLen + bottomLen + sideLen;
 
-  // Use a stable 40/20/40 split so 15 players become 6/3/6 by default.
-  let sideCount = Math.round(count * 0.4);
-  if (count >= 5) sideCount = Math.max(2, sideCount);
-  sideCount = Math.min(sideCount, Math.floor((count - 1) / 2));
-  const rightCount = Math.max(1, sideCount);
-  const leftCount = Math.max(1, sideCount);
-  const bottomCount = Math.max(1, count - rightCount - leftCount);
+  // Even spacing by path length: right side (top->bottom), bottom (right->left), left side (bottom->top).
+  const d = ((i + 0.5) / count) * totalLen;
 
-  // If rounding overflowed, pull extras from sides evenly.
-  const overflow = rightCount + leftCount + bottomCount - count;
-  const finalRight = rightCount - Math.ceil(Math.max(0, overflow) / 2);
-  const finalLeft = leftCount - Math.floor(Math.max(0, overflow) / 2);
-  const rCount = Math.max(1, finalRight);
-  const lCount = Math.max(1, finalLeft);
-  const bCount = Math.max(1, count - rCount - lCount);
-
-  const sideBulge = Math.max(8, W * 0.025);
-  const bottomBulge = Math.max(6, H * 0.016);
-
-  // Seat order: right side (top->bottom), bottom (right->left), left (bottom->top).
-  if (i < rCount) {
-    const p = (i + 0.5) / rCount;
-    const curve = 4 * p * (1 - p);
-    const x = clamp(rightX + sideBulge * curve, minX, maxX);
-    const y = clamp(topY + p * (bottomY - topY), minY, maxY);
-    return { x, y };
+  if (d < sideLen) {
+    const p = d / sideLen;
+    return { x: rightX, y: topY + p * sideLen };
   }
 
-  if (i < rCount + bCount) {
-    const j = i - rCount;
-    const p = (j + 0.5) / bCount;
-    const curve = 4 * p * (1 - p);
-    const x = clamp(bottomRightX - p * (bottomRightX - bottomLeftX), minX, maxX);
-    const y = clamp(bottomY + bottomBulge * curve, minY, maxY);
-    return { x, y };
+  if (d < sideLen + bottomLen) {
+    const p = (d - sideLen) / bottomLen;
+    return { x: bottomRightX - p * bottomLen, y: bottomY };
   }
 
-  const j = i - rCount - bCount;
-  const p = (j + 0.5) / lCount;
-  const curve = 4 * p * (1 - p);
-  const x = clamp(leftX - sideBulge * curve, minX, maxX);
-  const y = clamp(bottomY - p * (bottomY - topY), minY, maxY);
-  return { x, y };
+  const p = (d - sideLen - bottomLen) / sideLen;
+  return { x: leftX, y: bottomY - p * sideLen };
 }
 
 /** Convert a 0-based cycle step to { phase, round }. */
