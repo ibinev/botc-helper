@@ -3,7 +3,7 @@ import { getRoles, ROLE_ICONS } from '../data.js';
 
 const BMR_ROLE_ORDER = {
   townsfolk: [
-    'Grandmother', 'Sailor', 'Chambermaid', 'Exorcist', 'Innkeeper', 'Gambler', '__spacer__',
+    'Grandmother', 'Sailor', 'Chambermaid', 'Exorcist', 'Innkeeper', 'Gambler',
     'Gossip', 'Courtier', 'Professor', 'Minstrel', 'Tea Lady', 'Pacifist', 'Fool'
   ],
   outsider: ['Goon', 'Tinker', 'Lunatic', 'Moonchild'],
