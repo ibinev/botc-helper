@@ -202,7 +202,7 @@ export class BotcCircle extends LitElement {
     const displayRoleData = displayRole ? roles.find(r => r.name === displayRole) : null;
     const iconSrc         = displayRole && ROLE_ICONS[displayRole] ? ROLE_ICONS[displayRole] : null;
     const drunkIconSrc    = s.poisoned
-      ? 'assets/roles/Icon_poisoner.png'
+      ? ROLE_ICONS['Poisoner']
       : s.drunk ? ROLE_ICONS['Drunk'] : null;
     const dotClass = displayRoleData
       ? ` dot-${displayRoleData.cat}`

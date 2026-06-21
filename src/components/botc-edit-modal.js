@@ -1,5 +1,6 @@
 import { LitElement, html, nothing } from 'lit';
 import './botc-combo.js';
+import { ROLE_ICONS } from '../data.js';
 
 /**
  * <botc-edit-modal>
@@ -350,12 +351,12 @@ export class BotcEditModal extends LitElement {
                   @click="${() => this._onToggle('tog-vote')}">🗳 Ghost vote</button>
                 <button class="tog" id="tog-drunk" data-on="on-drunk"
                   @click="${() => this._onToggle('tog-drunk')}">
-                  <img src="assets/roles/Icon_drunk.png"
+                  <img src="${ROLE_ICONS['Drunk']}"
                     alt="Drunk" class="tog-icon">Drunk
                 </button>
                 <button class="tog" id="tog-poisoned" data-on="on-poisoned"
                   @click="${() => this._onToggle('tog-poisoned')}">
-                  <img src="assets/roles/Icon_poisoner.png"
+                  <img src="${ROLE_ICONS['Poisoner']}"
                     alt="Poisoned" class="tog-icon">Poisoned
                 </button>
               </div>
