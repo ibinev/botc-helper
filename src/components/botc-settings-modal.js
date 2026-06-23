@@ -117,6 +117,7 @@ export class BotcSettingsModal extends LitElement {
             <div class="modal-title modal-title--spaced">⚙️ Settings</div>
 
             <div class="settings-group">
+            <div class="settings-group-title">📋 Setup</div>
             <div class="settings-row">
               <div>
                 <div class="settings-label">Players</div>
@@ -135,16 +136,12 @@ export class BotcSettingsModal extends LitElement {
 
             <div class="settings-row">
               <div>
-                <div class="settings-label">Script</div>
-                <div class="settings-sub">Select script-specific roles and references</div>
+                <div class="settings-label">Move seats</div>
+                <div class="settings-sub">Drag seats to rearrange the circle</div>
               </div>
               <div class="settings-control">
-                <select class="btn-sm settings-script-select"
-                  @change="${e => this._fire('script-change', { script: e.target.value })}">
-                  ${SCRIPT_OPTIONS.map(s => html`
-                    <option value="${s.id}" ?selected="${this.script === s.id}">${s.label}</option>
-                  `)}
-                </select>
+                <button class="btn btn-gold"
+                  @click="${() => { this._onClose(); this._fire('move-mode', {}); }}">⣿ Move</button>
               </div>
             </div>
 
@@ -161,20 +158,26 @@ export class BotcSettingsModal extends LitElement {
 
             <div class="settings-row">
               <div>
-                <div class="settings-label">Move seats</div>
-                <div class="settings-sub">Drag seats to rearrange the circle</div>
+                <div class="settings-label">Script</div>
+                <div class="settings-sub">Select script-specific roles and references</div>
               </div>
               <div class="settings-control">
-                <button class="btn btn-gold"
-                  @click="${() => { this._onClose(); this._fire('move-mode', {}); }}">⣿ Move</button>
+                <select class="btn-sm settings-script-select"
+                  @change="${e => this._fire('script-change', { script: e.target.value })}">
+                  ${SCRIPT_OPTIONS.map(s => html`
+                    <option value="${s.id}" ?selected="${this.script === s.id}">${s.label}</option>
+                  `)}
+                </select>
               </div>
             </div>
+
             </div>
 
             <div class="settings-group">
+            <div class="settings-group-title">🎨 Appearance</div>
             <div class="settings-row">
               <div>
-                <div class="settings-label">Appearance</div>
+                <div class="settings-label">Light mode</div>
                 <div class="settings-sub">Switch between dark and day mode</div>
               </div>
               <div class="settings-control">
@@ -223,6 +226,7 @@ export class BotcSettingsModal extends LitElement {
             </div>
 
             <div class="settings-group settings-group--danger">
+            <div class="settings-group-title">♻️ Cleanup</div>
             <div class="settings-row">
               <div>
                 <div class="settings-label">Clear table</div>

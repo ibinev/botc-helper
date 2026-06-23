@@ -204,9 +204,11 @@ export class BotcReferenceModal extends LitElement {
           ? html`<img class="no-icon" src="${iconSrc}" alt="">`
           : html`<span class="no-icon no-icon--st">🌙</span>`}
         <div class="no-info">
-          <span class="no-name ${catClass} ${entry.st ? 'no-name--st' : ''}">${entry.name}</span>
+          <div class="no-name-row">
+            <span class="no-name ${catClass} ${entry.st ? 'no-name--st' : ''}">${entry.name}</span>
+            ${hasPlayers ? html`<span class="no-player-inline">- ${players.map(p => p.name).join(', ')}</span>` : nothing}
+          </div>
           ${entry.cond ? html`<span class="no-cond-tag">conditional</span>` : nothing}
-          ${hasPlayers ? html`<span class="no-players">${players.map(p => p.name).join(', ')}</span>` : nothing}
           <span class="no-hint">${entry.hint}</span>
           ${roleData?.ability ? html`<span class="no-ability">${roleData.ability}</span>` : nothing}
         </div>

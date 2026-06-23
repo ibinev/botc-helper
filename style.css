@@ -183,9 +183,9 @@ body.day-mode .combo-dropdown { box-shadow: 0 8px 32px rgba(100,60,0,0.25); }
 .meta-good { color: var(--good-text); }
 .meta-evil { color: var(--evil-text); }
 .btn-sm { padding: 5px 10px; background: var(--bg-surface); border: 0.5px solid var(--border); border-radius: var(--radius-sm); cursor: pointer; font-family: var(--font-sans); font-size: 11px; color: var(--text-primary); -webkit-tap-highlight-color: transparent; white-space: nowrap; }
-.topbar-icon-btn { width: 34px; height: 34px; padding: 0; display: flex; align-items: center; justify-content: center; font-size: 17px; color: var(--text-primary); border-radius: var(--radius-sm); background: var(--bg-surface); border: 0.5px solid var(--border); cursor: pointer; flex-shrink: 0; -webkit-tap-highlight-color: transparent; transition: background 0.12s, border-color 0.12s; }
+.topbar-icon-btn { width: 34px; height: 34px; padding: 0; display: flex; align-items: center; justify-content: center; font-size: 17px; color: var(--text-primary); border-radius: var(--radius-sm); background: var(--bg-surface); border: 1px solid rgba(201,151,58,0.48); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.03), 0 0 0 1px rgba(201,151,58,0.12); cursor: pointer; flex-shrink: 0; -webkit-tap-highlight-color: transparent; transition: background 0.12s, border-color 0.12s, box-shadow 0.12s; }
 .topbar-icon-btn.active { background: rgba(201,151,58,0.16); border-color: var(--gold); }
-.topbar-icon-btn:active { background: rgba(201,151,58,0.12); border-color: var(--border-strong); }
+.topbar-icon-btn:active { background: rgba(201,151,58,0.12); border-color: var(--gold); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05), 0 0 0 1px rgba(201,151,58,0.22); }
 
 /* ── Circle ─────────────────────────────────────────── */
 #circle-wrap { flex: 1 1 0; min-height: 0; position: relative; overflow: hidden; }
@@ -463,8 +463,9 @@ body.align-hints .seat.nom-voted.suspicious .seat-inner { background: rgba(155,7
 /* ── Settings ─────────────────────────────────────────── */
 .settings-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 0.5px solid var(--border); gap: 12px; }
 .settings-row:last-child { border-bottom: none; }
-.settings-group { background: var(--bg-input); border: 0.5px solid var(--border-strong); border-radius: var(--radius-md); padding: 0 14px; margin-bottom: 12px; }
+.settings-group { position: relative; background: var(--bg-input); border: 0.5px solid var(--border-strong); border-radius: var(--radius-md); padding: 8px 14px 0; margin: 16px 0 12px; }
 .settings-group--danger { border-color: rgba(192,57,43,0.25); background: rgba(192,57,43,0.06); }
+.settings-group-title { position: absolute; top: 0; left: 12px; transform: translateY(-50%); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: var(--gold-light); background: var(--bg-surface); padding: 0 6px; line-height: 1.2; }
 .settings-label { font-size: 14px; color: var(--text-primary); }
 .settings-sub   { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
 .settings-control { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
@@ -513,6 +514,7 @@ body.align-hints .seat.nom-voted.suspicious .seat-inner { background: rgba(155,7
 .no-icon { width: 32px; height: 32px; object-fit: contain; flex-shrink: 0; filter: drop-shadow(0 1px 3px rgba(0,0,0,0.7)); }
 .no-icon--st { display: inline-flex; align-items: center; justify-content: center; font-size: 18px; width: 32px; height: 32px; }
 .no-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.no-name-row { display: flex; align-items: baseline; gap: 6px; min-width: 0; flex-wrap: wrap; }
 .no-name { font-size: 16px; font-weight: 700; color: var(--text); }
 .no-name--st { color: var(--gold-light); }
 .no-name.no-cat-townsfolk { color: #8fca4b; }
@@ -520,6 +522,7 @@ body.align-hints .seat.nom-voted.suspicious .seat-inner { background: rgba(155,7
 .no-name.no-cat-minion    { color: #e06060; }
 .no-name.no-cat-demon     { color: #ff8080; }
 .no-name.no-cat-traveler  { color: #e6b85a; }
+.no-player-inline { font-size: 12px; font-weight: 600; color: var(--gold-light); min-width: 0; }
 .no-players { font-size: 12px; font-weight: 600; color: var(--gold-light); }
 .no-hint { font-size: 13px; color: var(--text-secondary); line-height: 1.4; }
 .no-ability { font-size: 11px; color: var(--text-secondary); line-height: 1.4; font-style: italic; opacity: 0.7; }
@@ -605,8 +608,20 @@ body.align-hints .seat.nom-voted.suspicious .seat-inner { background: rgba(155,7
 .charcount-table tr:last-child td { border-bottom: none; }
 .charcount-table thead th { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-secondary); background: var(--bg-card); }
 .charcount-table thead th:first-child { text-align: left; }
+.charcount-table thead th:first-child,
+.charcount-table td.row-label {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+}
+.charcount-table thead th:first-child {
+  z-index: 2;
+  background: var(--bg-card);
+  box-shadow: 1px 0 0 var(--border);
+}
 .charcount-table td.row-label { text-align: left; font-weight: 600; white-space: nowrap; }
 .charcount-table td { color: var(--text-primary); background: var(--bg-input); }
+.charcount-table td.row-label { background: var(--bg-input); box-shadow: 1px 0 0 var(--border); }
 .row-townsfolk td { background: rgba(63,107,17,0.12); }
 .row-townsfolk td.row-label { color: #8fca4b; }
 .row-outsider  td { background: rgba(24,95,165,0.12); }
