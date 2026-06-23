@@ -117,7 +117,7 @@ export class BotcSettingsModal extends LitElement {
             <div class="modal-title modal-title--spaced">⚙️ Settings</div>
 
             <div class="settings-group">
-            <div class="settings-group-title">📋 Setup</div>
+            <div class="settings-group-title">Setup</div>
             <div class="settings-row">
               <div>
                 <div class="settings-label">Players</div>
@@ -174,7 +174,7 @@ export class BotcSettingsModal extends LitElement {
             </div>
 
             <div class="settings-group">
-            <div class="settings-group-title">🎨 Appearance</div>
+            <div class="settings-group-title">Appearance</div>
             <div class="settings-row">
               <div>
                 <div class="settings-label">Light mode</div>
@@ -226,7 +226,7 @@ export class BotcSettingsModal extends LitElement {
             </div>
 
             <div class="settings-group settings-group--danger">
-            <div class="settings-group-title">♻️ Cleanup</div>
+            <div class="settings-group-title">Cleanup</div>
             <div class="settings-row">
               <div>
                 <div class="settings-label">Clear table</div>
