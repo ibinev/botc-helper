@@ -20,6 +20,10 @@
   --evil-text:      #e06060;
   --info-bg:        rgba(24,95,165,0.25);
   --info-text:      #7ab8f5;
+  --charcount-good-sticky: #2a331c;
+  --charcount-outsider-sticky: #1d2733;
+  --charcount-minion-sticky: #34201d;
+  --charcount-demon-sticky: #3b221f;
   --seat-size:      90px;
   --font-serif:     Georgia, 'Times New Roman', serif;
   --font-sans:      -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -48,6 +52,10 @@ body.day-mode {
   --evil-text:      #8b1a1a;
   --info-bg:        rgba(24,95,165,0.15);
   --info-text:      #0e5a9e;
+  --charcount-good-sticky: #dbe8c0;
+  --charcount-outsider-sticky: #d7e7f5;
+  --charcount-minion-sticky: #f0d8d4;
+  --charcount-demon-sticky: #f3d1cb;
 }
 
 html, body {
@@ -540,8 +548,8 @@ body.align-hints .seat.nom-voted.suspicious .seat-inner { background: rgba(155,7
 #ref-sheet { position: fixed; inset: 0; display: flex; flex-direction: column; background: var(--bg-surface); z-index: 200; }
 #ref-toolbar { flex-shrink: 0; display: flex; align-items: center; gap: 6px; padding: 8px 12px; padding-top: max(8px, env(safe-area-inset-top)); background: var(--bg-surface); border-bottom: 0.5px solid var(--border-strong); }
 .ref-main-tabs { display: flex; gap: 4px; flex: 1; }
-.ref-tab { flex: 1; background: var(--bg-card); border: 0.5px solid var(--border); border-radius: var(--radius-sm); color: var(--text-secondary); font-size: 12px; font-weight: 700; padding: 7px 4px; cursor: pointer; transition: background 0.12s, color 0.12s, border-color 0.12s; -webkit-tap-highlight-color: transparent; white-space: nowrap; }
-.ref-tab--active { background: rgba(201,151,58,0.18); border-color: var(--gold); color: var(--gold-light); }
+.ref-tab { flex: 1; background: var(--bg-card); border: 1px solid rgba(201,151,58,0.34); box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), inset 0 -1px 0 rgba(0,0,0,0.16); border-radius: var(--radius-sm); color: var(--text-secondary); font-size: 12px; font-weight: 700; padding: 7px 4px; cursor: pointer; transition: background 0.12s, color 0.12s, border-color 0.12s, box-shadow 0.12s; -webkit-tap-highlight-color: transparent; white-space: nowrap; }
+.ref-tab--active { background: rgba(201,151,58,0.18); border-color: var(--gold); box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), inset 0 -1px 0 rgba(0,0,0,0.10), 0 0 0 1px rgba(201,151,58,0.12); color: var(--gold-light); }
 .ref-body { flex: 1; overflow-y: auto; padding: 14px 12px 32px; max-width: 900px; margin: 0 auto; width: 100%; box-sizing: border-box; }
 .ref-body--center { display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 20px; padding-top: 24px; }
 .no-sub-tabs { display: flex; gap: 6px; margin-bottom: 14px; align-items: center; }
@@ -629,13 +637,13 @@ body.align-hints .seat.nom-voted.suspicious .seat-inner { background: rgba(155,7
 .charcount-table td { color: var(--text-primary); background: var(--bg-input); }
 .charcount-table td.row-label { background: var(--bg-input); }
 .row-townsfolk td { background: rgba(63,107,17,0.12); }
-.row-townsfolk td.row-label { background: rgba(63,107,17,0.22); color: #8fca4b; }
+.row-townsfolk td.row-label { background: var(--charcount-good-sticky); color: #8fca4b; }
 .row-outsider  td { background: rgba(24,95,165,0.12); }
-.row-outsider  td.row-label { background: rgba(24,95,165,0.22); color: #7ab8f5; }
+.row-outsider  td.row-label { background: var(--charcount-outsider-sticky); color: #7ab8f5; }
 .row-minion    td { background: rgba(139,26,26,0.15); }
-.row-minion    td.row-label { background: rgba(139,26,26,0.25); color: #e06060; }
+.row-minion    td.row-label { background: var(--charcount-minion-sticky); color: #e06060; }
 .row-demon     td { background: rgba(192,57,43,0.18); }
-.row-demon     td.row-label { background: rgba(192,57,43,0.28); color: #ff8080; }
+.row-demon     td.row-label { background: var(--charcount-demon-sticky); color: #ff8080; }
 .charcount-table td:not(.row-label) { font-size: 16px; font-weight: 700; }
 .charcount-table th.col-active, .charcount-table td.col-active { outline: 2px solid var(--gold); outline-offset: -2px; position: relative; }
 .charcount-note { font-size: 11px; color: var(--text-muted); text-align: center; max-width: 420px; line-height: 1.6; }
