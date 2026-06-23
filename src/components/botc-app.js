@@ -1,5 +1,5 @@
 import { LitElement, html, nothing } from 'lit';
-import { ROLES_IMG_URL, BG_NAMES, normalizeScript } from '../data.js';
+import { ROLES_IMG_URL, normalizeScript } from '../data.js';
 import { blankSeat, MIN, MAX, MAX_STEP, phaseRoundToStep, stepToPhaseRound } from '../utils.js';
 import './botc-circle.js';
 import './botc-edit-modal.js';
@@ -12,6 +12,7 @@ import './botc-pdf-modal.js';
 import './botc-nightorder-modal.js';
 import './botc-roles-modal.js';
 import './botc-reference-modal.js';
+import './botc-readme-modal.js';
 
 const LS_KEY = 'botc_town_square_v1';
 
@@ -53,6 +54,7 @@ export class BotcApp extends LitElement {
     _rolesOpen:        { state: true },
     _referenceOpen:    { state: true },
     _referenceTab:     { state: true },
+    _readmeOpen:       { state: true },
     _confirmOpen:      { state: true },
     _confirmSoftOpen:  { state: true },
     _poolManageOpen:   { state: true },
@@ -99,6 +101,7 @@ export class BotcApp extends LitElement {
     this._rolesOpen        = false;
     this._referenceOpen    = false;
     this._referenceTab     = 'roles';
+    this._readmeOpen       = false;
     this._confirmOpen      = false;
     this._confirmSoftOpen  = false;
     this._poolManageOpen   = false;
@@ -613,19 +616,6 @@ export class BotcApp extends LitElement {
     this.requestUpdate();
   }
 
-  // ── Autoname ─────────────────────────────────────────────────────────
-  _doAutoname() {
-    const pool = BG_NAMES.slice().sort(() => Math.random() - 0.5);
-    let pi = 0;
-    const seats = this.seats.map(s => {
-      if (!s.name && pi < pool.length) return { ...s, name: pool[pi++] };
-      return s;
-    });
-    this.seats = seats;
-    this._saveState();
-    this.requestUpdate();
-  }
-
   // ── Meta (alive/dead counts) ─────────────────────────────────────────
   _meta() {
     const isEvil = s => s.alignment === 'evil';
@@ -645,7 +635,7 @@ export class BotcApp extends LitElement {
   _nomBarText() {
     if (!this.nomMode) return '';
     if (this.nomMode === 'from') return 'Step 1 — tap who is nominating';
-    if (this.nomMode === 'to')   return '⚖ ' + this._seatLabel(this.nomFrom) + ' is nominating… pick target';
+    if (this.nomMode === 'to')   return '⚖️ ' + this._seatLabel(this.nomFrom) + ' is nominating… pick target';
     if (this.nomMode === 'votes') {
       const entry = this.nominations[this.nomVoteKey]?.[this.nomVoteIdx];
       const alive = entry?.aliveCount ?? this.seats.filter(s => !s.dead).length;
@@ -670,7 +660,7 @@ export class BotcApp extends LitElement {
       return html`✕ <span class="btn-label">Cancel </span><span class="nom-day-count">${count}</span>`;
     }
     const count = this.phase === 'night' ? 0 : (this.nominations[this._nomKey()] || []).length;
-    return html`⚖ <span class="btn-label">Nominate </span><span class="nom-day-count">${count}</span>`;
+    return html`⚖️ <span class="btn-label">Nominate </span><span class="nom-day-count">${count}</span>`;
   }
 
   _voteThresholdReached() {
@@ -712,16 +702,16 @@ export class BotcApp extends LitElement {
         ` : nothing}
 
         <div class="topbar-right">
-          <span class="bar-meta">
-            <strong>${meta.alive}</strong> alive
-            · <strong>${meta.dead}</strong> dead
+          <span class="bar-meta bar-meta-cues" aria-label="Player status summary">
+            <span class="meta-pill meta-pill-alive" title="Alive players">🟢 <strong>${meta.alive}</strong></span>
+            <span class="meta-pill meta-pill-dead" title="Dead players">💀 <strong>${meta.dead}</strong></span>
           </span>
-          <button class="topbar-icon-btn ${this.hideRole ? 'active' : ''}" title="${this.hideRole ? 'Show roles' : 'Hide roles'}"
+          <button class="topbar-icon-btn" title="${this.hideRole ? 'Show roles' : 'Hide roles'}"
             @click="${() => { this.hideRole = !this.hideRole; this._applyHideRole(); this.requestUpdate(); }}">${this.hideRole ? '👁️' : '🚫'}</button>
           <button class="topbar-icon-btn" title="Notes"
             @click="${() => { this._notesOpen = true; this.requestUpdate(); }}">📜</button>
           <button class="topbar-icon-btn" title="Nominations"
-            @click="${() => { this._nomsOpen = true; this.requestUpdate(); }}">⚖</button>
+            @click="${() => { this._nomsOpen = true; this.requestUpdate(); }}">⚖️</button>
           <button class="topbar-icon-btn" title="Reference"
             @click="${() => { this._referenceOpen = true; this._referenceTab = 'roles'; this.requestUpdate(); }}">📖</button>
           <button class="topbar-icon-btn" title="Settings"
@@ -954,7 +944,11 @@ export class BotcApp extends LitElement {
           this._confirmOpen  = true;
           this.requestUpdate();
         }}"
-        @autoname="${() => this._doAutoname()}"
+        @open-readme="${() => {
+          this._settingsOpen = false;
+          this._readmeOpen = true;
+          this.requestUpdate();
+        }}"
         @modal-close="${() => {
           this._settingsOpen = false;
           this.requestUpdate();
@@ -975,6 +969,15 @@ export class BotcApp extends LitElement {
           this.requestUpdate();
         }}"
       ></botc-reference-modal>
+
+      <!-- In-app guide (README) -->
+      <botc-readme-modal
+        .open="${this._readmeOpen}"
+        @modal-close="${() => {
+          this._readmeOpen = false;
+          this.requestUpdate();
+        }}"
+      ></botc-readme-modal>
 
       <!-- Character count modal -->
       <botc-charcount-modal

@@ -7,6 +7,7 @@ const LOCAL_ASSETS = [
   BASE + '/index.html',
   BASE + '/style.css',
   BASE + '/manifest.json',
+  BASE + '/README.md',
   BASE + '/icons/icon.svg',
   BASE + '/assets/background.png',
   BASE + '/assets/roles_en.png',
@@ -23,6 +24,7 @@ const LOCAL_ASSETS = [
   BASE + '/src/components/botc-nominations-modal.js',
   BASE + '/src/components/botc-settings-modal.js',
   BASE + '/src/components/botc-charcount-modal.js',
+  BASE + '/src/components/botc-readme-modal.js',
 ];
 
 // Install: pre-cache local assets

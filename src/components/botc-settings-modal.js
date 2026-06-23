@@ -24,7 +24,7 @@ import { SCRIPT_OPTIONS } from '../data.js';
  *   clear-table        – (no detail)
  *   clear-player-pool  – (no detail)
  *   reset              – (no detail)
- *   autoname           – (no detail)
+ *   open-readme        – (no detail)
  *   modal-close        – (no detail)
  */
 export class BotcSettingsModal extends LitElement {
@@ -49,8 +49,6 @@ export class BotcSettingsModal extends LitElement {
     this.dayMode    = false;
     this.storyView  = false;
     this.compactMode= false;
-    this._versionTaps = 0;
-    this._versionTapTimer = null;
   }
 
   updated(changed) {
@@ -101,14 +99,7 @@ export class BotcSettingsModal extends LitElement {
   }
 
   _onVersionTap() {
-    clearTimeout(this._versionTapTimer);
-    this._versionTaps++;
-    if (this._versionTaps >= 5) {
-      this._versionTaps = 0;
-      this._fire('autoname', {});
-    } else {
-      this._versionTapTimer = setTimeout(() => { this._versionTaps = 0; }, 1500);
-    }
+    this._fire('open-readme', {});
   }
 
   _fire(name, detail) {
@@ -148,7 +139,7 @@ export class BotcSettingsModal extends LitElement {
                 <div class="settings-sub">Select script-specific roles and references</div>
               </div>
               <div class="settings-control">
-                <select class="btn-sm"
+                <select class="btn-sm settings-script-select"
                   @change="${e => this._fire('script-change', { script: e.target.value })}">
                   ${SCRIPT_OPTIONS.map(s => html`
                     <option value="${s.id}" ?selected="${this.script === s.id}">${s.label}</option>
@@ -266,7 +257,9 @@ export class BotcSettingsModal extends LitElement {
             </div>
             </div>
 
-            <div class="settings-version" @click="${() => this._onVersionTap()}">${APP_VERSION}</div>
+            <div class="settings-version" title="Open in-app guide" @click="${() => this._onVersionTap()}">
+              ${APP_VERSION} · Open guide
+            </div>
 
           </div>
         </div>

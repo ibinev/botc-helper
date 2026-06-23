@@ -212,7 +212,7 @@ export class BotcCircle extends LitElement {
     const isNominated = this.phase === 'day' && dayNoms.some(n => n.to === i);
 
     const statusIcons = [
-      isNominated ? '<span class="seat-status-icon nominated">⚖</span>' : '',
+      isNominated ? '<span class="seat-status-icon nominated">⚖️</span>' : '',
       s.usedVote  ? '<span class="seat-status-icon ghost-vote">👻</span>' : '',
     ].filter(Boolean).join('');
 

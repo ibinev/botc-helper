@@ -133,7 +133,7 @@ export class BotcNominationsModal extends LitElement {
           <div class="modal-inner">
 
             <div class="nom-modal-header">
-              <div class="modal-title">⚖ Nominations</div>
+              <div class="modal-title">⚖️ Nominations</div>
               ${this.phase !== 'night' ? html`
                 <button class="btn btn-primary btn-primary--sm"
                   @click="${this._onNewNom}">➕ New</button>
@@ -141,7 +141,7 @@ export class BotcNominationsModal extends LitElement {
             </div>
 
             ${allKeys.length === 0 ? html`
-              <div class="nom-empty">No nominations recorded yet.<br>Use ⚖ Nominate on the circle to add one.</div>
+              <div class="nom-empty">No nominations recorded yet.<br>Use ⚖️ Nominate on the circle to add one.</div>
             ` : allKeys.map(key => {
               const dayNum = key.split('-')[1];
               const entries = [...this.nominations[key].entries()].reverse(); // {0: idx, 1: entry}
