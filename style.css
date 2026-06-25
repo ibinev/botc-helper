@@ -1012,9 +1012,8 @@ body.align-hints .seat.nom-voted.suspicious .seat-inner { background: rgba(155,7
   color: var(--text-secondary);
   font-size: 12px;
 }
-.settings-behind-picker {
-  transform: translateY(100%);
-  pointer-events: none;
+.settings-script-role-group {
+  margin-bottom: 10px;
 }
 @media (max-width: 767px) {
   .settings-script-role-item {
@@ -1030,9 +1029,6 @@ body.align-hints .seat.nom-voted.suspicious .seat-inner { background: rgba(155,7
   .settings-script-slot-spacer {
     display: none;
   }
-}
-.settings-script-role-group {
-  margin-bottom: 10px;
 }
 .settings-script-role-group-label {
   position: sticky;

@@ -1081,6 +1081,10 @@ export class BotcApp extends LitElement {
           this._readmeOpen = true;
           this.requestUpdate();
         }}"
+        @script-picker-open="${() => {
+          this._settingsOpen = false;
+          this.requestUpdate();
+        }}"
         @modal-close="${() => {
           this._settingsOpen = false;
           this.requestUpdate();

@@ -93,9 +93,6 @@ export class BotcSettingsModal extends LitElement {
     if (changed.has('open')) {
       this.querySelector('#modal-settings')?.classList.toggle('visible', this.open);
     }
-    if (changed.has('_customOpen')) {
-      this.querySelector('.modal-sheet')?.classList.toggle('settings-behind-picker', !!this._customOpen);
-    }
   }
 
   firstUpdated() {
@@ -172,6 +169,7 @@ export class BotcSettingsModal extends LitElement {
     this._customBuilderMode = 'list';
     this._slotTargetCat = null;
     this._slotTargetIndex = -1;
+    this._fire('script-picker-open', {});
   }
 
   _openEditCustomScriptPicker() {
@@ -202,6 +200,7 @@ export class BotcSettingsModal extends LitElement {
     this._customBuilderMode = 'list';
     this._slotTargetCat = null;
     this._slotTargetIndex = -1;
+    this._fire('script-picker-open', {});
   }
 
   _closeCustomScriptPicker() {
