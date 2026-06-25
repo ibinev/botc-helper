@@ -1,5 +1,5 @@
 import { LitElement, html, nothing } from 'lit';
-import { getRoles, getNightOrder, getCharacterCount, ROLE_ICONS } from '../data.js';
+import { getRoles, getNightOrder, getCharacterCount, ROLE_ICONS, getScriptRoleLayout } from '../data.js';
 import { CHARCOUNT_COLS } from '../utils.js';
 
 const BMR_ROLE_ORDER = {
@@ -116,6 +116,35 @@ export class BotcReferenceModal extends LitElement {
   }
 
   _orderedRoles(roles, cat) {
+    const customLayout = getScriptRoleLayout(this.script);
+    if (customLayout?.[cat]) {
+      const left = customLayout[cat].left || [];
+      const right = customLayout[cat].right || [];
+      const byName = new Map(roles.map(r => [r.name, r]));
+      const known = new Set([...left, ...right]);
+      const ordered = [];
+
+      if (cat === 'townsfolk') {
+        [...left, ...right].forEach(name => {
+          const role = byName.get(name);
+          if (role) ordered.push(role);
+        });
+      } else {
+        const rows = Math.max(left.length, right.length);
+        for (let i = 0; i < rows; i += 1) {
+          const l = byName.get(left[i]);
+          const r = byName.get(right[i]);
+          ordered.push(l || { __spacer: true, cat });
+          ordered.push(r || { __spacer: true, cat });
+        }
+      }
+
+      roles.forEach(role => {
+        if (!known.has(role.name)) ordered.push(role);
+      });
+      return ordered;
+    }
+
     const orderMap = this.script === 'bmr'
       ? BMR_ROLE_ORDER
       : this.script === 'snv'
@@ -143,15 +172,35 @@ export class BotcReferenceModal extends LitElement {
   _renderRoles() {
     const roles = getRoles(this.script);
     const inPlay    = this._inPlaySet();
+    const customLayout = getScriptRoleLayout(this.script);
+    const townsfolkByName = new Map(roles.filter(r => r.cat === 'townsfolk').map(r => [r.name, r]));
+    const townsfolkLeft = customLayout?.townsfolk
+      ? (customLayout.townsfolk.left || []).map(name => townsfolkByName.get(name)).filter(Boolean)
+      : [];
+    const townsfolkRight = customLayout?.townsfolk
+      ? (customLayout.townsfolk.right || []).map(name => townsfolkByName.get(name)).filter(Boolean)
+      : [];
     const townsfolk = this._orderedRoles(roles.filter(r => r.cat === 'townsfolk'), 'townsfolk');
     const outsiders = this._orderedRoles(roles.filter(r => r.cat === 'outsider'), 'outsider');
     const minions   = this._orderedRoles(roles.filter(r => r.cat === 'minion'), 'minion');
     const demons    = this._orderedRoles(roles.filter(r => r.cat === 'demon'), 'demon');
     const travelers = roles.filter(r => r.cat === 'traveler');
+    const hasCustomLayout = !!customLayout;
+    const knownTownsfolk = new Set([...townsfolkLeft, ...townsfolkRight].map(r => r.name));
+    const extraTownsfolk = roles.filter(r => r.cat === 'townsfolk' && !knownTownsfolk.has(r.name));
+    const leftTownsfolk = [...townsfolkLeft, ...extraTownsfolk];
+    const rightTownsfolk = townsfolkRight;
     return html`
       <div class="ref-body">
         <div class="rc-section-header rc-section-header--townsfolk"><span class="rc-section-dot"></span>Townsfolk</div>
-        <div class="rc-grid rc-grid--col-flow">${townsfolk.map(r => this._roleCard(r, inPlay))}</div>
+        ${customLayout?.townsfolk ? html`
+          <div class="rc-two-col">
+            <div class="rc-two-col-left">${leftTownsfolk.map(r => this._roleCard(r, inPlay))}</div>
+            <div class="rc-two-col-right">${rightTownsfolk.map(r => this._roleCard(r, inPlay))}</div>
+          </div>
+        ` : html`
+          <div class="rc-grid rc-grid--col-flow">${townsfolk.map(r => this._roleCard(r, inPlay))}</div>
+        `}
 
         <div class="rc-section-header rc-section-header--outsider"><span class="rc-section-dot"></span>Outsiders</div>
         <div class="rc-grid rc-grid--2">${outsiders.map(r => this._roleCard(r, inPlay))}</div>
@@ -160,10 +209,10 @@ export class BotcReferenceModal extends LitElement {
         <div class="rc-grid rc-grid--2">${minions.map(r => this._roleCard(r, inPlay))}</div>
 
         <div class="rc-section-header rc-section-header--demon"><span class="rc-section-dot"></span>Demon</div>
-        <div class="rc-grid ${this.script === 'bmr' || this.script === 'snv' ? 'rc-grid--2' : 'rc-grid--1 rc-grid--demon'}">${demons.map(r => this._roleCard(r, inPlay))}</div>
+        <div class="rc-grid ${this.script === 'bmr' || this.script === 'snv' || hasCustomLayout ? 'rc-grid--2' : 'rc-grid--1 rc-grid--demon'}">${demons.map(r => this._roleCard(r, inPlay))}</div>
 
         <div class="rc-section-header rc-section-header--traveler"><span class="rc-section-dot"></span>Travelers</div>
-        <div class="rc-grid rc-grid--2">${travelers.map(r => this._roleCard(r, inPlay))}</div>
+        <div class="rc-grid rc-grid--2">${this._orderedRoles(travelers, 'traveler').map(r => this._roleCard(r, inPlay))}</div>
       </div>
     `;
   }
@@ -217,7 +266,9 @@ export class BotcReferenceModal extends LitElement {
   }
 
   _renderNightOrder() {
-    const order     = getNightOrder(this.script)[this._noTab] || [];
+    const playerCount = this.seatCount || this.seats.length || 0;
+    const order = (getNightOrder(this.script)[this._noTab] || [])
+      .filter(entry => !entry.minPlayers || playerCount >= entry.minPlayers);
     const doneCount = [...this._done].filter(k => k.startsWith(this._noTab + '-')).length;
     return html`
       <div class="ref-body">

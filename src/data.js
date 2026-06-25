@@ -3,14 +3,76 @@
 // Leave empty ('') to hide the button.
 export const ROLES_IMG_URL = 'assets/roles_en.png';
 
-export const SCRIPT_OPTIONS = [
+const BASE_SCRIPT_OPTIONS = [
   { id: 'tb', label: 'Trouble Brewing' },
   { id: 'bmr', label: 'Bad Moon Rising' },
   { id: 'snv', label: 'Sects and Violets' },
 ];
 
+const ROLE_CATEGORY_ORDER = ['townsfolk','outsider','minion','demon','traveler'];
+
+let CUSTOM_SCRIPTS = [];
+
+export const SCRIPT_OPTIONS = BASE_SCRIPT_OPTIONS;
+
+function normalizeLayout(layout, roleList) {
+  const known = new Set(roleList || []);
+  const byCat = {};
+  ROLE_CATEGORY_ORDER.forEach(cat => { byCat[cat] = { left: [], right: [] }; });
+
+  (layout && typeof layout === 'object' ? ROLE_CATEGORY_ORDER : []).forEach(cat => {
+    const cols = layout[cat] || {};
+    ['left', 'right'].forEach(col => {
+      const names = Array.isArray(cols[col]) ? cols[col] : [];
+      names.forEach(name => {
+        if (known.has(name) && !byCat[cat].left.includes(name) && !byCat[cat].right.includes(name)) {
+          byCat[cat][col].push(name);
+        }
+      });
+    });
+  });
+
+  return byCat;
+}
+
+export function setCustomScripts(customScripts = []) {
+  const seen = new Set();
+  CUSTOM_SCRIPTS = (customScripts || [])
+    .map(s => {
+      const roles = Array.isArray(s?.roles) ? [...new Set(s.roles.filter(Boolean))] : [];
+      return {
+      id: String(s?.id || '').trim(),
+      label: String(s?.label || '').trim(),
+      roles,
+      layout: normalizeLayout(s?.layout, roles),
+    };
+    })
+    .filter(s => s.id && s.label && !seen.has(s.id) && (seen.add(s.id), true));
+}
+
+export function getCustomScripts() {
+  return CUSTOM_SCRIPTS.map(s => ({
+    ...s,
+    roles: [...s.roles],
+    layout: normalizeLayout(s.layout, s.roles),
+  }));
+}
+
+export function getScriptRoleLayout(script) {
+  const custom = getCustomScript(script);
+  if (!custom) return null;
+  return normalizeLayout(custom.layout, custom.roles);
+}
+
+export function getScriptOptions() {
+  return [
+    ...BASE_SCRIPT_OPTIONS,
+    ...CUSTOM_SCRIPTS.map(s => ({ id: s.id, label: s.label })),
+  ];
+}
+
 export function normalizeScript(script) {
-  return SCRIPT_OPTIONS.some(s => s.id === script) ? script : 'tb';
+  return getScriptOptions().some(s => s.id === script) ? script : 'tb';
 }
 
 // ── Trouble Brewing role data ──────────────────────────
@@ -111,13 +173,234 @@ const SNV_CORE_ROLES = [
   { name:'Vortox',        cat:'demon',     align:'evil', ability:'Each night*, choose a player: they die. Townsfolk abilities yield false info. Each day, if no-one is executed, evil wins.' },
 ];
 
+const EXPERIMENTAL_ROLES = [
+  { name:'Acrobat', cat:'outsider', align:'good', ability:'Each night*, if either good living neighbour is drunk or poisoned, you die.' },
+  { name:'Al-Hadikhia', cat:'demon', align:'evil', ability:'Each night*, choose 3 players (all players learn who): each silently chooses to live or die, but if all live, all die.' },
+  { name:'Alchemist', cat:'townsfolk', align:'good', ability:'You have a not-in-play Minion ability.' },
+  { name:'Alsaahir', cat:'townsfolk', align:'good', ability:'Each day, if you publicly guess which players are Minion(s) and which are Demon(s), good wins' },
+  { name:'Amnesiac', cat:'townsfolk', align:'good', ability:'You do not know what your ability is. Each day, privately guess what it is: you learn how accurate you are.' },
+  { name:'Atheist', cat:'townsfolk', align:'good', ability:'The Storyteller can break the game rules & if executed, good wins, even if you are dead. [No evil characters]' },
+  { name:'Balloonist', cat:'townsfolk', align:'good', ability:'Each night, you learn 1 player of each character type, until there are no more types to learn. [+1 Outsider]' },
+  { name:'Banshee', cat:'townsfolk', align:'good', ability:'If the Demon kills you, all players learn this. From now on, you may nominate twice per day and vote twice per nomination.' },
+  { name:'Big Wig', cat:'townsfolk', align:'good', ability:'Each nominee chooses a player: until voting, only they may speak & they are mad the nominee is good or they might die.' },
+  { name:'Boffin', cat:'minion', align:'evil', ability:`The Demon (even if drunk or poisoned) has a not-in-play good character's ability. You both know which.` },
+  { name:'Boomdandy', cat:'minion', align:'evil', ability:'If you are executed, all but 3 players die. 1 minute later, the player with the most players pointing at them dies.' },
+  { name:'Bootlegger', cat:'townsfolk', align:'good', ability:'This script has homebrew characters or rules.' },
+  { name:'Bounty Hunter', cat:'townsfolk', align:'good', ability:'You start knowing 1 evil player. If the player you know dies, you learn another evil player tonight. [1 Townsfolk is evil]' },
+  { name:'Cacklejack', cat:'traveler', align:'good', ability:'Each day, choose a player: a different player changes character tonight.' },
+  { name:'Cannibal', cat:'townsfolk', align:'good', ability:'You have the ability of the recently killed executee. If they are evil, you are poisoned until a good player dies by execution.' },
+  { name:'Choirboy', cat:'townsfolk', align:'good', ability:'If the Demon kills the King, you learn which player is the Demon. [+ the King]' },
+  { name:'Cult Leader', cat:'townsfolk', align:'good', ability:'Each night, you become the alignment of an alive neighbour. If all good players choose to join your cult, your team wins.' },
+  { name:'Damsel', cat:'outsider', align:'good', ability:'All Minions know you are in play. If a Minion publicly guesses you (once), your team loses.' },
+  { name:'Deus ex Fiasco', cat:'traveler', align:'good', ability:'At least once per game, the Storyteller will make a mistake, correct it, and publicly admit to it.' },
+  { name:'Engineer', cat:'townsfolk', align:'good', ability:'Once per game, at night, choose which Minions or which Demon is in play.' },
+  { name:'Farmer', cat:'townsfolk', align:'good', ability:'If you die at night, an alive good player becomes a Farmer.' },
+  { name:'Fearmonger', cat:'minion', align:'evil', ability:'Each night, choose a player. If you nominate & execute them, their team loses. All players know if you choose a new player.' },
+  { name:'Ferryman', cat:'traveler', align:'good', ability:'On the final day, all dead players regain their vote token.' },
+  { name:'Fisherman', cat:'townsfolk', align:'good', ability:'Once per game, during the day, visit the Storyteller for some advice to help you win.' },
+  { name:'Gangster', cat:'traveler', align:'good', ability:'Once per day, you may choose to kill an alive neighbour, if your other alive neighbour agrees.' },
+  { name:'Gardener', cat:'townsfolk', align:'good', ability:`The Storyteller assigns all players' characters.` },
+  { name:'General', cat:'townsfolk', align:'good', ability:'Each night, you learn which alignment the Storyteller believes is winning: good, evil, or neither.' },
+  { name:'Gnome', cat:'traveler', align:'good', ability:'All players start knowing a player of your alignment. You may choose to kill anyone who nominates them.' },
+  { name:'Goblin', cat:'minion', align:'evil', ability:'If you publicly claim to be the Goblin when nominated & are executed that day, your team wins.' },
+  { name:'God of Ug', cat:'townsfolk', align:'good', ability:'Experimental character placeholder. Update with official ability text if needed.' },
+  { name:'God of Ug (Ug Mode)', cat:'townsfolk', align:'good', ability:'Experimental character placeholder. Update with official ability text if needed.' },
+  { name:'Golem', cat:'outsider', align:'good', ability:'You may only nominate once per game. When you do, if the nominee is not the Demon, they die.' },
+  { name:'Harpy', cat:'minion', align:'evil', ability:'Experimental character placeholder. Update with official ability text if needed.' },
+  { name:'Hatter', cat:'outsider', align:'good', ability:'Experimental character placeholder. Update with official ability text if needed.' },
+  { name:'Heretic', cat:'outsider', align:'good', ability:'Whoever wins, loses & whoever loses, wins, even if you are dead.' },
+  { name:'Hermit', cat:'outsider', align:'good', ability:'Experimental character placeholder. Update with official ability text if needed.' },
+  { name:'High Priestess', cat:'townsfolk', align:'good', ability:'Experimental character placeholder. Update with official ability text if needed.' },
+  { name:'Hindu', cat:'townsfolk', align:'good', ability:'Experimental character placeholder. Update with official ability text if needed.' },
+  { name:'Huntsman', cat:'townsfolk', align:'good', ability:'Once per game, at night, choose a living player: the Damsel, if chosen, becomes a not-in-play Townsfolk. [+the Damsel]' },
+  { name:'Kazali', cat:'demon', align:'evil', ability:'Experimental character placeholder. Update with official ability text if needed.' },
+  { name:'King', cat:'townsfolk', align:'good', ability:'Each night, if the dead outnumber the living, you learn 1 alive character. The Demon knows who you are.' },
+  { name:'Knaves', cat:'townsfolk', align:'good', ability:'Experimental character placeholder. Update with official ability text if needed.' },
+  { name:'Knight', cat:'townsfolk', align:'good', ability:'Experimental character placeholder. Update with official ability text if needed.' },
+  { name:'Legion', cat:'demon', align:'evil', ability:'Each night*, a player might die. Executions fail if only evil voted. You register as a Minion too. [Most players are Legion]' },
+  { name:'Leviathan', cat:'demon', align:'evil', ability:'If more than 1 good player is executed, you win. All players know you are in play. After day 5, evil wins.' },
+  { name:'Lil\' Monsta', cat:'demon', align:'evil', ability:'Each night, Minions choose who babysits Lil\' Monsta\'s token & "is the Demon". A player dies each night*. [+1 Minion]' },
+  { name:'Lleech', cat:'demon', align:'evil', ability:'Each night*, choose a player: they die. You start by choosing an alive player: they are poisoned - you die if & only if they die.' },
+  { name:'Lord of Typhon', cat:'demon', align:'evil', ability:'Experimental character placeholder. Update with official ability text if needed.' },
+  { name:'Lycanthrope', cat:'townsfolk', align:'good', ability:'Each night*, choose a living player: if good, they die, but they are the only player that can die tonight.' },
+  { name:'Magician', cat:'townsfolk', align:'good', ability:'The Demon thinks you are a Minion. Minions think you are a Demon.' },
+  { name:'Marionette', cat:'minion', align:'evil', ability:'You think you are a good character but you are not. The Demon knows who you are. [You neighbour the Demon]' },
+  { name:'Mezepheles', cat:'minion', align:'evil', ability:'You start knowing a secret word. The 1st good player to say this word becomes evil that night.' },
+  { name:'Nightwatchman', cat:'townsfolk', align:'good', ability:'Once per game, at night, choose a player: they learn who you are.' },
+  { name:'Noble', cat:'townsfolk', align:'good', ability:'You start knowing 3 players, 1 and only 1 of which is evil.' },
+  { name:'Ogre', cat:'outsider', align:'good', ability:'Experimental character placeholder. Update with official ability text if needed.' },
+  { name:'Ojo', cat:'demon', align:'evil', ability:'Experimental character placeholder. Update with official ability text if needed.' },
+  { name:'Organ Grinder', cat:'minion', align:'evil', ability:'Experimental character placeholder. Update with official ability text if needed.' },
+  { name:'Pixie', cat:'townsfolk', align:'good', ability:'You start knowing 1 in-play Townsfolk. If you were mad that you were this character, you gain their ability when they die.' },
+  { name:'Plague Doctor', cat:'outsider', align:'good', ability:'Experimental character placeholder. Update with official ability text if needed.' },
+  { name:'Politician', cat:'outsider', align:'good', ability:'If you were the player most responsible for your team losing, you change alignment & win, even if dead.' },
+  { name:'Pope', cat:'townsfolk', align:'good', ability:'Experimental character placeholder. Update with official ability text if needed.' },
+  { name:'Poppy Grower', cat:'townsfolk', align:'good', ability:'Minions & Demons do not know each other. If you die, they learn who each other are that night.' },
+  { name:'Preacher', cat:'townsfolk', align:'good', ability:'Each night, choose a player: a Minion, if chosen, learns this. All chosen Minions have no ability.' },
+  { name:'Princess', cat:'townsfolk', align:'good', ability:'Experimental character placeholder. Update with official ability text if needed.' },
+  { name:'Psychopath', cat:'minion', align:'evil', ability:'Each day, before nominations, you may publicly choose a player: they die. If executed, you only die if you lose roshambo.' },
+  { name:'Puzzlemaster', cat:'outsider', align:'good', ability:'1 player is drunk, even if you die. If you guess (once) who it is, learn the Demon player, but guess wrong & get false info.' },
+  { name:'Riot', cat:'demon', align:'evil', ability:'Nominees die, but may nominate again immediately (on day 3, they must). After day 3, evil wins. [All Minions are Riot]' },
+  { name:'Shugenja', cat:'townsfolk', align:'good', ability:'Experimental character placeholder. Update with official ability text if needed.' },
+  { name:'Snitch', cat:'outsider', align:'good', ability:'Minions start knowing 3 not-in-play characters.' },
+  { name:'Steward', cat:'townsfolk', align:'good', ability:'Experimental character placeholder. Update with official ability text if needed.' },
+  { name:'Storm Catcher', cat:'townsfolk', align:'good', ability:'Experimental character placeholder. Update with official ability text if needed.' },
+  { name:'Summoner', cat:'minion', align:'evil', ability:'Experimental character placeholder. Update with official ability text if needed.' },
+  { name:'Tor', cat:'townsfolk', align:'good', ability:'Experimental character placeholder. Update with official ability text if needed.' },
+  { name:'Ventriloquist', cat:'townsfolk', align:'good', ability:'Experimental character placeholder. Update with official ability text if needed.' },
+  { name:'Village Idiot', cat:'townsfolk', align:'good', ability:'Experimental character placeholder. Update with official ability text if needed.' },
+  { name:'Vizier', cat:'minion', align:'evil', ability:'Experimental character placeholder. Update with official ability text if needed.' },
+  { name:'Widow', cat:'minion', align:'evil', ability:'On your 1st night, look at the Grimoire and choose a player: they are poisoned. 1 good player knows a Widow is in play.' },
+  { name:'Wizard', cat:'minion', align:'evil', ability:'Experimental character placeholder. Update with official ability text if needed.' },
+  { name:'Wraith', cat:'minion', align:'evil', ability:'Experimental character placeholder. Update with official ability text if needed.' },
+  { name:'Xaan', cat:'minion', align:'evil', ability:'Experimental character placeholder. Update with official ability text if needed.' },
+  { name:'Yaggababble', cat:'demon', align:'evil', ability:'Experimental character placeholder. Update with official ability text if needed.' },
+  { name:'Zealot', cat:'outsider', align:'good', ability:'Experimental character placeholder. Update with official ability text if needed.' },
+  { name:'Zenomancer', cat:'townsfolk', align:'good', ability:'Experimental character placeholder. Update with official ability text if needed.' },
+];
+
+const ALL_KNOWN_ROLES = [
+  ...ROLES,
+  ...BMR_CORE_ROLES,
+  ...SNV_CORE_ROLES,
+  ...TRAVELER_ROLES,
+  ...EXPERIMENTAL_ROLES,
+];
+
+const EXPERIMENTAL_ROLE_NAMES = new Set(EXPERIMENTAL_ROLES.map(r => r.name));
+
+const ROLE_BY_NAME = (() => {
+  const map = new Map();
+  ALL_KNOWN_ROLES.forEach(role => {
+    if (!map.has(role.name)) map.set(role.name, role);
+  });
+  return map;
+})();
+
+function getCustomScript(script) {
+  return CUSTOM_SCRIPTS.find(s => s.id === script) || null;
+}
+
+export function getAllRoles() {
+  const roles = [...ROLE_BY_NAME.values()];
+  const order = { townsfolk: 0, outsider: 1, minion: 2, demon: 3, traveler: 4 };
+  roles.sort((a, b) => {
+    const ca = order[a.cat] ?? 99;
+    const cb = order[b.cat] ?? 99;
+    if (ca !== cb) return ca - cb;
+    return a.name.localeCompare(b.name);
+  });
+  return roles;
+}
+
+export function isExperimentalRole(name) {
+  return EXPERIMENTAL_ROLE_NAMES.has(name);
+}
+
 export function getRoles(script = 'tb') {
   const id = normalizeScript(script);
   if (id === 'tb') return ROLES;
   if (id === 'bmr') return [...BMR_CORE_ROLES, ...TRAVELER_ROLES];
   if (id === 'snv') return [...SNV_CORE_ROLES, ...TRAVELER_ROLES];
+  const custom = getCustomScript(id);
+  if (custom) {
+    const layout = normalizeLayout(custom.layout, custom.roles);
+    const orderedNames = [];
+    ROLE_CATEGORY_ORDER.forEach(cat => {
+      orderedNames.push(...layout[cat].left, ...layout[cat].right);
+    });
+    custom.roles.forEach(name => {
+      if (!orderedNames.includes(name)) orderedNames.push(name);
+    });
+    return orderedNames.map(name => ROLE_BY_NAME.get(name)).filter(Boolean);
+  }
   return TRAVELER_ROLES;
 }
+
+const EXPERIMENTAL_ICON_DEFAULTS = {
+  'Acrobat': 'assets/roles/experimental/Icon_acrobat.png',
+  'Al-Hadikhia': 'assets/roles/experimental/Icon_alhadikhia.png',
+  'Alchemist': 'assets/roles/experimental/Icon_alchemist.png',
+  'Alsaahir': 'assets/roles/experimental/Icon_alsaahir.png',
+  'Amnesiac': 'assets/roles/experimental/Icon_amnesiac.png',
+  'Atheist': 'assets/roles/experimental/Icon_atheist.png',
+  'Balloonist': 'assets/roles/experimental/Icon_balloonist.png',
+  'Banshee': 'assets/roles/experimental/Icon_banshee.png',
+  'Big Wig': 'assets/roles/experimental/Icon_bigwig.png',
+  'Boffin': 'assets/roles/experimental/Icon_boffin.png',
+  'Boomdandy': 'assets/roles/experimental/Icon_boomdandy.png',
+  'Bootlegger': 'assets/roles/experimental/Icon_bootlegger.png',
+  'Bounty Hunter': 'assets/roles/experimental/Icon_bountyhunter.png',
+  'Cacklejack': 'assets/roles/experimental/Icon_cacklejack.png',
+  'Cannibal': 'assets/roles/experimental/Icon_cannibal.png',
+  'Choirboy': 'assets/roles/experimental/Icon_choirboy.png',
+  'Cult Leader': 'assets/roles/experimental/Icon_cultleader.png',
+  'Damsel': 'assets/roles/experimental/Icon_damsel.png',
+  'Deus ex Fiasco': 'assets/roles/experimental/Icon_deusexfiasco.png',
+  'Engineer': 'assets/roles/experimental/Icon_engineer.png',
+  'Farmer': 'assets/roles/experimental/Icon_farmer.png',
+  'Fearmonger': 'assets/roles/experimental/Icon_fearmonger.png',
+  'Ferryman': 'assets/roles/experimental/Icon_ferryman.png',
+  'Fisherman': 'assets/roles/experimental/Icon_fisherman.png',
+  'Gardener': 'assets/roles/experimental/Icon_gardener.png',
+  'General': 'assets/roles/experimental/Icon_general.png',
+  'Gnome': 'assets/roles/experimental/Icon_gnome.png',
+  'Goblin': 'assets/roles/experimental/Icon_goblin.png',
+  'God of Ug': 'assets/roles/experimental/Icon_godofug.png',
+  'God of Ug (Ug Mode)': 'assets/roles/experimental/Icon_godofugugmode.png',
+  'Golem': 'assets/roles/experimental/Icon_golem.png',
+  'Harpy': 'assets/roles/experimental/Icon_harpy.png',
+  'Hatter': 'assets/roles/experimental/Icon_hatter.png',
+  'Heretic': 'assets/roles/experimental/Icon_heretic.png',
+  'Hermit': 'assets/roles/experimental/Icon_hermit.png',
+  'High Priestess': 'assets/roles/experimental/Icon_highpriestess.png',
+  'Hindu': 'assets/roles/experimental/Icon_hindu.png',
+  'Huntsman': 'assets/roles/experimental/Icon_huntsman.png',
+  'Kazali': 'assets/roles/experimental/Icon_kazali.png',
+  'King': 'assets/roles/experimental/Icon_king.png',
+  'Knaves': 'assets/roles/experimental/Icon_knaves.png',
+  'Knight': 'assets/roles/experimental/Icon_knight.png',
+  'Legion': 'assets/roles/experimental/Icon_legion.png',
+  'Leviathan': 'assets/roles/experimental/Icon_leviathan.png',
+  'Lil\' Monsta': 'assets/roles/experimental/Icon_lilmonsta.png',
+  'Lleech': 'assets/roles/experimental/Icon_lleech.png',
+  'Lord of Typhon': 'assets/roles/experimental/Icon_lordoftyphon.png',
+  'Lycanthrope': 'assets/roles/experimental/Icon_lycanthrope.png',
+  'Magician': 'assets/roles/experimental/Icon_magician.png',
+  'Marionette': 'assets/roles/experimental/Icon_marionette.png',
+  'Mezepheles': 'assets/roles/experimental/Icon_mezepheles.png',
+  'Nightwatchman': 'assets/roles/experimental/Icon_nightwatchman.png',
+  'Noble': 'assets/roles/experimental/Icon_noble.png',
+  'Ogre': 'assets/roles/experimental/Icon_ogre.png',
+  'Ojo': 'assets/roles/experimental/Icon_ojo.png',
+  'Organ Grinder': 'assets/roles/experimental/Icon_organgrinder.png',
+  'Pixie': 'assets/roles/experimental/Icon_pixie.png',
+  'Plague Doctor': 'assets/roles/experimental/Icon_plaguedoctor.png',
+  'Politician': 'assets/roles/experimental/Icon_politician.png',
+  'Pope': 'assets/roles/experimental/Icon_pope.png',
+  'Poppy Grower': 'assets/roles/experimental/Icon_poppygrower.png',
+  'Preacher': 'assets/roles/experimental/Icon_preacher.png',
+  'Princess': 'assets/roles/experimental/Icon_princess.png',
+  'Psychopath': 'assets/roles/experimental/Icon_psychopath.png',
+  'Puzzlemaster': 'assets/roles/experimental/Icon_puzzlemaster.png',
+  'Riot': 'assets/roles/experimental/Icon_riot.png',
+  'Shugenja': 'assets/roles/experimental/Icon_shugenja.png',
+  'Snitch': 'assets/roles/experimental/Icon_snitch.png',
+  'Steward': 'assets/roles/experimental/Icon_steward.png',
+  'Storm Catcher': 'assets/roles/experimental/Icon_stormcatcher.png',
+  'Summoner': 'assets/roles/experimental/Icon_summoner.png',
+  'Tor': 'assets/roles/experimental/Icon_tor.png',
+  'Ventriloquist': 'assets/roles/experimental/Icon_ventriloquist.png',
+  'Village Idiot': 'assets/roles/experimental/Icon_villageidiot.png',
+  'Vizier': 'assets/roles/experimental/Icon_vizier.png',
+  'Widow': 'assets/roles/experimental/Icon_widow.png',
+  'Wizard': 'assets/roles/experimental/Icon_wizard.png',
+  'Wraith': 'assets/roles/experimental/Icon_wraith.png',
+  'Xaan': 'assets/roles/experimental/Icon_xaan.png',
+  'Yaggababble': 'assets/roles/experimental/Icon_yaggababble.png',
+  'Zealot': 'assets/roles/experimental/Icon_zealot.png',
+  'Zenomancer': 'assets/roles/experimental/Icon_zenomancer.png',
+};
 
 // ── Role icons ─────────────────────────────────────────
 export const ROLE_ICONS = {
@@ -207,6 +490,7 @@ export const ROLE_ICONS = {
   'Vigormortis':    'assets/roles/sects-and-violets/Icon_vigormortis.png',
   'No Dashii':      'assets/roles/sects-and-violets/Icon_nodashii.png',
   'Vortox':         'assets/roles/sects-and-violets/Icon_vortox.png',
+  ...EXPERIMENTAL_ICON_DEFAULTS,
 };
 
 // ── Night order (Trouble Brewing) ─────────────────────
@@ -326,11 +610,161 @@ export const SNV_NIGHT_ORDER = {
 
 const EMPTY_NIGHT_ORDER = { first: [], other: [] };
 
+const ROLE_NIGHT_INDEX = {
+  'Apprentice': { firstNight: 1, otherNight: 0 },
+  'Assassin': { firstNight: 0, otherNight: 36 },
+  'Barber': { firstNight: 0, otherNight: 40 },
+  'Barista': { firstNight: 1, otherNight: 1 },
+  'Bone Collector': { firstNight: 0, otherNight: 1 },
+  'Bureaucrat': { firstNight: 1, otherNight: 1 },
+  'Butler': { firstNight: 39, otherNight: 67 },
+  'Cerenovus': { firstNight: 25, otherNight: 15 },
+  'Chambermaid': { firstNight: 51, otherNight: 70 },
+  'Chef': { firstNight: 36, otherNight: 0 },
+  'Clockmaker': { firstNight: 41, otherNight: 0 },
+  'Courtier': { firstNight: 19, otherNight: 8 },
+  'Devil\'s Advocate': { firstNight: 22, otherNight: 13 },
+  'Dreamer': { firstNight: 42, otherNight: 56 },
+  'Empath': { firstNight: 37, otherNight: 53 },
+  'Evil Twin': { firstNight: 23, otherNight: 0 },
+  'Exorcist': { firstNight: 0, otherNight: 21 },
+  'Fang Gu': { firstNight: 0, otherNight: 29 },
+  'Flowergirl': { firstNight: 0, otherNight: 57 },
+  'Fortune Teller': { firstNight: 38, otherNight: 54 },
+  'Gambler': { firstNight: 0, otherNight: 10 },
+  'Godfather': { firstNight: 21, otherNight: 37 },
+  'Gossip': { firstNight: 0, otherNight: 38 },
+  'Grandmother': { firstNight: 40, otherNight: 51 },
+  'Harlot': { firstNight: 0, otherNight: 1 },
+  'Imp': { firstNight: 0, otherNight: 24 },
+  'Innkeeper': { firstNight: 0, otherNight: 9 },
+  'Investigator': { firstNight: 35, otherNight: 0 },
+  'Juggler': { firstNight: 0, otherNight: 61 },
+  'Librarian': { firstNight: 34, otherNight: 0 },
+  'Lunatic': { firstNight: 8, otherNight: 20 },
+  'Mathematician': { firstNight: 52, otherNight: 71 },
+  'Monk': { firstNight: 0, otherNight: 12 },
+  'Moonchild': { firstNight: 0, otherNight: 50 },
+  'No Dashii': { firstNight: 0, otherNight: 30 },
+  'Oracle': { firstNight: 0, otherNight: 59 },
+  'Philosopher': { firstNight: 2, otherNight: 2 },
+  'Pit-Hag': { firstNight: 0, otherNight: 16 },
+  'Po': { firstNight: 0, otherNight: 28 },
+  'Poisoner': { firstNight: 17, otherNight: 7 },
+  'Professor': { firstNight: 0, otherNight: 43 },
+  'Pukka': { firstNight: 28, otherNight: 26 },
+  'Ravenkeeper': { firstNight: 0, otherNight: 52 },
+  'Sage': { firstNight: 0, otherNight: 42 },
+  'Sailor': { firstNight: 11, otherNight: 4 },
+  'Scarlet Woman': { firstNight: 0, otherNight: 19 },
+  'Seamstress': { firstNight: 43, otherNight: 60 },
+  'Shabaloth': { firstNight: 0, otherNight: 27 },
+  'Snake Charmer': { firstNight: 20, otherNight: 11 },
+  'Spy': { firstNight: 49, otherNight: 68 },
+  'Sweetheart': { firstNight: 0, otherNight: 41 },
+  'Thief': { firstNight: 1, otherNight: 1 },
+  'Tinker': { firstNight: 0, otherNight: 49 },
+  'Town Crier': { firstNight: 0, otherNight: 58 },
+  'Undertaker': { firstNight: 0, otherNight: 55 },
+  'Vigormortis': { firstNight: 0, otherNight: 32 },
+  'Vortox': { firstNight: 0, otherNight: 31 },
+  'Washerwoman': { firstNight: 33, otherNight: 0 },
+  'Witch': { firstNight: 24, otherNight: 14 },
+  'Zombuul': { firstNight: 0, otherNight: 25 },
+};
+
+const FIRST_HINT_BY_NAME = new Map();
+const OTHER_HINT_BY_NAME = new Map();
+
+[NIGHT_ORDER, BMR_NIGHT_ORDER, SNV_NIGHT_ORDER].forEach(order => {
+  (order.first || []).forEach(entry => {
+    if (!FIRST_HINT_BY_NAME.has(entry.name)) FIRST_HINT_BY_NAME.set(entry.name, entry);
+  });
+  (order.other || []).forEach(entry => {
+    if (!OTHER_HINT_BY_NAME.has(entry.name)) OTHER_HINT_BY_NAME.set(entry.name, entry);
+  });
+});
+
+function buildCustomNightOrder(custom) {
+  const selected = new Set(custom.roles || []);
+  const selectedData = [...selected].map(name => ROLE_BY_NAME.get(name)).filter(Boolean);
+  const hasMinion = selectedData.some(r => r.cat === 'minion');
+  const hasDemon = selectedData.some(r => r.cat === 'demon');
+
+  const first = [];
+  const other = [];
+
+  if (hasMinion) {
+    first.push({
+      order: 5,
+      entry: {
+        name: 'Minion info',
+        st: true,
+        minPlayers: 7,
+        hint: 'If 7+ players: Minions learn each other and who the Demon is.',
+      },
+    });
+  }
+  if (hasDemon) {
+    first.push({
+      order: 8,
+      entry: {
+        name: 'Demon info',
+        st: true,
+        minPlayers: 7,
+        hint: 'If 7+ players: Demon learns Minions and receives bluffs/setup info.',
+      },
+    });
+  }
+
+  selected.forEach(name => {
+    const idx = ROLE_NIGHT_INDEX[name];
+    if (idx?.firstNight > 0) {
+      const meta = FIRST_HINT_BY_NAME.get(name);
+      first.push({
+        order: idx.firstNight,
+        entry: {
+          name,
+          hint: meta?.hint || 'Acts on the first night.',
+          cond: !!meta?.cond,
+          st: !!meta?.st,
+        },
+      });
+    }
+  });
+
+  selected.forEach(name => {
+    const idx = ROLE_NIGHT_INDEX[name];
+    if (idx?.otherNight > 0) {
+      const meta = OTHER_HINT_BY_NAME.get(name);
+      other.push({
+        order: idx.otherNight,
+        entry: {
+          name,
+          hint: meta?.hint || 'Acts on other nights.',
+          cond: !!meta?.cond,
+          st: !!meta?.st,
+        },
+      });
+    }
+  });
+
+  first.sort((a, b) => a.order - b.order || a.entry.name.localeCompare(b.entry.name));
+  other.sort((a, b) => a.order - b.order || a.entry.name.localeCompare(b.entry.name));
+
+  return {
+    first: first.map(x => x.entry),
+    other: other.map(x => x.entry),
+  };
+}
+
 export function getNightOrder(script = 'tb') {
   const id = normalizeScript(script);
   if (id === 'tb') return NIGHT_ORDER;
   if (id === 'bmr') return BMR_NIGHT_ORDER;
   if (id === 'snv') return SNV_NIGHT_ORDER;
+  const custom = getCustomScript(id);
+  if (custom) return buildCustomNightOrder(custom);
   return EMPTY_NIGHT_ORDER;
 }
 
@@ -354,4 +788,4 @@ export const CAT_LABELS = {
   demon:     'Demon',
   traveler:  'Travelers',
 };
-export const CAT_ORDER = ['townsfolk','outsider','minion','demon','traveler'];
+export const CAT_ORDER = ROLE_CATEGORY_ORDER;

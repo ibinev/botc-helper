@@ -144,7 +144,9 @@ export class BotcNightorderModal extends LitElement {
   }
 
   render() {
-    const order = getNightOrder(this.script)[this._tab] || [];
+    const playerCount = this.seats.length || 0;
+    const order = (getNightOrder(this.script)[this._tab] || [])
+      .filter(entry => !entry.minPlayers || playerCount >= entry.minPlayers);
     const doneCount = [...this._done].filter(k => k.startsWith(this._tab + '-')).length;
     const total = order.length;
 

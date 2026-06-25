@@ -1,5 +1,5 @@
 import { LitElement, html, nothing } from 'lit';
-import { ROLES_IMG_URL, normalizeScript } from '../data.js';
+import { ROLES_IMG_URL, normalizeScript, setCustomScripts, getScriptOptions, getAllRoles } from '../data.js';
 import { blankSeat, MIN, MAX, MAX_STEP, phaseRoundToStep, stepToPhaseRound } from '../utils.js';
 import './botc-circle.js';
 import './botc-edit-modal.js';
@@ -38,6 +38,7 @@ export class BotcApp extends LitElement {
     compactMode:       { type: Boolean },
     hideRole:          { type: Boolean },
     script:            { type: String  },
+    customScripts:     { type: Array   },
     playerPool:        { type: Array   },
     deathsCollapsed:   { type: Boolean },
     poisonedCollapsed: { type: Boolean },
@@ -86,6 +87,7 @@ export class BotcApp extends LitElement {
     this.compactMode       = false;
     this.hideRole          = false;
     this.script            = 'tb';
+    this.customScripts     = [];
     this.playerPool        = [];
     this.deathsCollapsed   = false;
     this.poisonedCollapsed = false;
@@ -113,6 +115,7 @@ export class BotcApp extends LitElement {
   connectedCallback() {
     super.connectedCallback();
     this._loadAll();
+    this._bindVisualViewport();
     window.addEventListener('resize', this._onResize = () => {
       clearTimeout(this._resizeTimer);
       this._resizeTimer = setTimeout(() => this.requestUpdate(), 60);
@@ -128,10 +131,51 @@ export class BotcApp extends LitElement {
     window.removeEventListener('resize', this._onResize);
     document.removeEventListener('visibilitychange', this._onVisibilityChange);
     window.removeEventListener('pagehide', this._onPageHide);
+    this._unbindVisualViewport();
+  }
+
+  _bindVisualViewport() {
+    this._vv = window.visualViewport || null;
+    this._onViewportChange = () => this._updateKeyboardInset();
+
+    if (this._vv) {
+      this._vv.addEventListener('resize', this._onViewportChange);
+      this._vv.addEventListener('scroll', this._onViewportChange);
+    }
+
+    window.addEventListener('focusin', this._onViewportChange);
+    window.addEventListener('focusout', this._onViewportChange);
+    this._updateKeyboardInset();
+  }
+
+  _unbindVisualViewport() {
+    if (this._vv && this._onViewportChange) {
+      this._vv.removeEventListener('resize', this._onViewportChange);
+      this._vv.removeEventListener('scroll', this._onViewportChange);
+    }
+    if (this._onViewportChange) {
+      window.removeEventListener('focusin', this._onViewportChange);
+      window.removeEventListener('focusout', this._onViewportChange);
+    }
+    document.documentElement.style.setProperty('--keyboard-inset', '0px');
+    this._vv = null;
+    this._onViewportChange = null;
+  }
+
+  _updateKeyboardInset() {
+    if (!window.visualViewport) {
+      document.documentElement.style.setProperty('--keyboard-inset', '0px');
+      return;
+    }
+
+    const vv = window.visualViewport;
+    const inset = Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop));
+    document.documentElement.style.setProperty('--keyboard-inset', `${inset}px`);
   }
 
   // ── Persistence ──────────────────────────────────────────────────────
   _loadAll() {
+    this._loadCustomScripts();
     this._loadGameNotes();
     this._loadNominations();
     this._loadPoisonSnapshots();
@@ -299,6 +343,7 @@ export class BotcApp extends LitElement {
   }
 
   _loadScript() {
+    setCustomScripts(this.customScripts);
     this.script = normalizeScript(localStorage.getItem('botc_script') || 'tb');
   }
 
@@ -306,6 +351,81 @@ export class BotcApp extends LitElement {
     try {
       localStorage.setItem('botc_script', normalizeScript(this.script));
     } catch(e) {}
+  }
+
+  _loadCustomScripts() {
+    try {
+      const raw = localStorage.getItem('botc_custom_scripts');
+      const parsed = raw ? JSON.parse(raw) : [];
+      this.customScripts = Array.isArray(parsed) ? parsed : [];
+    } catch (e) {
+      this.customScripts = [];
+    }
+    setCustomScripts(this.customScripts);
+  }
+
+  _saveCustomScripts() {
+    setCustomScripts(this.customScripts);
+    try {
+      localStorage.setItem('botc_custom_scripts', JSON.stringify(this.customScripts));
+    } catch (e) {}
+  }
+
+  _createCustomScript(name, roles, layout = null) {
+    const base = String(name || '').trim();
+    const selectedRoles = [...new Set((roles || []).filter(Boolean))];
+    if (!base || !selectedRoles.length) return;
+
+    const normalizedBase = base
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '') || 'custom-script';
+
+    const used = new Set(getScriptOptions().map(s => s.id));
+    let id = 'custom-' + normalizedBase;
+    let suffix = 2;
+    while (used.has(id)) {
+      id = `custom-${normalizedBase}-${suffix++}`;
+    }
+
+    this.customScripts = [
+      ...this.customScripts,
+      { id, label: base, roles: selectedRoles, layout },
+    ];
+    this._saveCustomScripts();
+    this.script = id;
+    this._saveScript();
+    this.requestUpdate();
+  }
+
+  _isCustomScript(id) {
+    return this.customScripts.some(s => s.id === id);
+  }
+
+  _editCustomScript(id, name, roles, layout = null) {
+    if (!this._isCustomScript(id)) return;
+    const label = String(name || '').trim();
+    const selectedRoles = [...new Set((roles || []).filter(Boolean))];
+    if (!label || !selectedRoles.length) return;
+
+    this.customScripts = this.customScripts.map(s =>
+      s.id === id ? { ...s, label, roles: selectedRoles, layout } : s
+    );
+    this._saveCustomScripts();
+    this.script = id;
+    this._saveScript();
+    this.requestUpdate();
+  }
+
+  _deleteCustomScript(id) {
+    if (!this._isCustomScript(id)) return;
+    this.customScripts = this.customScripts.filter(s => s.id !== id);
+    this._saveCustomScripts();
+    if (this.script === id) {
+      this.script = 'tb';
+      this._saveScript();
+    }
+    this.requestUpdate();
   }
 
   _savePlayerPool() {
@@ -879,6 +999,9 @@ export class BotcApp extends LitElement {
         .open="${this._settingsOpen}"
         .seatCount="${this.seatCount}"
         .script="${this.script}"
+        .scriptOptions="${getScriptOptions()}"
+        .allRoles="${getAllRoles()}"
+        .selectedCustomScript="${this.customScripts.find(s => s.id === this.script) || null}"
         .alignHints="${this.alignHints}"
         .dayMode="${this.dayMode}"
         .storyView="${this.storyView}"
@@ -902,6 +1025,15 @@ export class BotcApp extends LitElement {
           this.script = normalizeScript(e.detail.script);
           this._saveScript();
           this.requestUpdate();
+        }}"
+        @custom-script-create="${e => {
+          this._createCustomScript(e.detail.name, e.detail.roles, e.detail.layout || null);
+        }}"
+        @custom-script-edit="${e => {
+          this._editCustomScript(e.detail.id, e.detail.name, e.detail.roles, e.detail.layout || null);
+        }}"
+        @custom-script-delete="${e => {
+          this._deleteCustomScript(e.detail.id);
         }}"
         @story-view-toggle="${() => {
           this.storyView = !this.storyView;
