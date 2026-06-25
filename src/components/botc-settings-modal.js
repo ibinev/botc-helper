@@ -93,6 +93,9 @@ export class BotcSettingsModal extends LitElement {
     if (changed.has('open')) {
       this.querySelector('#modal-settings')?.classList.toggle('visible', this.open);
     }
+    if (changed.has('_customOpen')) {
+      this.querySelector('.modal-sheet')?.classList.toggle('settings-behind-picker', !!this._customOpen);
+    }
   }
 
   firstUpdated() {
@@ -134,7 +137,6 @@ export class BotcSettingsModal extends LitElement {
     this._layoutMedia = window.matchMedia('(min-width: 768px)');
     this._onLayoutMediaChange = e => {
       this._advancedScriptLayout = e.matches;
-      if (!e.matches && this._customBuilderMode === 'slots') this._customBuilderMode = 'list';
     };
     this._advancedScriptLayout = this._layoutMedia.matches;
     if (this._layoutMedia.addEventListener) {
@@ -418,7 +420,7 @@ export class BotcSettingsModal extends LitElement {
 
   render() {
     const canUseAdvancedLayout = this._advancedScriptLayout;
-    const builderMode = canUseAdvancedLayout ? this._customBuilderMode : 'list';
+    const builderMode = this._customBuilderMode;
     const groupedRoles = this._filteredRoles();
     const hasSlotTarget = !!this._slotTargetCat && this._slotTargetIndex >= 0;
     const slotPool = hasSlotTarget ? this._slotRolePool(this._slotTargetCat) : [];
@@ -615,14 +617,12 @@ export class BotcSettingsModal extends LitElement {
                       @click="${() => { this._showExperimental = !this._showExperimental; }}">${this._showExperimental ? 'On' : 'Off'}</button>
                   </div>
 
-                  ${canUseAdvancedLayout ? html`
-                    <div class="settings-script-builder-tabs" role="tablist" aria-label="Custom script builder mode">
-                      <button class="settings-script-builder-tab ${builderMode === 'list' ? 'active' : ''}" type="button"
-                        @click="${() => { this._customBuilderMode = 'list'; }}">List</button>
-                      <button class="settings-script-builder-tab ${builderMode === 'slots' ? 'active' : ''}" type="button"
-                        @click="${() => { this._customBuilderMode = 'slots'; }}">Slots (13/4/4/4)</button>
-                    </div>
-                  ` : nothing}
+                  <div class="settings-script-builder-tabs" role="tablist" aria-label="Custom script builder mode">
+                    <button class="settings-script-builder-tab ${builderMode === 'list' ? 'active' : ''}" type="button"
+                      @click="${() => { this._customBuilderMode = 'list'; }}">List</button>
+                    <button class="settings-script-builder-tab ${builderMode === 'slots' ? 'active' : ''}" type="button"
+                      @click="${() => { this._customBuilderMode = 'slots'; }}">Slots (13/4/4/4)</button>
+                  </div>
 
                   ${builderMode === 'slots' ? html`
                     <div class="settings-script-slot-list">

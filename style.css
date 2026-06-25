@@ -1012,10 +1012,23 @@ body.align-hints .seat.nom-voted.suspicious .seat-inner { background: rgba(155,7
   color: var(--text-secondary);
   font-size: 12px;
 }
+.settings-behind-picker {
+  transform: translateY(100%);
+  pointer-events: none;
+}
 @media (max-width: 767px) {
   .settings-script-role-item {
     gap: 6px;
     padding: 7px;
+  }
+  .settings-script-role-group {
+    margin-bottom: 2px;
+  }
+  .settings-script-slot-grid {
+    grid-template-columns: 1fr;
+  }
+  .settings-script-slot-spacer {
+    display: none;
   }
 }
 .settings-script-role-group {
