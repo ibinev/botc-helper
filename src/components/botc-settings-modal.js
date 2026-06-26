@@ -10,9 +10,10 @@ const SLOT_TEMPLATE_COUNTS = {
   demon: 4,
   traveler: 4,
   loric: 4,
+  fabled: 4,
 };
 
-const SLOT_TEMPLATE_ORDER = ['townsfolk', 'outsider', 'minion', 'demon', 'traveler', 'loric'];
+const SLOT_TEMPLATE_ORDER = ['townsfolk', 'outsider', 'minion', 'demon', 'traveler', 'loric', 'fabled'];
 
 /**
  * <botc-settings-modal>

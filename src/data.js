@@ -9,7 +9,7 @@ const BASE_SCRIPT_OPTIONS = [
   { id: 'snv', label: 'Sects and Violets' },
 ];
 
-const ROLE_CATEGORY_ORDER = ['townsfolk','outsider','minion','demon','traveler','loric'];
+const ROLE_CATEGORY_ORDER = ['townsfolk','outsider','minion','demon','traveler','loric','fabled'];
 
 let CUSTOM_SCRIPTS = [];
 
@@ -192,11 +192,11 @@ const EXPERIMENTAL_ROLES = [
   { name:'Choirboy', cat:'townsfolk', align:'good', ability:'If the Demon kills the King, you learn which player is the Demon. [+the King]' },
   { name:'Cult Leader', cat:'townsfolk', align:'good', ability:'Each night, you become the alignment of an alive neighbour. If all good players choose to join your cult, your team wins.' },
   { name:'Damsel', cat:'outsider', align:'good', ability:'All Minions know a Damsel is in play. If a Minion publicly guesses you (once), your team loses.' },
-  { name:'Deus ex Fiasco', cat:'traveler', align:'good', ability:'At least once per game, the Storyteller will make a mistake, correct it, and publicly admit to it.' },
+  { name:'Deus ex Fiasco', cat:'fabled', align:'good', ability:'At least once per game, the Storyteller will make a mistake, correct it, and publicly admit to it.' },
   { name:'Engineer', cat:'townsfolk', align:'good', ability:'Once per game, at night, choose which Minions or which Demon is in play.' },
   { name:'Farmer', cat:'townsfolk', align:'good', ability:'When you die at night, an alive good player becomes a Farmer.' },
   { name:'Fearmonger', cat:'minion', align:'evil', ability:'Each night, choose a player: if you nominate & execute them, their team loses. All players know if you choose a new player.' },
-  { name:'Ferryman', cat:'traveler', align:'good', ability:'On the final day, all dead players regain their vote token.' },
+  { name:'Ferryman', cat:'fabled', align:'good', ability:'On the final day, all dead players regain their vote token.' },
   { name:'Fisherman', cat:'townsfolk', align:'good', ability:'Once per game, during the day, visit the Storyteller for some advice to help your team win.' },
   { name:'Gangster', cat:'traveler', align:'good', ability:'Once per day, you may choose to kill an alive neighbour, if your other alive neighbour agrees.' },
   { name:'Gardener', cat:'loric', align:'good', ability:`The Storyteller assigns all players' characters.` },
@@ -788,5 +788,6 @@ export const CAT_LABELS = {
   demon:     'Demon',
   traveler:  'Travelers',
   loric:     'Loric',
+  fabled:    'Fabled',
 };
 export const CAT_ORDER = ROLE_CATEGORY_ORDER;

@@ -186,6 +186,7 @@ export class BotcReferenceModal extends LitElement {
     const demons    = this._orderedRoles(roles.filter(r => r.cat === 'demon'), 'demon');
     const travelers = roles.filter(r => r.cat === 'traveler');
     const lorics    = roles.filter(r => r.cat === 'loric');
+    const fabls     = roles.filter(r => r.cat === 'fabled');
     const hasCustomLayout = !!customLayout;
     const knownTownsfolk = new Set([...townsfolkLeft, ...townsfolkRight].map(r => r.name));
     const extraTownsfolk = roles.filter(r => r.cat === 'townsfolk' && !knownTownsfolk.has(r.name));
@@ -197,6 +198,7 @@ export class BotcReferenceModal extends LitElement {
     const hasDemons    = demons.some(r => !r.__spacer);
     const hasTravelers = travelers.length > 0;
     const hasLorics    = lorics.length > 0;
+    const hasFabls     = fabls.length > 0;
     return html`
       <div class="ref-body">
         ${hasTownsfolk ? html`
@@ -234,6 +236,11 @@ export class BotcReferenceModal extends LitElement {
         ${hasLorics ? html`
           <div class="rc-section-header rc-section-header--loric"><span class="rc-section-dot"></span>Loric</div>
           <div class="rc-grid rc-grid--2">${lorics.map(r => this._roleCard(r, inPlay))}</div>
+        ` : nothing}
+
+        ${hasFabls ? html`
+          <div class="rc-section-header rc-section-header--fabled"><span class="rc-section-dot"></span>Fabled</div>
+          <div class="rc-grid rc-grid--2">${fabls.map(r => this._roleCard(r, inPlay))}</div>
         ` : nothing}
       </div>
     `;

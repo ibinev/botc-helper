@@ -96,6 +96,7 @@ export class BotcCombo extends LitElement {
     const groups = [];
     CAT_ORDER.forEach(cat => {
       if (cat === 'loric') return;
+      if (cat === 'fabled') return;
       const matches = roles.filter(r => r.cat === cat && r.name.toLowerCase().includes(ql));
       if (matches.length) groups.push({ cat, matches });
     });

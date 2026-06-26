@@ -312,12 +312,14 @@ body.align-hints .seat.align-evil.dead .seat-inner { box-shadow: 0 0 0 3px #c039
 .dot-demon     { background: #c0392b; }
 .dot-traveler  { background: #c9973a; }
 .dot-loric     { background: #f2d75c; }
+.dot-fabled    { background: #c8830a; }
 .tag-townsfolk { background: rgba(63,107,17,0.3);   color: #8fca4b; }
 .tag-outsider  { background: rgba(24,95,165,0.25);  color: #7ab8f5; }
 .tag-minion    { background: rgba(139,26,26,0.35);  color: #e06060; }
 .tag-demon     { background: rgba(192,57,43,0.4);   color: #ff8080; }
 .tag-traveler  { background: rgba(186,117,23,0.25); color: #e6b85a; }
 .tag-loric     { background: rgba(242,215,92,0.22); color: #f2d75c; }
+.tag-fabled    { background: rgba(200,131,10,0.22);  color: #e8a020; }
 
 .badge-suspicious { background: rgba(160,60,200,0.2); color: #d08ef0; }
 .badge-good { background: var(--good-bg); color: var(--good-text); }
@@ -611,6 +613,8 @@ body.align-hints .seat.nom-voted.suspicious .seat-inner { background: rgba(155,7
 .rc-section-header--traveler  .rc-section-dot { background: #c9973a; }
 .rc-section-header--loric     { color: #f2d75c; border-color: rgba(242,215,92,0.38); }
 .rc-section-header--loric     .rc-section-dot { background: #f2d75c; }
+.rc-section-header--fabled    { color: #e8a020; border-color: rgba(200,131,10,0.38); }
+.rc-section-header--fabled    .rc-section-dot { background: #c8830a; }
 
 .rc-grid { display: grid; gap: 6px; margin-bottom: 4px; }
 .rc-grid--2 { grid-template-columns: 1fr 1fr; }
@@ -644,6 +648,7 @@ body.align-hints .seat.nom-voted.suspicious .seat-inner { background: rgba(155,7
 .rc-cat-demon.rc-card--active     { border-color: #ff8080;  background: rgba(192,57,43,0.22); }
 .rc-cat-traveler.rc-card--active  { border-color: #e6b85a;  background: rgba(186,117,23,0.18); }
 .rc-cat-loric.rc-card--active     { border-color: #f2d75c;  background: rgba(242,215,92,0.18); }
+.rc-cat-fabled.rc-card--active    { border-color: #e8a020;  background: rgba(200,131,10,0.18); }
 
 .rc-icon { width: 36px; height: 36px; object-fit: contain; flex-shrink: 0; filter: drop-shadow(0 1px 3px rgba(0,0,0,0.7)); margin-top: 1px; }
 .rc-icon--fallback { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; font-size: 18px; color: var(--text-secondary); }
@@ -655,6 +660,7 @@ body.align-hints .seat.nom-voted.suspicious .seat-inner { background: rgba(155,7
 .rc-cat-demon     .rc-name { color: #ff8080; }
 .rc-cat-traveler  .rc-name { color: #e6b85a; }
 .rc-cat-loric     .rc-name { color: #f2d75c; }
+.rc-cat-fabled    .rc-name { color: #e8a020; }
 .rc-ability { font-size: 13px; color: var(--text-secondary); line-height: 1.45; }
 
 /* ── Character count ──────────────────────────────────── */

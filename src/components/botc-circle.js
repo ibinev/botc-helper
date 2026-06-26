@@ -208,11 +208,38 @@ export class BotcCircle extends LitElement {
       ? ` dot-${displayRoleData.cat}`
       : (roleData ? ` dot-${roleData.cat}` : '');
 
-    const dayNoms    = this.nominations['day-' + this.round] || [];
-    const isNominated = this.phase === 'day' && dayNoms.some(n => n.to === i);
+    const dayKey  = 'day-' + this.round;
+    const dayNoms = this.phase === 'day' ? (this.nominations[dayKey] || []) : [];
+
+    // For each nomination compute vote count and whether threshold was reached.
+    const nomEntries = dayNoms.map(n => {
+      const needed = n.aliveCount ? Math.ceil(n.aliveCount / 2) : Infinity;
+      const count  = (n.votes || []).length;
+      return { to: n.to, count, reached: count >= needed };
+    });
+
+    // Skull goes to the nomination with threshold reached AND highest vote count.
+    let skullSeat = null;
+    let skullMax  = -1;
+    nomEntries.forEach(e => {
+      if (e.reached && e.count > skullMax) {
+        skullMax  = e.count;
+        skullSeat = e.to;
+      }
+    });
+
+    const isNominated = dayNoms.some(n => n.to === i);
+    const isSkull     = skullSeat === i;
+
+    let nominatedIcon = '';
+    if (isSkull) {
+      nominatedIcon = '<span class="seat-status-icon nominated">💀</span>';
+    } else if (isNominated) {
+      nominatedIcon = '<span class="seat-status-icon nominated">⚖️</span>';
+    }
 
     const statusIcons = [
-      isNominated ? '<span class="seat-status-icon nominated">⚖️</span>' : '',
+      nominatedIcon,
       s.usedVote  ? '<span class="seat-status-icon ghost-vote">👻</span>' : '',
     ].filter(Boolean).join('');
 

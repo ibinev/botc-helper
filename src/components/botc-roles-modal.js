@@ -164,6 +164,7 @@ export class BotcRolesModal extends LitElement {
     const demons     = this._orderedRoles(roles.filter(r => r.cat === 'demon'), 'demon');
     const travelers  = this._orderedRoles(roles.filter(r => r.cat === 'traveler'), 'traveler');
     const lorics     = getAllRoles().filter(r => r.cat === 'loric');
+    const fabls      = getAllRoles().filter(r => r.cat === 'fabled');
     const hasCustomLayout = !!customLayout;
     const knownTownsfolk = new Set([...townsfolkLeft, ...townsfolkRight].map(r => r.name));
     const extraTownsfolk = roles.filter(r => r.cat === 'townsfolk' && !knownTownsfolk.has(r.name));
@@ -175,6 +176,7 @@ export class BotcRolesModal extends LitElement {
     const hasDemons    = demons.some(r => !r.__spacer);
     const hasTravelers = travelers.some(r => !r.__spacer);
     const hasLorics    = lorics.length > 0;
+    const hasFabls     = fabls.length > 0;
 
     return html`
       <div class="modal-overlay modal-overlay--fullscreen" id="roles-sheet-overlay"
@@ -250,6 +252,16 @@ export class BotcRolesModal extends LitElement {
               </div>
               <div class="rc-grid rc-grid--2">
                 ${lorics.map(r => this._roleCard(r, inPlay))}
+              </div>
+            ` : nothing}
+
+            <!-- ── Fabled ── -->
+            ${hasFabls ? html`
+              <div class="rc-section-header rc-section-header--fabled">
+                <span class="rc-section-dot"></span>Fabled
+              </div>
+              <div class="rc-grid rc-grid--2">
+                ${fabls.map(r => this._roleCard(r, inPlay))}
               </div>
             ` : nothing}
 
