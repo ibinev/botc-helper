@@ -76,7 +76,7 @@ export class BotcRolesModal extends LitElement {
 
   _roleCard(role, inPlay) {
     if (role.__spacer) {
-      return html`<div class="rc-card rc-card--placeholder" aria-hidden="true"></div>`;
+      return html`<div class="rc-card rc-card--placeholder rc-cat-${role.cat}" aria-hidden="true"></div>`;
     }
     const icon   = ROLE_ICONS[role.name];
     const active = inPlay.has(role.name);

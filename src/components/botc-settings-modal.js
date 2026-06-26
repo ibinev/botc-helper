@@ -313,6 +313,32 @@ export class BotcSettingsModal extends LitElement {
     return null;
   }
 
+  _openSlotPicker(cat, index) {
+    this._slotTargetCat = cat;
+    this._slotTargetIndex = index;
+  }
+
+  _closeSlotPicker() {
+    this._slotTargetCat = null;
+    this._slotTargetIndex = -1;
+  }
+
+  _slotPosLabel(cat, index) {
+    const split = this._splitCountForCat(cat);
+    if (index < split) return `L${index + 1}`;
+    return `R${index - split + 1}`;
+  }
+
+  _nextListPlacement(cat) {
+    const c = this._ensureLayoutCat(cat);
+    const rows = Math.max(c.left.length, c.right.length);
+    for (let i = 0; i <= rows; i += 1) {
+      if (!c.left[i]) return { col: 'left', index: i };
+      if (!c.right[i]) return { col: 'right', index: i };
+    }
+    return { col: 'left', index: rows };
+  }
+
   _toggleCustomRole(name) {
     const cat = this._roleCat(name);
     if (!cat) return;
@@ -323,7 +349,10 @@ export class BotcSettingsModal extends LitElement {
     } else {
       selected.add(name);
       const c = this._ensureLayoutCat(cat);
-      c.left = [...c.left, name];
+      const place = this._nextListPlacement(cat);
+      const arr = [...c[place.col]];
+      arr[place.index] = name;
+      c[place.col] = arr;
     }
     this._customSelected = [...selected];
     this._customLayout = { ...this._customLayout };
@@ -618,7 +647,7 @@ export class BotcSettingsModal extends LitElement {
 
                   <div class="settings-script-builder-tabs" role="tablist" aria-label="Custom script builder mode">
                     <button class="settings-script-builder-tab ${builderMode === 'list' ? 'active' : ''}" type="button"
-                      @click="${() => { this._customBuilderMode = 'list'; }}">List</button>
+                      @click="${() => { this._customBuilderMode = 'list'; this._closeSlotPicker(); }}">List</button>
                     <button class="settings-script-builder-tab ${builderMode === 'slots' ? 'active' : ''}" type="button"
                       @click="${() => { this._customBuilderMode = 'slots'; }}">Slots (13/4/4/4)</button>
                   </div>
@@ -644,7 +673,7 @@ export class BotcSettingsModal extends LitElement {
 
                                 const leftButton = html`
                                   <button class="settings-script-slot-item ${leftName ? 'is-filled' : ''} ${leftActive ? 'is-active' : ''}" type="button"
-                                    @click="${() => { this._slotTargetCat = cat; this._slotTargetIndex = leftIndex; }}">
+                                    @click="${() => this._openSlotPicker(cat, leftIndex)}">
                                     <span class="settings-script-slot-pos">L${row + 1}</span>
                                     <span class="settings-script-slot-name">${leftName || 'Empty slot'}</span>
                                     ${leftName && isExperimentalRole(leftName) ? html`<span class="settings-script-role-exp" title="Experimental role" aria-label="Experimental role">E</span>` : nothing}
@@ -656,7 +685,7 @@ export class BotcSettingsModal extends LitElement {
 
                                 const rightButton = rightIndex < slots.length ? html`
                                   <button class="settings-script-slot-item ${rightName ? 'is-filled' : ''} ${rightActive ? 'is-active' : ''}" type="button"
-                                    @click="${() => { this._slotTargetCat = cat; this._slotTargetIndex = rightIndex; }}">
+                                    @click="${() => this._openSlotPicker(cat, rightIndex)}">
                                     <span class="settings-script-slot-pos">R${row + 1}</span>
                                     <span class="settings-script-slot-name">${rightName || 'Empty slot'}</span>
                                     ${rightName && isExperimentalRole(rightName) ? html`<span class="settings-script-role-exp" title="Experimental role" aria-label="Experimental role">E</span>` : nothing}
@@ -676,24 +705,41 @@ export class BotcSettingsModal extends LitElement {
                         `;
                       })}
                     </div>
+                    <div class="settings-script-slot-picker-hint">Tap any slot to open the role picker for that exact position.</div>
 
                     ${hasSlotTarget ? html`
-                      <div class="settings-script-slot-picker-label">Pick ${CAT_LABELS[this._slotTargetCat]} role for ${this._slotTargetIndex < this._splitCountForCat(this._slotTargetCat) ? 'L' : 'R'}${this._slotTargetIndex < this._splitCountForCat(this._slotTargetCat) ? this._slotTargetIndex + 1 : this._slotTargetIndex - this._splitCountForCat(this._slotTargetCat) + 1}</div>
-                      <div class="settings-script-slot-picker">
-                        ${slotPool.map(role => {
-                          const active = this._slotValuesForCat(this._slotTargetCat)[this._slotTargetIndex] === role.name;
-                          return html`
-                            <button class="settings-script-slot-role ${active ? 'is-active' : ''}" type="button"
-                              @click="${() => this._setSlotValue(this._slotTargetCat, this._slotTargetIndex, role.name)}">
-                              <span>${role.name}</span>
-                              ${isExperimentalRole(role.name) ? html`<span class="settings-script-role-exp" title="Experimental role" aria-label="Experimental role">E</span>` : nothing}
-                            </button>
-                          `;
-                        })}
+                      <div class="settings-script-slot-popup-overlay" @click="${e => { if (e.target.classList.contains('settings-script-slot-popup-overlay')) this._closeSlotPicker(); }}">
+                        <div class="settings-script-slot-popup" role="dialog" aria-modal="true" aria-label="Slot role picker">
+                          <div class="settings-script-slot-popup-header">
+                            <div class="settings-script-slot-popup-title">${CAT_LABELS[this._slotTargetCat]} · ${this._slotPosLabel(this._slotTargetCat, this._slotTargetIndex)}</div>
+                            <button class="btn-sm" type="button" @click="${() => this._closeSlotPicker()}">✕</button>
+                          </div>
+                          <div class="settings-script-slot-picker-label">Choose a role for ${this._slotPosLabel(this._slotTargetCat, this._slotTargetIndex)}.</div>
+                          <div class="settings-script-slot-picker">
+                            ${slotPool.map(role => {
+                              const active = this._slotValuesForCat(this._slotTargetCat)[this._slotTargetIndex] === role.name;
+                              return html`
+                                <button class="settings-script-slot-role ${active ? 'is-active' : ''}" type="button"
+                                  @click="${() => {
+                                    this._setSlotValue(this._slotTargetCat, this._slotTargetIndex, role.name);
+                                    this._closeSlotPicker();
+                                  }}">
+                                  <span>${role.name}</span>
+                                  ${isExperimentalRole(role.name) ? html`<span class="settings-script-role-exp" title="Experimental role" aria-label="Experimental role">E</span>` : nothing}
+                                </button>
+                              `;
+                            })}
+                          </div>
+                          <div class="settings-script-slot-popup-actions">
+                            <button class="btn" type="button" @click="${() => {
+                              this._clearSlotValue(this._slotTargetCat, this._slotTargetIndex);
+                              this._closeSlotPicker();
+                            }}">Clear slot</button>
+                            <button class="btn" type="button" @click="${() => this._closeSlotPicker()}">Done</button>
+                          </div>
+                        </div>
                       </div>
-                    ` : html`
-                      <div class="settings-script-slot-picker-hint">Click any empty or filled slot to choose a role for that exact position.</div>
-                    `}
+                    ` : nothing}
                   ` : html`
                     <div class="settings-script-role-list">
                       ${CAT_ORDER.map(cat => {
