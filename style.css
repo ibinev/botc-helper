@@ -59,6 +59,26 @@ body.day-mode {
   --charcount-demon-sticky: #f3d1cb;
 }
 
+/* ── Custom scrollbars ─────────────────────────────── */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(201,151,58,0.35) transparent;
+}
+*::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background: rgba(201,151,58,0.35);
+  border-radius: 999px;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(201,151,58,0.6);
+}
+
 html, body {
   height: 100%;
   min-height: -webkit-fill-available;
@@ -887,37 +907,65 @@ body.align-hints .seat.nom-voted.suspicious .seat-inner { background: rgba(155,7
   border-color: var(--gold);
   box-shadow: 0 0 0 2px rgba(201,151,58,0.15);
 }
-.settings-script-filter-row {
+.settings-script-search-wrap {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 8px 14px 0;
-}
-.settings-script-filter-label {
-  font-size: 12px;
-  color: var(--text-secondary);
-}
-.settings-script-builder-tabs {
-  display: flex;
   gap: 6px;
-  padding: 10px 14px 0;
 }
-.settings-script-builder-tab {
+.settings-script-search-wrap .settings-script-input {
   flex: 1;
-  height: 30px;
+  min-width: 0;
+}
+.settings-script-exp-btn {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
   border: 0.5px solid var(--border);
-  border-radius: 8px;
   background: var(--bg-input);
   color: var(--text-secondary);
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 700;
+  font-style: italic;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.12s, color 0.12s, background 0.12s;
+  line-height: 1;
 }
-.settings-script-builder-tab.active {
+.settings-script-exp-btn.active {
   border-color: var(--gold);
   color: var(--gold-light);
-  background: rgba(201,151,58,0.12);
+  background: rgba(201,151,58,0.14);
+}
+.settings-script-builder-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 6px 14px 0;
+  background: var(--bg-input);
+  border-radius: 999px;
+  margin: 6px 14px 0;
+  padding: 3px;
+  border: 0.5px solid var(--border);
+}
+.settings-script-builder-tab {
+  flex: 1;
+  height: 22px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  letter-spacing: 0.03em;
+  transition: background 0.12s, color 0.12s;
+}
+.settings-script-builder-tab.active {
+  background: rgba(201,151,58,0.22);
+  color: var(--gold-light);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.25);
 }
 .settings-script-role-list {
   margin-top: 10px;
@@ -1007,7 +1055,7 @@ body.align-hints .seat.nom-voted.suspicious .seat-inner { background: rgba(155,7
   width: 100%;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 8px;
   border: 0.5px solid var(--border);
   border-radius: var(--radius-sm);
@@ -1048,8 +1096,8 @@ body.align-hints .seat.nom-voted.suspicious .seat-inner { background: rgba(155,7
 }
 .settings-script-slot-popup {
   width: 100%;
-  max-width: 520px;
-  max-height: min(82dvh, calc(100dvh - var(--keyboard-inset) - 12px));
+  max-width: 600px;
+  max-height: min(88dvh, calc(100dvh - var(--keyboard-inset) - 12px));
   display: flex;
   flex-direction: column;
   background: var(--bg-surface);
@@ -1096,10 +1144,10 @@ body.align-hints .seat.nom-voted.suspicious .seat-inner { background: rgba(155,7
     display: none;
   }
   .settings-script-slot-popup-overlay {
-    padding: 8px;
+    padding: 4px;
   }
   .settings-script-slot-popup {
-    max-height: min(88dvh, calc(100dvh - var(--keyboard-inset) - 8px));
+    max-height: min(94dvh, calc(100dvh - var(--keyboard-inset) - 4px));
   }
 }
 .settings-script-role-group-label {

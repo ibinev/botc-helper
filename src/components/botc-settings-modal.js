@@ -640,17 +640,16 @@ export class BotcSettingsModal extends LitElement {
                       @keydown="${e => { if (e.key === 'Enter') this._submitCustomScript(); }}">
                   </div>
 
-                  <div class="settings-script-form-row">
+                  <div class="settings-script-form-row settings-script-search-row">
                     <label for="custom-script-role-search" class="settings-script-label">Roles</label>
-                    <input id="custom-script-role-search" class="settings-script-input" type="text" .value="${this._customQuery}"
-                      placeholder="Search roles..."
-                      @input="${e => { this._customQuery = e.target.value; }}">
-                  </div>
-
-                  <div class="settings-script-filter-row">
-                    <span class="settings-script-filter-label">Experimental</span>
-                    <button class="btn-sm btn-hints ${this._showExperimental ? 'active' : ''}" type="button"
-                      @click="${() => { this._showExperimental = !this._showExperimental; }}">${this._showExperimental ? 'On' : 'Off'}</button>
+                    <div class="settings-script-search-wrap">
+                      <input id="custom-script-role-search" class="settings-script-input" type="text" .value="${this._customQuery}"
+                        placeholder="Search roles..."
+                        @input="${e => { this._customQuery = e.target.value; }}">
+                      <button class="settings-script-exp-btn ${this._showExperimental ? 'active' : ''}" type="button"
+                        title="Toggle experimental roles"
+                        @click="${() => { this._showExperimental = !this._showExperimental; }}">E</button>
+                    </div>
                   </div>
 
                   <div class="settings-script-builder-tabs" role="tablist" aria-label="Custom script builder mode">
@@ -715,7 +714,6 @@ export class BotcSettingsModal extends LitElement {
                         `;
                       })}
                     </div>
-                    <div class="settings-script-slot-picker-hint">Tap any slot to open the role picker for that exact position.</div>
 
                     ${hasSlotTarget ? html`
                       <div class="settings-script-slot-popup-overlay" @click="${e => { if (e.target.classList.contains('settings-script-slot-popup-overlay')) this._closeSlotPicker(); }}">
