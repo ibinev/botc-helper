@@ -276,11 +276,18 @@ export class BotcSettingsModal extends LitElement {
     this._syncSelectedFromLayout();
   }
 
-  _slotRolePool(cat) {
+  _slotRolePool(cat, currentName = null) {
     const q = this._customQuery.trim().toLowerCase();
+    const assigned = new Set();
+    SLOT_TEMPLATE_ORDER.forEach(k => {
+      this._slotValuesForCat(k).forEach(name => {
+        if (name) assigned.add(name);
+      });
+    });
     return this.allRoles.filter(role => {
       if (role.cat !== cat) return false;
       if (q && !role.name.toLowerCase().includes(q)) return false;
+      if (assigned.has(role.name) && role.name !== currentName) return false;
       const isExp = isExperimentalRole(role.name);
       if (!this._showExperimental && isExp && !this._customSelected.includes(role.name)) return false;
       return true;
@@ -451,7 +458,8 @@ export class BotcSettingsModal extends LitElement {
     const builderMode = this._customBuilderMode;
     const groupedRoles = this._filteredRoles();
     const hasSlotTarget = !!this._slotTargetCat && this._slotTargetIndex >= 0;
-    const slotPool = hasSlotTarget ? this._slotRolePool(this._slotTargetCat) : [];
+    const currentSlotName = hasSlotTarget ? (this._slotValuesForCat(this._slotTargetCat)[this._slotTargetIndex] || null) : null;
+    const slotPool = hasSlotTarget ? this._slotRolePool(this._slotTargetCat, currentSlotName) : [];
     return html`
       <div class="modal-overlay" id="modal-settings">
         <div class="modal-sheet">
@@ -675,6 +683,7 @@ export class BotcSettingsModal extends LitElement {
                                   <button class="settings-script-slot-item ${leftName ? 'is-filled' : ''} ${leftActive ? 'is-active' : ''}" type="button"
                                     @click="${() => this._openSlotPicker(cat, leftIndex)}">
                                     <span class="settings-script-slot-pos">L${row + 1}</span>
+                                    ${leftName && ROLE_ICONS[leftName] ? html`<img class="settings-script-slot-icon" src="${ROLE_ICONS[leftName]}" alt="">` : nothing}
                                     <span class="settings-script-slot-name">${leftName || 'Empty slot'}</span>
                                     ${leftName && isExperimentalRole(leftName) ? html`<span class="settings-script-role-exp" title="Experimental role" aria-label="Experimental role">E</span>` : nothing}
                                     ${leftName ? html`
@@ -687,6 +696,7 @@ export class BotcSettingsModal extends LitElement {
                                   <button class="settings-script-slot-item ${rightName ? 'is-filled' : ''} ${rightActive ? 'is-active' : ''}" type="button"
                                     @click="${() => this._openSlotPicker(cat, rightIndex)}">
                                     <span class="settings-script-slot-pos">R${row + 1}</span>
+                                    ${rightName && ROLE_ICONS[rightName] ? html`<img class="settings-script-slot-icon" src="${ROLE_ICONS[rightName]}" alt="">` : nothing}
                                     <span class="settings-script-slot-name">${rightName || 'Empty slot'}</span>
                                     ${rightName && isExperimentalRole(rightName) ? html`<span class="settings-script-role-exp" title="Experimental role" aria-label="Experimental role">E</span>` : nothing}
                                     ${rightName ? html`
@@ -724,6 +734,7 @@ export class BotcSettingsModal extends LitElement {
                                     this._setSlotValue(this._slotTargetCat, this._slotTargetIndex, role.name);
                                     this._closeSlotPicker();
                                   }}">
+                                  ${ROLE_ICONS[role.name] ? html`<img class="settings-script-slot-role-icon" src="${ROLE_ICONS[role.name]}" alt="">` : nothing}
                                   <span>${role.name}</span>
                                   ${isExperimentalRole(role.name) ? html`<span class="settings-script-role-exp" title="Experimental role" aria-label="Experimental role">E</span>` : nothing}
                                 </button>
