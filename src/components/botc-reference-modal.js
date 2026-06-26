@@ -1,5 +1,5 @@
 import { LitElement, html, nothing } from 'lit';
-import { getRoles, getNightOrder, getCharacterCount, ROLE_ICONS, getScriptRoleLayout } from '../data.js';
+import { getRoles, getAllRoles, getNightOrder, getCharacterCount, ROLE_ICONS, getScriptRoleLayout } from '../data.js';
 import { CHARCOUNT_COLS } from '../utils.js';
 
 const BMR_ROLE_ORDER = {
@@ -185,34 +185,56 @@ export class BotcReferenceModal extends LitElement {
     const minions   = this._orderedRoles(roles.filter(r => r.cat === 'minion'), 'minion');
     const demons    = this._orderedRoles(roles.filter(r => r.cat === 'demon'), 'demon');
     const travelers = roles.filter(r => r.cat === 'traveler');
+    const lorics    = roles.filter(r => r.cat === 'loric');
     const hasCustomLayout = !!customLayout;
     const knownTownsfolk = new Set([...townsfolkLeft, ...townsfolkRight].map(r => r.name));
     const extraTownsfolk = roles.filter(r => r.cat === 'townsfolk' && !knownTownsfolk.has(r.name));
     const leftTownsfolk = [...townsfolkLeft, ...extraTownsfolk];
     const rightTownsfolk = townsfolkRight;
+    const hasTownsfolk = townsfolk.some(r => !r.__spacer) || leftTownsfolk.length > 0;
+    const hasOutsiders = outsiders.some(r => !r.__spacer);
+    const hasMinions   = minions.some(r => !r.__spacer);
+    const hasDemons    = demons.some(r => !r.__spacer);
+    const hasTravelers = travelers.length > 0;
+    const hasLorics    = lorics.length > 0;
     return html`
       <div class="ref-body">
-        <div class="rc-section-header rc-section-header--townsfolk"><span class="rc-section-dot"></span>Townsfolk</div>
-        ${customLayout?.townsfolk ? html`
-          <div class="rc-two-col">
-            <div class="rc-two-col-left">${leftTownsfolk.map(r => this._roleCard(r, inPlay))}</div>
-            <div class="rc-two-col-right">${rightTownsfolk.map(r => this._roleCard(r, inPlay))}</div>
-          </div>
-        ` : html`
-          <div class="rc-grid rc-grid--col-flow">${townsfolk.map(r => this._roleCard(r, inPlay))}</div>
-        `}
+        ${hasTownsfolk ? html`
+          <div class="rc-section-header rc-section-header--townsfolk"><span class="rc-section-dot"></span>Townsfolk</div>
+          ${customLayout?.townsfolk ? html`
+            <div class="rc-two-col">
+              <div class="rc-two-col-left">${leftTownsfolk.map(r => this._roleCard(r, inPlay))}</div>
+              <div class="rc-two-col-right">${rightTownsfolk.map(r => this._roleCard(r, inPlay))}</div>
+            </div>
+          ` : html`
+            <div class="rc-grid rc-grid--col-flow">${townsfolk.map(r => this._roleCard(r, inPlay))}</div>
+          `}
+        ` : nothing}
 
-        <div class="rc-section-header rc-section-header--outsider"><span class="rc-section-dot"></span>Outsiders</div>
-        <div class="rc-grid rc-grid--2">${outsiders.map(r => this._roleCard(r, inPlay))}</div>
+        ${hasOutsiders ? html`
+          <div class="rc-section-header rc-section-header--outsider"><span class="rc-section-dot"></span>Outsiders</div>
+          <div class="rc-grid rc-grid--2">${outsiders.map(r => this._roleCard(r, inPlay))}</div>
+        ` : nothing}
 
-        <div class="rc-section-header rc-section-header--minion"><span class="rc-section-dot"></span>Minions</div>
-        <div class="rc-grid rc-grid--2">${minions.map(r => this._roleCard(r, inPlay))}</div>
+        ${hasMinions ? html`
+          <div class="rc-section-header rc-section-header--minion"><span class="rc-section-dot"></span>Minions</div>
+          <div class="rc-grid rc-grid--2">${minions.map(r => this._roleCard(r, inPlay))}</div>
+        ` : nothing}
 
-        <div class="rc-section-header rc-section-header--demon"><span class="rc-section-dot"></span>Demon</div>
-        <div class="rc-grid ${this.script === 'bmr' || this.script === 'snv' || hasCustomLayout ? 'rc-grid--2' : 'rc-grid--1 rc-grid--demon'}">${demons.map(r => this._roleCard(r, inPlay))}</div>
+        ${hasDemons ? html`
+          <div class="rc-section-header rc-section-header--demon"><span class="rc-section-dot"></span>Demon</div>
+          <div class="rc-grid ${this.script === 'bmr' || this.script === 'snv' || hasCustomLayout ? 'rc-grid--2' : 'rc-grid--1 rc-grid--demon'}">${demons.map(r => this._roleCard(r, inPlay))}</div>
+        ` : nothing}
 
-        <div class="rc-section-header rc-section-header--traveler"><span class="rc-section-dot"></span>Travelers</div>
-        <div class="rc-grid rc-grid--2">${this._orderedRoles(travelers, 'traveler').map(r => this._roleCard(r, inPlay))}</div>
+        ${hasTravelers ? html`
+          <div class="rc-section-header rc-section-header--traveler"><span class="rc-section-dot"></span>Travelers</div>
+          <div class="rc-grid rc-grid--2">${this._orderedRoles(travelers, 'traveler').map(r => this._roleCard(r, inPlay))}</div>
+        ` : nothing}
+
+        ${hasLorics ? html`
+          <div class="rc-section-header rc-section-header--loric"><span class="rc-section-dot"></span>Loric</div>
+          <div class="rc-grid rc-grid--2">${lorics.map(r => this._roleCard(r, inPlay))}</div>
+        ` : nothing}
       </div>
     `;
   }

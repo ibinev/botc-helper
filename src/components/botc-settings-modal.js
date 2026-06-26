@@ -8,9 +8,11 @@ const SLOT_TEMPLATE_COUNTS = {
   outsider: 4,
   minion: 4,
   demon: 4,
+  traveler: 4,
+  loric: 4,
 };
 
-const SLOT_TEMPLATE_ORDER = ['townsfolk', 'outsider', 'minion', 'demon'];
+const SLOT_TEMPLATE_ORDER = ['townsfolk', 'outsider', 'minion', 'demon', 'traveler', 'loric'];
 
 /**
  * <botc-settings-modal>
@@ -58,6 +60,7 @@ export class BotcSettingsModal extends LitElement {
     _slotTargetCat:{ state: true },
     _slotTargetIndex:{ state: true },
     _advancedScriptLayout:{ state: true },
+    _scriptMenuOpen:{ state: true },
   };
 
   createRenderRoot() { return this; }
@@ -84,6 +87,7 @@ export class BotcSettingsModal extends LitElement {
     this._customBuilderMode = 'list';
     this._slotTargetCat = null;
     this._slotTargetIndex = -1;
+    this._scriptMenuOpen = false;
     this._advancedScriptLayout = typeof window !== 'undefined'
       ? window.matchMedia('(min-width: 768px)').matches
       : false;
@@ -131,6 +135,13 @@ export class BotcSettingsModal extends LitElement {
 
     overlay.addEventListener('click', e => { if (e.target === overlay) this._onClose(); });
 
+    this._onDocumentPointerDown = e => {
+      if (!this._scriptMenuOpen) return;
+      const scriptControl = this.querySelector('.settings-control--script');
+      if (scriptControl && !scriptControl.contains(e.target)) this._closeScriptMenu();
+    };
+    document.addEventListener('pointerdown', this._onDocumentPointerDown);
+
     this._layoutMedia = window.matchMedia('(min-width: 768px)');
     this._onLayoutMediaChange = e => {
       this._advancedScriptLayout = e.matches;
@@ -145,6 +156,9 @@ export class BotcSettingsModal extends LitElement {
 
   disconnectedCallback() {
     super.disconnectedCallback();
+    if (this._onDocumentPointerDown) {
+      document.removeEventListener('pointerdown', this._onDocumentPointerDown);
+    }
     if (this._layoutMedia && this._onLayoutMediaChange) {
       if (this._layoutMedia.removeEventListener) {
         this._layoutMedia.removeEventListener('change', this._onLayoutMediaChange);
@@ -155,11 +169,21 @@ export class BotcSettingsModal extends LitElement {
   }
 
   _onClose() {
+    this._closeScriptMenu();
     this._closeCustomScriptPicker();
     this.dispatchEvent(new CustomEvent('modal-close', { bubbles: true, composed: true }));
   }
 
+  _toggleScriptMenu() {
+    this._scriptMenuOpen = !this._scriptMenuOpen;
+  }
+
+  _closeScriptMenu() {
+    this._scriptMenuOpen = false;
+  }
+
   _openCustomScriptPicker() {
+    this._closeScriptMenu();
     this._customMode = 'create';
     this._customOpen = true;
     this._customName = '';
@@ -175,6 +199,7 @@ export class BotcSettingsModal extends LitElement {
   _openEditCustomScriptPicker() {
     const s = this.selectedCustomScript;
     if (!s?.id) return;
+    this._closeScriptMenu();
     this._customMode = 'edit';
     this._customOpen = true;
     this._customName = s.label || '';
@@ -402,7 +427,11 @@ export class BotcSettingsModal extends LitElement {
           layout[cat] = { left, right };
           roles.push(...left, ...right);
         } else {
-          layout[cat] = { left: [], right: [] };
+          const c = this._ensureLayoutCat(cat);
+          const left = c.left.filter(r => this._customSelected.includes(r));
+          const right = c.right.filter(r => this._customSelected.includes(r));
+          layout[cat] = { left, right };
+          roles.push(...left, ...right);
         }
       });
       if (!roles.length) return;
@@ -427,6 +456,7 @@ export class BotcSettingsModal extends LitElement {
 
   _deleteSelectedCustomScript() {
     if (!this.selectedCustomScript?.id) return;
+    this._closeScriptMenu();
     this._fire('custom-script-delete', { id: this.selectedCustomScript.id });
   }
 
@@ -512,20 +542,27 @@ export class BotcSettingsModal extends LitElement {
                 <div class="settings-label">Script</div>
                 <div class="settings-sub">Select script-specific roles and references</div>
               </div>
-              <div class="settings-control">
+              <div class="settings-control settings-control--script">
                 <select class="btn-sm settings-script-select"
-                  @change="${e => this._fire('script-change', { script: e.target.value })}">
+                  @change="${e => { this._closeScriptMenu(); this._fire('script-change', { script: e.target.value }); }}">
                   ${(this.scriptOptions || SCRIPT_OPTIONS).map(s => html`
                     <option value="${s.id}" ?selected="${this.script === s.id}">${s.label}</option>
                   `)}
                 </select>
-                <button class="btn-sm settings-script-add" title="Create custom script"
-                  @click="${() => this._openCustomScriptPicker()}">+</button>
-                ${this.selectedCustomScript ? html`
-                  <button class="btn-sm settings-script-edit" title="Edit selected custom script"
-                    @click="${() => this._openEditCustomScriptPicker()}">✎</button>
-                  <button class="btn-sm settings-script-delete" title="Delete selected custom script"
-                    @click="${() => this._deleteSelectedCustomScript()}">🗑</button>
+                <button class="btn-sm settings-script-menu-btn ${this._scriptMenuOpen ? 'active' : ''}" type="button" title="Custom script actions"
+                  aria-haspopup="menu" aria-expanded="${this._scriptMenuOpen ? 'true' : 'false'}"
+                  @click="${e => { e.stopPropagation(); this._toggleScriptMenu(); }}">⋯</button>
+                ${this._scriptMenuOpen ? html`
+                  <div class="settings-script-menu" role="menu" @click="${e => e.stopPropagation()}">
+                    <button class="settings-script-menu-item" type="button" role="menuitem" title="Add custom script"
+                      @click="${() => this._openCustomScriptPicker()}"><span class="settings-script-menu-icon">➕</span><span class="settings-script-menu-label">Add</span></button>
+                    ${this.selectedCustomScript ? html`
+                      <button class="settings-script-menu-item" type="button" role="menuitem" title="Edit custom script"
+                        @click="${() => this._openEditCustomScriptPicker()}"><span class="settings-script-menu-icon">✏️</span><span class="settings-script-menu-label">Edit</span></button>
+                      <button class="settings-script-menu-item settings-script-menu-item--danger" type="button" role="menuitem" title="Delete custom script"
+                        @click="${() => this._deleteSelectedCustomScript()}"><span class="settings-script-menu-icon">🗑️</span><span class="settings-script-menu-label">Delete</span></button>
+                    ` : nothing}
+                  </div>
                 ` : nothing}
               </div>
             </div>
@@ -656,7 +693,7 @@ export class BotcSettingsModal extends LitElement {
                     <button class="settings-script-builder-tab ${builderMode === 'list' ? 'active' : ''}" type="button"
                       @click="${() => { this._customBuilderMode = 'list'; this._closeSlotPicker(); }}">List</button>
                     <button class="settings-script-builder-tab ${builderMode === 'slots' ? 'active' : ''}" type="button"
-                      @click="${() => { this._customBuilderMode = 'slots'; }}">Slots (13/4/4/4)</button>
+                      @click="${() => { this._customBuilderMode = 'slots'; }}">Slots</button>
                   </div>
 
                   ${builderMode === 'slots' ? html`
