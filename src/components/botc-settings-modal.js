@@ -315,7 +315,7 @@ export class BotcSettingsModal extends LitElement {
       if (q && !role.name.toLowerCase().includes(q)) return false;
       if (assigned.has(role.name) && role.name !== currentName) return false;
       const isExp = isExperimentalRole(role.name);
-      if (!this._showExperimental && isExp && !this._customSelected.includes(role.name)) return false;
+      if (!this._showExperimental && isExp && role.cat !== 'loric' && role.cat !== 'fabled' && !this._customSelected.includes(role.name)) return false;
       return true;
     });
   }
@@ -467,7 +467,7 @@ export class BotcSettingsModal extends LitElement {
     this.allRoles.forEach(role => {
       if (q && !role.name.toLowerCase().includes(q)) return;
       const isExp = isExperimentalRole(role.name);
-      if (!this._showExperimental && isExp && !this._customSelected.includes(role.name)) return;
+      if (!this._showExperimental && isExp && role.cat !== 'loric' && role.cat !== 'fabled' && !this._customSelected.includes(role.name)) return;
       if (!grouped[role.cat]) grouped[role.cat] = [];
       grouped[role.cat].push(role);
     });
@@ -730,7 +730,7 @@ export class BotcSettingsModal extends LitElement {
                                 `;
 
                                 const rightButton = rightIndex < slots.length ? html`
-                                  <button class="settings-script-slot-item ${rightName ? 'is-filled' : ''} ${rightActive ? 'is-active' : ''}" type="button"
+                                  <button class="settings-script-slot-item ${rightName ? 'is-filled' : 'slot-right-empty'} ${rightActive ? 'is-active' : ''}" type="button"
                                     @click="${() => this._openSlotPicker(cat, rightIndex)}">
                                     <span class="settings-script-slot-pos">R${row + 1}</span>
                                     ${rightName && ROLE_ICONS[rightName] ? html`<img class="settings-script-slot-icon" src="${ROLE_ICONS[rightName]}" alt="">` : nothing}

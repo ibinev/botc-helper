@@ -1203,6 +1203,9 @@ body.align-hints .seat.nom-voted.suspicious .seat-inner { background: rgba(155,7
   .settings-script-slot-spacer {
     display: none;
   }
+  .settings-script-slot-grid > .slot-right-empty {
+    display: none;
+  }
   .settings-script-slot-popup-overlay {
     padding: 4px;
   }
