@@ -90,6 +90,8 @@ html, body {
   font-family: var(--font-sans);
   font-size: 14px;
   line-height: 1.5;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 /* pan-x pan-y allows scrolling when zoomed in; manipulation alone blocks panning */
 * { touch-action: manipulation; }
