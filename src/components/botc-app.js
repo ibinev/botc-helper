@@ -1035,6 +1035,10 @@ export class BotcApp extends LitElement {
         @custom-script-delete="${e => {
           this._deleteCustomScript(e.detail.id);
         }}"
+        @script-picker-open="${() => {
+          this._settingsOpen = false;
+          this.requestUpdate();
+        }}"
         @story-view-toggle="${() => {
           this.storyView = !this.storyView;
           this._applyStoryView();

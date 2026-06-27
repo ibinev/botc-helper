@@ -638,9 +638,7 @@ body.align-hints .seat.nom-voted.suspicious .seat-inner { background: rgba(155,7
 .rc-card--placeholder { background: transparent; border-color: transparent; box-shadow: none; }
 .rc-card--active { border-left-width: 4px; }
 @media (max-width: 479px) {
-  .rc-card--placeholder.rc-cat-outsider,
-  .rc-card--placeholder.rc-cat-minion,
-  .rc-card--placeholder.rc-cat-demon { display: none; }
+  .rc-card--placeholder { display: none; }
 }
 .rc-cat-townsfolk.rc-card--active { border-color: #8fca4b;  background: rgba(90,158,47,0.18); }
 .rc-cat-outsider.rc-card--active  { border-color: #7ab8f5;  background: rgba(90,158,200,0.18); }
@@ -912,6 +910,31 @@ body.align-hints .seat.nom-voted.suspicious .seat-inner { background: rgba(155,7
   align-items: center;
   justify-content: center;
   padding: 14px;
+}
+.modal-overlay--custom-open .modal-sheet > .modal-drag-bar,
+.modal-overlay--custom-open .modal-inner > :not(.settings-script-overlay) {
+  display: none;
+}
+.modal-overlay--custom-open {
+  align-items: stretch;
+  justify-content: stretch;
+}
+.modal-overlay--custom-open .modal-sheet {
+  width: 100%;
+  max-width: none;
+  height: 100dvh;
+  max-height: none;
+  margin: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  overflow: visible;
+  transform: none;
+  transition: none;
+}
+.modal-overlay--custom-open .modal-inner {
+  padding: 0;
+  overflow: visible;
 }
 .settings-script-sheet {
   width: 100%;

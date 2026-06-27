@@ -1,4 +1,4 @@
-const VERSION = 'v2';
+const VERSION = 'v3';
 const CACHE = 'botc-' + VERSION;
 // Derive base path so this works at root (localhost) or a subpath (GitHub Pages)
 const BASE = self.location.pathname.replace(/\/sw\.js$/, '') || '';
@@ -49,6 +49,26 @@ self.addEventListener('activate', e => {
 // CDN resources: cache-first after first load
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
+  const isLocal = url.origin === self.location.origin;
+  const isRoleIcon = isLocal && url.pathname.includes('/assets/roles/');
+  const isStaticAsset = isLocal && /\.(png|jpg|jpeg|webp|svg|gif|ico|woff2?|ttf)$/i.test(url.pathname);
+
+  // Role icons and other static binary assets: cache-first for instant UI.
+  // Update cache in background when online.
+  if (isRoleIcon || isStaticAsset) {
+    e.respondWith(
+      caches.open(CACHE).then(cache =>
+        cache.match(e.request).then(cached => {
+          const fresh = fetch(e.request).then(res => {
+            if (res.ok) cache.put(e.request, res.clone());
+            return res;
+          });
+          return cached || fresh;
+        })
+      )
+    );
+    return;
+  }
 
   if (url.hostname === 'esm.sh') {
     // CDN: cache-first, update cache in background

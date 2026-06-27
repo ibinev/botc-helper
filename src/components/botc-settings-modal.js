@@ -171,7 +171,6 @@ export class BotcSettingsModal extends LitElement {
 
   _onClose() {
     this._closeScriptMenu();
-    this._closeCustomScriptPicker();
     this.dispatchEvent(new CustomEvent('modal-close', { bubbles: true, composed: true }));
   }
 
@@ -194,6 +193,8 @@ export class BotcSettingsModal extends LitElement {
     this._customBuilderMode = 'list';
     this._slotTargetCat = null;
     this._slotTargetIndex = -1;
+    // Close settings while opening the detached custom-script popup.
+    this.dispatchEvent(new CustomEvent('modal-close', { bubbles: true, composed: true }));
     this._fire('script-picker-open', {});
   }
 
@@ -226,6 +227,8 @@ export class BotcSettingsModal extends LitElement {
     this._customBuilderMode = 'list';
     this._slotTargetCat = null;
     this._slotTargetIndex = -1;
+    // Close settings while opening the detached custom-script popup.
+    this.dispatchEvent(new CustomEvent('modal-close', { bubbles: true, composed: true }));
     this._fire('script-picker-open', {});
   }
 
@@ -492,6 +495,7 @@ export class BotcSettingsModal extends LitElement {
     const currentSlotName = hasSlotTarget ? (this._slotValuesForCat(this._slotTargetCat)[this._slotTargetIndex] || null) : null;
     const slotPool = hasSlotTarget ? this._slotRolePool(this._slotTargetCat, currentSlotName) : [];
     return html`
+      <div>
       <div class="modal-overlay" id="modal-settings">
         <div class="modal-sheet">
           <div class="modal-drag-bar" id="modal-settings-dragbar"><div class="pill"></div></div>
@@ -662,8 +666,15 @@ export class BotcSettingsModal extends LitElement {
               ${APP_VERSION} · Open guide
             </div>
 
-            ${this._customOpen ? html`
-              <div class="settings-script-overlay" @click="${e => { if (e.target.classList.contains('settings-script-overlay')) this._closeCustomScriptPicker(); }}">
+          </div>
+        </div>
+      </div>
+
+      ${this._customOpen ? html`
+        <div class="settings-script-overlay"
+          @touchstart="${e => { this._csOverlayTouchY = e.touches[0].clientY; this._csOverlayScrolled = false; }}"
+          @touchmove="${e => { if (Math.abs(e.touches[0].clientY - this._csOverlayTouchY) > 8) this._csOverlayScrolled = true; }}"
+          @click="${e => { if (this._csOverlayScrolled) return; if (e.target.classList.contains('settings-script-overlay')) this._closeCustomScriptPicker(); }}">
                 <div class="settings-script-sheet">
                   <div class="settings-script-header">
                     <div class="settings-script-title">${this._customMode === 'edit' ? 'Edit custom script' : 'Custom script'}</div>
@@ -720,7 +731,7 @@ export class BotcSettingsModal extends LitElement {
                                   <button class="settings-script-slot-item ${leftName ? 'is-filled' : ''} ${leftActive ? 'is-active' : ''}" type="button"
                                     @click="${() => this._openSlotPicker(cat, leftIndex)}">
                                     <span class="settings-script-slot-pos">L${row + 1}</span>
-                                    ${leftName && ROLE_ICONS[leftName] ? html`<img class="settings-script-slot-icon" src="${ROLE_ICONS[leftName]}" alt="">` : nothing}
+                                    ${leftName && ROLE_ICONS[leftName] ? html`<img class="settings-script-slot-icon" src="${ROLE_ICONS[leftName]}" alt="" loading="lazy" decoding="async">` : nothing}
                                     <span class="settings-script-slot-name">${leftName || 'Empty slot'}</span>
                                     ${leftName && isExperimentalRole(leftName) ? html`<span class="settings-script-role-exp" title="Experimental role" aria-label="Experimental role">E</span>` : nothing}
                                     ${leftName ? html`
@@ -730,10 +741,10 @@ export class BotcSettingsModal extends LitElement {
                                 `;
 
                                 const rightButton = rightIndex < slots.length ? html`
-                                  <button class="settings-script-slot-item ${rightName ? 'is-filled' : 'slot-right-empty'} ${rightActive ? 'is-active' : ''}" type="button"
+                                  <button class="settings-script-slot-item ${rightName ? 'is-filled' : (rows === 1 ? 'slot-right-empty' : '')} ${rightActive ? 'is-active' : ''}" type="button"
                                     @click="${() => this._openSlotPicker(cat, rightIndex)}">
                                     <span class="settings-script-slot-pos">R${row + 1}</span>
-                                    ${rightName && ROLE_ICONS[rightName] ? html`<img class="settings-script-slot-icon" src="${ROLE_ICONS[rightName]}" alt="">` : nothing}
+                                    ${rightName && ROLE_ICONS[rightName] ? html`<img class="settings-script-slot-icon" src="${ROLE_ICONS[rightName]}" alt="" loading="lazy" decoding="async">` : nothing}
                                     <span class="settings-script-slot-name">${rightName || 'Empty slot'}</span>
                                     ${rightName && isExperimentalRole(rightName) ? html`<span class="settings-script-role-exp" title="Experimental role" aria-label="Experimental role">E</span>` : nothing}
                                     ${rightName ? html`
@@ -770,7 +781,7 @@ export class BotcSettingsModal extends LitElement {
                                     this._setSlotValue(this._slotTargetCat, this._slotTargetIndex, role.name);
                                     this._closeSlotPicker();
                                   }}">
-                                  ${ROLE_ICONS[role.name] ? html`<img class="settings-script-slot-role-icon" src="${ROLE_ICONS[role.name]}" alt="">` : nothing}
+                                  ${ROLE_ICONS[role.name] ? html`<img class="settings-script-slot-role-icon" src="${ROLE_ICONS[role.name]}" alt="" loading="lazy" decoding="async">` : nothing}
                                   <span>${role.name}</span>
                                   ${isExperimentalRole(role.name) ? html`<span class="settings-script-role-exp" title="Experimental role" aria-label="Experimental role">E</span>` : nothing}
                                 </button>
@@ -803,7 +814,7 @@ export class BotcSettingsModal extends LitElement {
                                 <button class="settings-script-role-item ${selected ? 'is-selected' : ''}" type="button"
                                   @click="${() => this._toggleCustomRole(role.name)}">
                                   <span class="settings-script-role-check">${selected ? '✓' : ''}</span>
-                                  ${icon ? html`<img class="settings-script-role-icon" src="${icon}" alt="">` : nothing}
+                                  ${icon ? html`<img class="settings-script-role-icon" src="${icon}" alt="" loading="lazy" decoding="async">` : nothing}
                                   <span class="settings-script-role-name">${role.name}</span>
                                   ${isExperimentalRole(role.name) ? html`
                                     <span class="settings-script-role-exp" title="Experimental role" aria-label="Experimental role">E</span>
@@ -841,11 +852,9 @@ export class BotcSettingsModal extends LitElement {
                       @click="${() => this._submitCustomScript()}">${this._customMode === 'edit' ? 'Save changes' : 'Create script'}</button>
                   </div>
                 </div>
-              </div>
-            ` : nothing}
-
-          </div>
         </div>
+      ` : nothing}
+
       </div>
     `;
   }
