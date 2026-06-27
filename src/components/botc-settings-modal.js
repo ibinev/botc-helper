@@ -702,7 +702,7 @@ export class BotcSettingsModal extends LitElement {
               </div>
               <div class="settings-control">
                 <button class="btn btn-gold"
-                  @click="${() => { this._onClose(); this._fire('clear-table', {}); }}">⟳ Clear</button>
+                  @click="${() => { this._onClose(); this._fire('clear-table', {}); }}">↺ Clear</button>
               </div>
             </div>
 
