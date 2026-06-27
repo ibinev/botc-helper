@@ -29,6 +29,7 @@ Use this when running a live game and you need a fast reminder.
 5. 🧪 Status tracking
 - Seat editor toggles: Dead, Ghost vote, Drunk, Poisoned
 - Top bar pills: 🟢 alive count, 💀 dead count
+- Click 🟢 alive count to hide/show dead seats on the board
 
 6. ♻️ Reset options
 - Clear table: keeps names + seat positions
@@ -98,8 +99,12 @@ The UI has three primary areas:
 - Red pill with count: dead players
 
 ### Roles visibility toggle
-- 🚫 Stop icon (roles visible): hides role text and dead seats in board view
-- 👁️ Eye icon (roles hidden): shows role text again
+- 🚫 Stop icon (roles visible): hides role text/icons/tags in board and player list views
+- 👁️ Eye icon (roles hidden): shows role text/icons/tags again
+
+### Dead seats visibility toggle
+- Click the 🟢 alive-count pill to toggle dead seat visibility on the board
+- 💀 dead-count pill is display-only
 
 ### Notes
 📜 Opens notes sheet for day/night round notes.
@@ -158,6 +163,12 @@ Useful details:
 - Step 1: tap nominator seat
 - Step 2: tap nominee seat
 
+Nomination constraints:
+- Dead players cannot nominate
+- Dead players cannot be nominated
+- A player may nominate only once per day
+- A player may be nominated only once per day
+
 ### Voting mode
 After creating nomination, app enters vote mode:
 - Tap seats to add/remove votes
@@ -178,6 +189,11 @@ From top bar nominations icon:
 Threshold indicator behavior:
 - Required votes = ceil(aliveCount / 2) captured at nomination time
 - Vote outcome badge reflects pass/fail styling in history
+
+Execution marker behavior:
+- 💀 is shown only for a unique highest nomination that reached threshold
+- If top reached nominations are tied, nobody gets 💀 (all tied nominees only show ⚖️)
+- If a later nomination exceeds that tie and is uniquely highest, it gets 💀
 
 ## 7. 📜 Notes System
 
@@ -234,6 +250,17 @@ Top bar Reference opens a 3-tab reference module:
   - Trouble Brewing (tb)
   - Bad Moon Rising (bmr)
   - Sects and Violets (snv)
+- Open custom script menu (⋯) to:
+  - Add custom script
+  - Copy currently selected script into a custom draft
+  - Edit selected custom script
+  - Delete selected custom script (with confirmation)
+
+Custom script builder:
+- Name field first
+- List/Slots tabs directly under Name
+- Role search + experimental toggle shown in List mode
+- In Slots mode, filtering is in the slot popup (`Choose a role for ...`)
 
 ### Appearance
 - Theme toggle (dark/day)
@@ -253,7 +280,7 @@ Top bar Reference opens a 3-tab reference module:
 
 ### Data management
 - Clear table: reset game state but keep names and seat positions
-- Clear player pool: remove saved pool names
+- Player pool clear: use ↺ button in the Player pool row (with confirmation)
 - Reset everything: full reset including seat positions
 
 ## 11. 🧲 Move Mode and Custom Layout
@@ -333,4 +360,4 @@ If running locally fails:
 
 ---
 
-Version in app source at time of writing: v5.2.3
+Version in app source at time of writing: v6.2.3

@@ -521,6 +521,12 @@ export class BotcSettingsModal extends LitElement {
     this._fire('custom-script-delete', { id: this.selectedCustomScript.id });
   }
 
+  _confirmClearPlayerPool() {
+    const ok = window.confirm('Clear all saved player pool names? This cannot be undone.');
+    if (!ok) return;
+    this._fire('clear-player-pool', {});
+  }
+
   _filteredRoles() {
     const q = this._customQuery.trim().toLowerCase();
     const grouped = {};
@@ -594,8 +600,10 @@ export class BotcSettingsModal extends LitElement {
                 <div class="settings-sub">Open and manage saved player names</div>
               </div>
               <div class="settings-control">
-                <button class="btn btn-gold"
+                <button class="btn btn-gold settings-pool-btn"
                   @click="${() => { this._onClose(); this._fire('open-player-pool', {}); }}">👥 Open</button>
+                <button class="btn btn-gold settings-pool-clear-btn" title="Clear player pool" aria-label="Clear player pool"
+                  @click="${() => this._confirmClearPlayerPool()}">↺</button>
               </div>
             </div>
 
@@ -700,17 +708,6 @@ export class BotcSettingsModal extends LitElement {
 
             <div class="settings-row">
               <div>
-                <div class="settings-label">Clear player pool</div>
-                <div class="settings-sub">Remove all saved pool names</div>
-              </div>
-              <div class="settings-control">
-                <button class="btn btn-gold"
-                  @click="${() => { this._onClose(); this._fire('clear-player-pool', {}); }}">Clear pool</button>
-              </div>
-            </div>
-
-            <div class="settings-row">
-              <div>
                 <div class="settings-label settings-label--danger">Reset everything</div>
                 <div class="settings-sub">Clear all data including seat positions (keeps player pool)</div>
               </div>
@@ -748,24 +745,26 @@ export class BotcSettingsModal extends LitElement {
                       @keydown="${e => { if (e.key === 'Enter') this._submitCustomScript(); }}">
                   </div>
 
-                  <div class="settings-script-form-row settings-script-search-row">
-                    <label for="custom-script-role-search" class="settings-script-label">Roles</label>
-                    <div class="settings-script-search-wrap">
-                      <input id="custom-script-role-search" class="settings-script-input" type="text" .value="${this._customQuery}"
-                        placeholder="Search roles..."
-                        @input="${e => { this._customQuery = e.target.value; }}">
-                      <button class="settings-script-exp-btn ${this._showExperimental ? 'active' : ''}" type="button"
-                        title="Toggle experimental roles"
-                        @click="${() => { this._showExperimental = !this._showExperimental; }}">E</button>
-                    </div>
-                  </div>
-
                   <div class="settings-script-builder-tabs" role="tablist" aria-label="Custom script builder mode">
                     <button class="settings-script-builder-tab ${builderMode === 'list' ? 'active' : ''}" type="button"
                       @click="${() => { this._customBuilderMode = 'list'; this._closeSlotPicker(); }}">List</button>
                     <button class="settings-script-builder-tab ${builderMode === 'slots' ? 'active' : ''}" type="button"
                       @click="${() => { this._customBuilderMode = 'slots'; }}">Slots</button>
                   </div>
+
+                  ${builderMode === 'list' ? html`
+                    <div class="settings-script-form-row settings-script-search-row">
+                      <label for="custom-script-role-search" class="settings-script-label">Roles</label>
+                      <div class="settings-script-search-wrap">
+                        <input id="custom-script-role-search" class="settings-script-input" type="text" .value="${this._customQuery}"
+                          placeholder="Search roles..."
+                          @input="${e => { this._customQuery = e.target.value; }}">
+                        <button class="settings-script-exp-btn ${this._showExperimental ? 'active' : ''}" type="button"
+                          title="Toggle experimental roles"
+                          @click="${() => { this._showExperimental = !this._showExperimental; }}">E</button>
+                      </div>
+                    </div>
+                  ` : nothing}
 
                   ${builderMode === 'slots' ? html`
                     <div class="settings-script-slot-list">
@@ -831,6 +830,16 @@ export class BotcSettingsModal extends LitElement {
                             <button class="btn-sm" type="button" @click="${() => this._closeSlotPicker()}">✕</button>
                           </div>
                           <div class="settings-script-slot-picker-label">Choose a role for ${this._slotPosLabel(this._slotTargetCat, this._slotTargetIndex)}.</div>
+                          <div class="settings-script-form-row settings-script-search-row settings-script-slot-search-row">
+                            <div class="settings-script-search-wrap">
+                              <input id="custom-script-slot-search" class="settings-script-input" type="text" .value="${this._customQuery}"
+                                placeholder="Filter roles..."
+                                @input="${e => { this._customQuery = e.target.value; }}">
+                              <button class="settings-script-exp-btn ${this._showExperimental ? 'active' : ''}" type="button"
+                                title="Toggle experimental roles"
+                                @click="${() => { this._showExperimental = !this._showExperimental; }}">E</button>
+                            </div>
+                          </div>
                           <div class="settings-script-slot-picker">
                             ${slotPool.map(role => {
                               const active = this._slotValuesForCat(this._slotTargetCat)[this._slotTargetIndex] === role.name;
