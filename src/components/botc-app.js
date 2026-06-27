@@ -1,5 +1,5 @@
 import { LitElement, html, nothing } from 'lit';
-import { ROLES_IMG_URL, normalizeScript, setCustomScripts, getScriptOptions, getAllRoles } from '../data.js';
+import { ROLES_IMG_URL, normalizeScript, setCustomScripts, getScriptOptions, getAllRoles, getRoles, getScriptRoleLayout } from '../data.js';
 import { blankSeat, MIN, MAX, MAX_STEP, phaseRoundToStep, stepToPhaseRound } from '../utils.js';
 import './botc-circle.js';
 import './botc-edit-modal.js';
@@ -1000,6 +1000,9 @@ export class BotcApp extends LitElement {
         .seatCount="${this.seatCount}"
         .script="${this.script}"
         .scriptOptions="${getScriptOptions()}"
+        .selectedScriptLabel="${getScriptOptions().find(s => s.id === this.script)?.label || 'Script'}"
+        .selectedScriptRoles="${getRoles(this.script).map(r => r.name)}"
+        .selectedScriptLayout="${getScriptRoleLayout(this.script)}"
         .allRoles="${getAllRoles()}"
         .selectedCustomScript="${this.customScripts.find(s => s.id === this.script) || null}"
         .alignHints="${this.alignHints}"

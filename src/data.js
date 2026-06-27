@@ -115,6 +115,7 @@ export const ROLES = [
   { name:'Thief',         cat:'traveler',  align:'good', ability:'Each night, choose a player: their vote counts as −1 vote tomorrow.' },
 ];
 
+const TB_ROLES = ROLES.filter(r => r.cat !== 'traveler');
 const TRAVELER_ROLES = ROLES.filter(r => r.cat === 'traveler');
 
 const BMR_CORE_ROLES = [
@@ -299,7 +300,7 @@ export function isExperimentalRole(name) {
 
 export function getRoles(script = 'tb') {
   const id = normalizeScript(script);
-  if (id === 'tb') return ROLES;
+  if (id === 'tb') return TB_ROLES;
   if (id === 'bmr') return [...BMR_CORE_ROLES, ...TRAVELER_ROLES];
   if (id === 'snv') return [...SNV_CORE_ROLES, ...TRAVELER_ROLES];
   const custom = getCustomScript(id);

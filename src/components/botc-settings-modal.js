@@ -45,6 +45,9 @@ export class BotcSettingsModal extends LitElement {
     seatCount:  { type: Number  },
     script:     { type: String  },
     scriptOptions: { type: Array },
+    selectedScriptLabel: { type: String },
+    selectedScriptRoles: { type: Array },
+    selectedScriptLayout: { type: Object },
     allRoles:   { type: Array },
     selectedCustomScript: { type: Object },
     alignHints: { type: Boolean },
@@ -72,6 +75,9 @@ export class BotcSettingsModal extends LitElement {
     this.seatCount  = 12;
     this.script     = 'tb';
     this.scriptOptions = SCRIPT_OPTIONS;
+    this.selectedScriptLabel = '';
+    this.selectedScriptRoles = [];
+    this.selectedScriptLayout = null;
     this.allRoles   = [];
     this.selectedCustomScript = null;
     this.alignHints = false;
@@ -190,6 +196,54 @@ export class BotcSettingsModal extends LitElement {
     this._customQuery = '';
     this._customSelected = [];
     this._customLayout = {};
+    this._customBuilderMode = 'list';
+    this._slotTargetCat = null;
+    this._slotTargetIndex = -1;
+    // Close settings while opening the detached custom-script popup.
+    this.dispatchEvent(new CustomEvent('modal-close', { bubbles: true, composed: true }));
+    this._fire('script-picker-open', {});
+  }
+
+  _buildLayoutFromRoles(roles, preferredLayout = null) {
+    const selected = new Set((roles || []).filter(Boolean));
+    const layout = {};
+
+    CAT_ORDER.forEach(cat => {
+      const left = [];
+      const right = [];
+      const preferredLeft = Array.isArray(preferredLayout?.[cat]?.left) ? preferredLayout[cat].left : [];
+      const preferredRight = Array.isArray(preferredLayout?.[cat]?.right) ? preferredLayout[cat].right : [];
+
+      preferredLeft.forEach(name => {
+        if (selected.has(name) && !left.includes(name) && !right.includes(name)) left.push(name);
+      });
+      preferredRight.forEach(name => {
+        if (selected.has(name) && !left.includes(name) && !right.includes(name)) right.push(name);
+      });
+
+      const missing = (roles || []).filter(name => this._roleCat(name) === cat && !left.includes(name) && !right.includes(name));
+      missing.forEach((name, idx) => {
+        if (idx % 2 === 0) left.push(name);
+        else right.push(name);
+      });
+
+      layout[cat] = { left, right };
+    });
+
+    return layout;
+  }
+
+  _openDuplicateScriptPicker() {
+    const roles = Array.isArray(this.selectedScriptRoles) ? [...new Set(this.selectedScriptRoles.filter(Boolean))] : [];
+    if (!roles.length) return;
+
+    this._closeScriptMenu();
+    this._customMode = 'create';
+    this._customOpen = true;
+    this._customName = `${this.selectedScriptLabel || 'Script'} Copy`;
+    this._customQuery = '';
+    this._customSelected = roles;
+    this._customLayout = this._buildLayoutFromRoles(roles, this.selectedScriptLayout);
     this._customBuilderMode = 'list';
     this._slotTargetCat = null;
     this._slotTargetIndex = -1;
@@ -460,6 +514,9 @@ export class BotcSettingsModal extends LitElement {
 
   _deleteSelectedCustomScript() {
     if (!this.selectedCustomScript?.id) return;
+    const name = this.selectedCustomScript.label || 'this custom script';
+    const ok = window.confirm(`Delete "${name}"? This cannot be undone.`);
+    if (!ok) return;
     this._closeScriptMenu();
     this._fire('custom-script-delete', { id: this.selectedCustomScript.id });
   }
@@ -561,6 +618,8 @@ export class BotcSettingsModal extends LitElement {
                   <div class="settings-script-menu" role="menu" @click="${e => e.stopPropagation()}">
                     <button class="settings-script-menu-item" type="button" role="menuitem" title="Add custom script"
                       @click="${() => this._openCustomScriptPicker()}"><span class="settings-script-menu-icon">➕</span><span class="settings-script-menu-label">Add</span></button>
+                    <button class="settings-script-menu-item" type="button" role="menuitem" title="Copy selected script"
+                      @click="${() => this._openDuplicateScriptPicker()}"><span class="settings-script-menu-icon">📄</span><span class="settings-script-menu-label">Copy</span></button>
                     ${this.selectedCustomScript ? html`
                       <button class="settings-script-menu-item" type="button" role="menuitem" title="Edit custom script"
                         @click="${() => this._openEditCustomScriptPicker()}"><span class="settings-script-menu-icon">✏️</span><span class="settings-script-menu-label">Edit</span></button>
