@@ -209,6 +209,9 @@ body.day-mode .combo-dropdown { box-shadow: 0 8px 32px rgba(100,60,0,0.25); }
   color: #f18a8a;
   border-color: rgba(192,57,43,0.45);
 }
+@media (hover: hover) and (pointer: fine) {
+  .meta-pill-clickable { cursor: pointer; }
+}
 .meta-good { color: var(--good-text); }
 .meta-evil { color: var(--evil-text); }
 .btn-sm { padding: 5px 10px; background: var(--bg-surface); border: 0.5px solid var(--border); border-radius: var(--radius-sm); cursor: pointer; font-family: var(--font-sans); font-size: 11px; color: var(--text-primary); -webkit-tap-highlight-color: transparent; white-space: nowrap; }
@@ -277,7 +280,7 @@ botc-circle { display: block; position: absolute; inset: 0; }
 .seat.dead:active .seat-inner { opacity: 0.85; }
 @media (hover: hover) and (pointer: fine) { .seat.dead:hover .seat-inner { opacity: 0.85; } }
 
-body.hide-role .seat.dead { display: none; }
+body.hide-dead .seat.dead { display: none; }
 
 body.align-hints .seat.suspicious .seat-inner { box-shadow: 0 0 0 3px #9b4dca, 0 2px 12px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08); }
 body.align-hints .seat.dead.suspicious .seat-inner { box-shadow: 0 0 0 3px #9b4dca, 0 2px 8px rgba(0,0,0,0.4); }

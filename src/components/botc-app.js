@@ -37,6 +37,7 @@ export class BotcApp extends LitElement {
     storyView:         { type: Boolean },
     compactMode:       { type: Boolean },
     hideRole:          { type: Boolean },
+    hideDeadPlayers:   { type: Boolean },
     script:            { type: String  },
     customScripts:     { type: Array   },
     playerPool:        { type: Array   },
@@ -86,6 +87,7 @@ export class BotcApp extends LitElement {
     this.storyView         = false;
     this.compactMode       = false;
     this.hideRole          = false;
+    this.hideDeadPlayers   = false;
     this.script            = 'tb';
     this.customScripts     = [];
     this.playerPool        = [];
@@ -185,6 +187,7 @@ export class BotcApp extends LitElement {
     this._loadStoryView();
     this._loadCompactMode();
     this._loadHideRole();
+    this._loadHideDeadPlayers();
     this._loadScript();
     this._loadPlayerPool();
     const restored = this._loadState();
@@ -197,6 +200,7 @@ export class BotcApp extends LitElement {
     this._applyStoryView();
     this._applyCompactMode();
     this._applyHideRole();
+    this._applyHideDeadPlayers();
     this._saveScript();
     requestAnimationFrame(() => requestAnimationFrame(() => this.requestUpdate()));
   }
@@ -335,6 +339,11 @@ export class BotcApp extends LitElement {
     this.hideRole = false;
   }
 
+  _loadHideDeadPlayers() {
+    // Default startup behavior: dead players are visible.
+    this.hideDeadPlayers = false;
+  }
+
   _loadPlayerPool() {
     try {
       const r = localStorage.getItem('botc_player_pool');
@@ -446,6 +455,10 @@ export class BotcApp extends LitElement {
     try {
       localStorage.setItem('botc_hide_role', this.hideRole ? 'on' : 'off');
     } catch(e) {}
+  }
+
+  _applyHideDeadPlayers() {
+    document.body.classList.toggle('hide-dead', this.hideDeadPlayers);
   }
 
   _applyStoryView() {
@@ -823,7 +836,7 @@ export class BotcApp extends LitElement {
 
         <div class="topbar-right">
           <span class="bar-meta bar-meta-cues" aria-label="Player status summary">
-            <span class="meta-pill meta-pill-alive" title="Alive players">🟢 <strong>${meta.alive}</strong></span>
+            <span class="meta-pill meta-pill-alive meta-pill-clickable" title="Alive players" @click="${() => { this.hideDeadPlayers = !this.hideDeadPlayers; this._applyHideDeadPlayers(); }}">🟢 <strong>${meta.alive}</strong></span>
             <span class="meta-pill meta-pill-dead" title="Dead players">💀 <strong>${meta.dead}</strong></span>
           </span>
           <button class="topbar-icon-btn" title="${this.hideRole ? 'Show roles' : 'Hide roles'}"
