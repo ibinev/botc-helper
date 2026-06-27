@@ -530,6 +530,16 @@ export class BotcApp extends LitElement {
   }
 
   // ── Nominations ──────────────────────────────────────────────────────
+  _hasNominatedToday(idx) {
+    const key = this._nomKey();
+    return (this.nominations[key] || []).some(n => n.from === idx);
+  }
+
+  _wasNominatedToday(idx) {
+    const key = this._nomKey();
+    return (this.nominations[key] || []).some(n => n.to === idx);
+  }
+
   _startNomMode() {
     if (this.moveMode) return;
     if (this.phase === 'night') return;
@@ -551,10 +561,24 @@ export class BotcApp extends LitElement {
 
   _handleNomClick(idx) {
     if (this.nomMode === 'from') {
+      const seat = this.seats[idx];
+      if (seat?.dead) return;
+      if (this._hasNominatedToday(idx)) return;
       this.nomFrom = idx;
       this.nomMode = 'to';
       this.requestUpdate();
     } else if (this.nomMode === 'to') {
+      const fromSeat = this.seats[this.nomFrom];
+      if (fromSeat?.dead) {
+        this.nomFrom = null;
+        this.nomMode = 'from';
+        this.requestUpdate();
+        return;
+      }
+      if (this._hasNominatedToday(this.nomFrom)) return;
+      const toSeat = this.seats[idx];
+      if (toSeat?.dead) return;
+      if (this._wasNominatedToday(idx)) return;
       const key = this._nomKey();
       const noms = { ...this.nominations };
       if (!noms[key]) noms[key] = [];

@@ -218,15 +218,13 @@ export class BotcCircle extends LitElement {
       return { to: n.to, count, reached: count >= needed };
     });
 
-    // Skull goes to the nomination with threshold reached AND highest vote count.
-    let skullSeat = null;
-    let skullMax  = -1;
-    nomEntries.forEach(e => {
-      if (e.reached && e.count > skullMax) {
-        skullMax  = e.count;
-        skullSeat = e.to;
-      }
-    });
+    // Skull appears only when there is a unique top nomination that reached threshold.
+    const reachedEntries = nomEntries.filter(e => e.reached);
+    const topReachedCount = reachedEntries.length
+      ? Math.max(...reachedEntries.map(e => e.count))
+      : -1;
+    const topReached = reachedEntries.filter(e => e.count === topReachedCount);
+    const skullSeat = topReached.length === 1 ? topReached[0].to : null;
 
     const isNominated = dayNoms.some(n => n.to === i);
     const isSkull     = skullSeat === i;
