@@ -265,7 +265,7 @@ Custom script builder:
 ### Appearance
 - Theme toggle (dark/day)
 
-### Extended hints
+### Alignment
 - Adds alignment ring cues on seats
 
 ### Compact mode
@@ -274,7 +274,7 @@ Custom script builder:
 ### Storyteller view
 - Rotates board perspective by 180 degrees
 
-### Move seats
+### Seats
 - Enables drag-and-drop seat positioning
 - Press Done Moving in top bar to exit
 

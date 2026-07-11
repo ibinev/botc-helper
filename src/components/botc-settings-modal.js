@@ -34,6 +34,8 @@ const SLOT_TEMPLATE_ORDER = ['townsfolk', 'outsider', 'minion', 'demon', 'travel
  *   remove-mode        – (no detail)
  *   export-game        – (no detail)
  *   import-game        – (no detail)
+ *   export-script      – { detail: { id, label, roles, layout } }
+ *   import-script      – (no detail)
  *   clear-table        – (no detail)
  *   clear-player-pool  – (no detail)
  *   reset              – (no detail)
@@ -586,7 +588,7 @@ export class BotcSettingsModal extends LitElement {
 
             <div class="settings-row">
               <div>
-                <div class="settings-label">Move seats</div>
+                <div class="settings-label">Seats</div>
                 <div class="settings-sub">Drag seats to rearrange the circle</div>
               </div>
               <div class="settings-control">
@@ -638,6 +640,21 @@ export class BotcSettingsModal extends LitElement {
                       <button class="settings-script-menu-item settings-script-menu-item--danger" type="button" role="menuitem" title="Delete custom script"
                         @click="${() => this._deleteSelectedCustomScript()}"><span class="settings-script-menu-icon">🗑️</span><span class="settings-script-menu-label">Delete</span></button>
                     ` : nothing}
+                    ${this.selectedCustomScript ? html`
+                      <div class="settings-script-menu-divider"></div>
+                      <button class="settings-script-menu-item" type="button" role="menuitem" title="Export selected script as XML"
+                        @click="${() => {
+                          this._closeScriptMenu();
+                          this._fire('export-script', {
+                            id: this.script,
+                            label: this.selectedScriptLabel || this.script,
+                            roles: Array.isArray(this.selectedScriptRoles) ? [...this.selectedScriptRoles] : [],
+                            layout: this.selectedScriptLayout || {},
+                          });
+                        }}"><span class="settings-script-menu-icon">⤓</span><span class="settings-script-menu-label">Export</span></button>
+                      <button class="settings-script-menu-item" type="button" role="menuitem" title="Import a script from XML"
+                        @click="${() => { this._closeScriptMenu(); this._fire('import-script', {}); }}"><span class="settings-script-menu-icon">⤒</span><span class="settings-script-menu-label">Import</span></button>
+                    ` : nothing}
                   </div>
                 ` : nothing}
               </div>
@@ -649,7 +666,7 @@ export class BotcSettingsModal extends LitElement {
             <div class="settings-group-title">Appearance</div>
             <div class="settings-row">
               <div>
-                <div class="settings-label">Extended hints</div>
+                <div class="settings-label">Alignment</div>
                 <div class="settings-sub">Show coloured ring on seats when alignment is set</div>
               </div>
               <div class="settings-control">

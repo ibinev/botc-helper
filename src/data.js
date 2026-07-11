@@ -4,9 +4,34 @@
 export const ROLES_IMG_URL = 'assets/roles_en.png';
 
 const BASE_SCRIPT_OPTIONS = [
-  { id: 'tb', label: 'Trouble Brewing' },
+  { id: 'tb',  label: 'Trouble Brewing' },
   { id: 'bmr', label: 'Bad Moon Rising' },
   { id: 'snv', label: 'Sects and Violets' },
+  { id: 'pavels-brewing', label: "Pavel's Brewing" },
+];
+
+// ── Bundled custom scripts (available on every device) ─
+const BUNDLED_SCRIPTS = [
+  {
+    id: 'pavels-brewing',
+    label: "Pavel's Brewing",
+    roles: [
+      'Chef','Investigator','Librarian','Pixie','Empath','Fortune Teller','Undertaker',
+      'Monk','Slayer','Soldier','Ravenkeeper','Mayor','Virgin',
+      'Ogre','Drunk','Recluse','Saint',
+      'Poisoner','Spy','Scarlet Woman','Baron',
+      'No Dashii','Imp',
+    ],
+    layout: {
+      townsfolk: { left: ['Chef','Investigator','Librarian','Pixie','Empath','Fortune Teller','Undertaker'], right: ['Monk','Slayer','Soldier','Ravenkeeper','Mayor','Virgin'] },
+      outsider:  { left: ['Ogre','Drunk'], right: ['Recluse','Saint'] },
+      minion:    { left: ['Poisoner','Spy'], right: ['Scarlet Woman','Baron'] },
+      demon:     { left: ['No Dashii'], right: ['Imp'] },
+      traveler:  { left: [], right: [] },
+      loric:     { left: [], right: [] },
+      fabled:    { left: [], right: [] },
+    },
+  },
 ];
 
 const ROLE_CATEGORY_ORDER = ['townsfolk','outsider','minion','demon','traveler','loric','fabled'];
@@ -65,9 +90,10 @@ export function getScriptRoleLayout(script) {
 }
 
 export function getScriptOptions() {
+  const bundledIds = new Set(BUNDLED_SCRIPTS.map(s => s.id));
   return [
     ...BASE_SCRIPT_OPTIONS,
-    ...CUSTOM_SCRIPTS.map(s => ({ id: s.id, label: s.label })),
+    ...CUSTOM_SCRIPTS.filter(s => !bundledIds.has(s.id)).map(s => ({ id: s.id, label: s.label })),
   ];
 }
 
@@ -175,7 +201,7 @@ const SNV_CORE_ROLES = [
 ];
 
 const EXPERIMENTAL_ROLES = [
-  { name:'Acrobat', cat:'outsider', align:'good', ability:'Each night*, choose a player: if they are or become drunk or poisoned tonight, you die.' },
+  { name:'Acrobat', cat:'townsfolk', align:'good', ability:'Each night*, choose a player: if they are or become drunk or poisoned tonight, you die.' },
   { name:'Al-Hadikhia', cat:'demon', align:'evil', ability:'Each night*, choose 3 players (all players learn who): each silently chooses to live or die, but if all live, all die.' },
   { name:'Alchemist', cat:'townsfolk', align:'good', ability:'You have a Minion ability. When using this, the Storyteller may prompt you to choose differently.' },
   { name:'Alsaahir', cat:'townsfolk', align:'good', ability:'Each day, if you publicly guess which players are Minion(s) and which are Demon(s), good wins' },
@@ -279,7 +305,9 @@ const ROLE_BY_NAME = (() => {
 })();
 
 function getCustomScript(script) {
-  return CUSTOM_SCRIPTS.find(s => s.id === script) || null;
+  return BUNDLED_SCRIPTS.find(s => s.id === script)
+    || CUSTOM_SCRIPTS.find(s => s.id === script)
+    || null;
 }
 
 export function getAllRoles() {

@@ -437,6 +437,75 @@ export class BotcApp extends LitElement {
     } catch(e) {}
   }
 
+  async _exportScriptBackup(scriptData) {
+    try {
+      const payload = {
+        schema: 1,
+        exportedAt: new Date().toISOString(),
+        script: {
+          id: scriptData.id,
+          label: scriptData.label,
+          roles: scriptData.roles || [],
+          layout: scriptData.layout || {},
+        },
+      };
+      const json = JSON.stringify(payload);
+      const safeJson = json.replace(/]]>/g, ']]]]><![CDATA[>');
+      const xml = [
+        '<?xml version="1.0" encoding="UTF-8"?>',
+        '<botc-script format="json" schema="1">',
+        `<data><![CDATA[${safeJson}]]></data>`,
+        '</botc-script>',
+      ].join('\n');
+      const safeName = (scriptData.label || 'script').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/, '');
+      const stamp = new Date().toISOString().slice(0, 10);
+      await this._saveXmlToFile(xml, `botc-script-${safeName}-${stamp}.xml`);
+    } catch (e) {
+      if (e?.name === 'AbortError') return;
+      window.alert('Script export failed. Please try again.');
+    }
+  }
+
+  async _importScriptBackup() {
+    try {
+      const file = await this._pickImportFile();
+      if (!file) return;
+      const xml = await file.text();
+      const doc = new DOMParser().parseFromString(xml, 'application/xml');
+      if (doc.querySelector('parsererror')) throw new Error('Invalid XML.');
+      const root = doc.querySelector('botc-script');
+      const dataNode = root?.querySelector('data');
+      if (!root || !dataNode) throw new Error('Not a script backup.');
+      const payload = JSON.parse(dataNode.textContent || '{}');
+      const s = payload?.script;
+      if (!s?.label || !Array.isArray(s?.roles) || !s.roles.length) throw new Error('Script file is missing data.');
+
+      const used = new Set(getScriptOptions().map(o => o.id));
+      let targetId = s.id && used.has(s.id) ? s.id : (s.id || null);
+
+      // If it matches an existing custom script, replace it.
+      const existingCustom = this.customScripts.find(c => c.id === targetId);
+      if (existingCustom) {
+        this._editCustomScript(targetId, s.label, s.roles, s.layout || null);
+      } else {
+        // Generate a fresh id if the stored one collides with a built-in.
+        const base = (s.label || 'imported').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/, '') || 'custom-script';
+        let id = targetId && !['tb','bmr','snv'].includes(targetId) ? targetId : ('custom-' + base);
+        let suffix = 2;
+        while (this.customScripts.some(c => c.id === id)) id = `custom-${base}-${suffix++}`;
+        this.customScripts = [...this.customScripts, { id, label: s.label, roles: s.roles, layout: s.layout || {} }];
+        this._saveCustomScripts();
+        this.script = id;
+        this._saveScript();
+        this.requestUpdate();
+      }
+      window.alert(`Script "${s.label}" imported successfully.`);
+    } catch (e) {
+      if (e?.name === 'AbortError') return;
+      window.alert('Script import failed. Please choose a valid script XML file.');
+    }
+  }
+
   _backupPayload() {
     return {
       schema: 1,
@@ -1409,6 +1478,16 @@ export class BotcApp extends LitElement {
           this._settingsOpen = false;
           this.requestUpdate();
           this._importGameBackup();
+        }}"
+        @export-script="${e => {
+          this._settingsOpen = false;
+          this.requestUpdate();
+          this._exportScriptBackup(e.detail);
+        }}"
+        @import-script="${() => {
+          this._settingsOpen = false;
+          this.requestUpdate();
+          this._importScriptBackup();
         }}"
         @clear-table="${() => {
           this._settingsOpen    = false;

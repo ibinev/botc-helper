@@ -853,6 +853,11 @@ body.align-hints .seat.nom-voted.suspicious .seat-inner { background: rgba(155,7
 .settings-script-menu-label {
   font-size: 13px;
 }
+.settings-script-menu-divider {
+  height: 0.5px;
+  background: var(--border);
+  margin: 3px 4px;
+}
 .settings-label--danger { color: var(--evil-text); }
 .settings-version {
   text-align: center;
