@@ -24,15 +24,16 @@ const SLOT_TEMPLATE_ORDER = ['townsfolk', 'outsider', 'minion', 'demon', 'travel
  *   open       {Boolean}
  *   seatCount  {Number}
  *   alignHints {Boolean}
- *   dayMode    {Boolean}
  *
  * Fires:
  *   count-change       – { detail: { count } }
  *   script-change      – { detail: { script } }
  *   open-player-pool   – (no detail)
  *   align-hints-toggle – (no detail)
- *   theme-toggle       – (no detail)
  *   move-mode          – (no detail)
+ *   remove-mode        – (no detail)
+ *   export-game        – (no detail)
+ *   import-game        – (no detail)
  *   clear-table        – (no detail)
  *   clear-player-pool  – (no detail)
  *   reset              – (no detail)
@@ -51,7 +52,6 @@ export class BotcSettingsModal extends LitElement {
     allRoles:   { type: Array },
     selectedCustomScript: { type: Object },
     alignHints: { type: Boolean },
-    dayMode:    { type: Boolean },
     storyView:  { type: Boolean },
     compactMode:{ type: Boolean },
     _customOpen:{ state: true },
@@ -81,7 +81,6 @@ export class BotcSettingsModal extends LitElement {
     this.allRoles   = [];
     this.selectedCustomScript = null;
     this.alignHints = false;
-    this.dayMode    = false;
     this.storyView  = false;
     this.compactMode= false;
     this._customOpen = false;
@@ -411,6 +410,7 @@ export class BotcSettingsModal extends LitElement {
   _closeSlotPicker() {
     this._slotTargetCat = null;
     this._slotTargetIndex = -1;
+    this._customQuery = '';
   }
 
   _slotPosLabel(cat, index) {
@@ -446,6 +446,7 @@ export class BotcSettingsModal extends LitElement {
     }
     this._customSelected = [...selected];
     this._customLayout = { ...this._customLayout };
+    this._customQuery = '';
   }
 
   _setRoleColumn(name, cat, col) {
@@ -591,6 +592,9 @@ export class BotcSettingsModal extends LitElement {
               <div class="settings-control">
                 <button class="btn btn-gold"
                   @click="${() => { this._onClose(); this._fire('move-mode', {}); }}">⣿ Move</button>
+                <button class="btn btn-danger btn-gold"
+                  ?disabled="${this.seatCount <= MIN}"
+                  @click="${() => { if (this.seatCount > MIN) { this._onClose(); this._fire('remove-mode', {}); } }}">✕ Remove</button>
               </div>
             </div>
 
@@ -645,19 +649,6 @@ export class BotcSettingsModal extends LitElement {
             <div class="settings-group-title">Appearance</div>
             <div class="settings-row">
               <div>
-                <div class="settings-label">Light mode</div>
-                <div class="settings-sub">Switch between dark and day mode</div>
-              </div>
-              <div class="settings-control">
-                <button class="btn-sm btn-theme" title="${this.dayMode ? 'Dark mode' : 'Day mode'}"
-                  @click="${() => this._fire('theme-toggle', {})}">
-                  ${this.dayMode ? '🕯' : '🔆'}
-                </button>
-              </div>
-            </div>
-
-            <div class="settings-row">
-              <div>
                 <div class="settings-label">Extended hints</div>
                 <div class="settings-sub">Show coloured ring on seats when alignment is set</div>
               </div>
@@ -689,6 +680,31 @@ export class BotcSettingsModal extends LitElement {
                 <button class="btn-sm btn-hints ${this.storyView ? 'active' : ''}"
                   @click="${() => this._fire('story-view-toggle', {})}"
                 >${this.storyView ? 'On' : 'Off'}</button>
+              </div>
+            </div>
+            </div>
+
+            <div class="settings-group">
+            <div class="settings-group-title">Export/Import</div>
+            <div class="settings-row">
+              <div>
+                <div class="settings-label">Export game</div>
+                <div class="settings-sub">Save all seats, roles, votes, notes and setup as XML</div>
+              </div>
+              <div class="settings-control">
+                <button class="btn btn-gold"
+                  @click="${() => { this._onClose(); this._fire('export-game', {}); }}">⤓ Export XML</button>
+              </div>
+            </div>
+
+            <div class="settings-row">
+              <div>
+                <div class="settings-label">Import game</div>
+                <div class="settings-sub">Load a previously exported XML game backup</div>
+              </div>
+              <div class="settings-control">
+                <button class="btn btn-gold"
+                  @click="${() => { this._onClose(); this._fire('import-game', {}); }}">⤒ Import XML</button>
               </div>
             </div>
             </div>

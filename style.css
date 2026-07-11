@@ -33,32 +33,6 @@
   --keyboard-inset: 0px;
 }
 
-body.day-mode {
-  --bg-page:        #e8dcc8;
-  --bg-surface:     #f2e8d5;
-  --bg-card:        #fdf6e8;
-  --bg-input:       #fff9f0;
-  --border:         rgba(120,80,20,0.25);
-  --border-strong:  rgba(120,80,20,0.5);
-  --gold:           #8b5e0a;
-  --gold-light:     #6b4408;
-  --blood:          #8b1a1a;
-  --blood-light:    #c0392b;
-  --text-primary:   #1a0f00;
-  --text-secondary: #5c3d10;
-  --text-muted:     #8c6830;
-  --good-bg:        rgba(63,107,17,0.18);
-  --good-text:      #2d5c00;
-  --evil-bg:        rgba(139,26,26,0.15);
-  --evil-text:      #8b1a1a;
-  --info-bg:        rgba(24,95,165,0.15);
-  --info-text:      #0e5a9e;
-  --charcount-good-sticky: #dbe8c0;
-  --charcount-outsider-sticky: #d7e7f5;
-  --charcount-minion-sticky: #f0d8d4;
-  --charcount-demon-sticky: #f3d1cb;
-}
-
 /* ── Custom scrollbars ─────────────────────────────── */
 * {
   scrollbar-width: thin;
@@ -128,40 +102,6 @@ botc-app::before, #app::before {
 }
 #topbar, #circle-wrap, .modal-overlay { position: relative; z-index: 1; }
 #topbar { z-index: 10; }
-
-body.day-mode botc-app, body.day-mode #app {
-  background-image: url('assets/background.png');
-}
-body.day-mode botc-app::before, body.day-mode #app::before {
-  background:
-    radial-gradient(ellipse 100% 80% at 50% 50%, rgba(255,240,200,0.14) 0%, rgba(220,190,130,0.36) 100%),
-    linear-gradient(to bottom, rgba(255,245,220,0.24) 0%, rgba(200,160,80,0.10) 50%, rgba(180,130,50,0.30) 100%);
-}
-body.day-mode .seat-inner { border-color: rgba(0,0,0,0.2);
-  box-shadow: 0 0 0 1px rgba(120,80,20,0.3), 0 2px 10px rgba(100,60,0,0.2), inset 0 1px 0 rgba(255,255,255,0.6);
-}
-body.day-mode .seat-num  { color: #5c3d10; text-shadow: 0 1px 1px rgba(255,240,200,0.8); }
-body.day-mode .seat-name { color: #1a0f00; text-shadow: 0 1px 2px rgba(255,240,200,0.7); }
-body.day-mode .seat-name.empty { color: #8c6830; }
-body.day-mode .seat-role { color: #3d1e00; text-shadow: 0 1px 1px rgba(255,240,200,0.8); }
-body.day-mode .seat:active .seat-inner {
-  border-color: rgba(0,0,0,0.45);
-  box-shadow: 0 0 0 2px var(--gold), 0 4px 16px rgba(100,60,0,0.3), inset 0 1px 0 rgba(255,255,255,0.7);
-}
-@media (hover: hover) and (pointer: fine) {
-  body.day-mode .seat:hover .seat-inner {
-    border-color: rgba(0,0,0,0.45);
-    box-shadow: 0 0 0 2px var(--gold), 0 4px 16px rgba(100,60,0,0.3), inset 0 1px 0 rgba(255,255,255,0.7);
-  }
-}
-body.day-mode .modal-sheet { box-shadow: 0 -4px 40px rgba(100,60,0,0.2); }
-body.day-mode .combo-dropdown { box-shadow: 0 8px 32px rgba(100,60,0,0.25); }
-
-.btn-theme {
-  width: 30px; height: 30px; padding: 0;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 15px; border-radius: 50%; flex-shrink: 0;
-}
 
 /* ── Topbar ─────────────────────────────────────────── */
 #topbar {
@@ -294,6 +234,11 @@ body.align-hints .seat.align-evil.dead .seat-inner { box-shadow: 0 0 0 3px #c039
 .move-mode .seat { cursor: grab; }
 .move-mode .seat:active { cursor: grabbing; }
 .move-mode .seat.dragging .seat-inner { border-color: var(--gold-light); box-shadow: 0 0 0 4px rgba(201,151,58,0.3), 0 8px 28px rgba(0,0,0,0.6); transform: scale(1.1); }
+.remove-mode .seat { cursor: default; }
+.remove-mode .seat .seat-inner { border-color: rgba(192,57,43,0.55); box-shadow: 0 0 0 2px rgba(192,57,43,0.25), 0 4px 18px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.12); }
+.seat-remove-btn { position: absolute; top: -8px; right: -8px; z-index: 6; width: 28px; height: 28px; border: 1px solid rgba(255,255,255,0.18); border-radius: 999px; background: linear-gradient(180deg, #c74b3f, #7e2018); color: #fff6f4; font-size: 14px; font-weight: 700; line-height: 1; display: flex; align-items: center; justify-content: center; box-shadow: 0 6px 16px rgba(0,0,0,0.45); cursor: pointer; }
+.seat-remove-btn:active { transform: scale(0.94); }
+@media (hover: hover) and (pointer: fine) { .seat-remove-btn:hover { filter: brightness(1.08); } }
 
 .seat-num  { font-size: 10px; color: #c4aa80; letter-spacing: 0.08em; text-transform: uppercase; text-shadow: 0 1px 2px rgba(0,0,0,0.9); }
 .seat-name { font-size: 13px; font-weight: 600; color: #ffffff; max-width: 78px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; text-align: center; text-shadow: 0 1px 3px rgba(0,0,0,0.9); }
@@ -710,6 +655,7 @@ body.align-hints .seat.nom-voted.suspicious .seat-inner { background: rgba(155,7
 
 /* ── Topbar extras ────────────────────────────────────── */
 .btn-move-done { border-color: var(--gold); color: var(--gold-light); flex-shrink: 0; }
+.btn-remove-done { border-color: rgba(192,57,43,0.8); color: #ffd8d3; flex-shrink: 0; }
 .topbar-right  { display: flex; align-items: center; gap: 8px; margin-left: auto; flex-shrink: 0; }
 
 /* ── Full-screen modal overlays (PDF / charcount) ─────── */

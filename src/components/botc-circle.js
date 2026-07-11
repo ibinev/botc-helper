@@ -12,6 +12,7 @@ import { esc, defaultPos } from '../utils.js';
  *   seatPositions {Array}         – [{x,y}|null] per seat
  *   selected      {Number|null}   – index of selected seat
  *   moveMode      {Boolean}
+ *   removeMode    {Boolean}
  *   nomMode       {String|Boolean} – false | 'from' | 'to' | 'votes'
  *   nomFrom       {Number|null}
  *   nominations   {Object}        – { 'day-N': [...] }
@@ -31,6 +32,7 @@ export class BotcCircle extends LitElement {
     seatPositions: { type: Array  },
     selected:      { type: Number },
     moveMode:      { type: Boolean },
+    removeMode:    { type: Boolean },
     nomMode:       { type: String  },
     nomFrom:       { type: Number  },
     nominations:   { type: Object  },
@@ -52,6 +54,7 @@ export class BotcCircle extends LitElement {
     this.seatPositions = [];
     this.selected      = null;
     this.moveMode      = false;
+    this.removeMode    = false;
     this.nomMode       = false;
     this.nomFrom       = null;
     this.nominations   = {};
@@ -114,6 +117,7 @@ export class BotcCircle extends LitElement {
   }
 
   _onClick(i) {
+    if (this.removeMode) return;
     if (this.nomMode) {
       this.dispatchEvent(new CustomEvent('nom-click', {
         detail: { idx: i }, bubbles: true, composed: true
@@ -248,6 +252,15 @@ export class BotcCircle extends LitElement {
         style="left:${pos.x}px;top:${pos.y}px"
         data-idx="${i}"
         @click="${this.moveMode ? null : () => this._onClick(i)}">
+        ${this.removeMode ? html`
+          <button class="seat-remove-btn" type="button" title="Remove seat ${i + 1}"
+            @click="${e => {
+              e.stopPropagation();
+              this.dispatchEvent(new CustomEvent('seat-remove', {
+                detail: { idx: i }, bubbles: true, composed: true
+              }));
+            }}">✕</button>
+        ` : nothing}
         ${iconSrc
           ? html`<img class="seat-role-icon" src="${iconSrc}" alt="${displayRole}" title="${displayRole}">`
           : nothing}
@@ -273,7 +286,7 @@ export class BotcCircle extends LitElement {
     const isNomMode = !!this.nomMode;
     return html`
       <div id="circle-stage">
-        <div id="circle-inner" class="${isNomMode ? 'nom-mode' : ''} ${this.moveMode ? 'move-mode' : ''} ${this.storyView ? 'story-view' : ''}">
+        <div id="circle-inner" class="${isNomMode ? 'nom-mode' : ''} ${this.moveMode ? 'move-mode' : ''} ${this.removeMode ? 'remove-mode' : ''} ${this.storyView ? 'story-view' : ''}">
           <div class="center-label">
             <div class="phase-icon">${this.phase === 'day' ? '☀️' : '🌙'}</div>
             <div class="round-label">${this.phase === 'day' ? 'Day' : 'Night'} ${this.round}</div>

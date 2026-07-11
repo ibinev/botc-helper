@@ -25,6 +25,7 @@ export class BotcApp extends LitElement {
     seatPositions:     { type: Array   },
     selected:          { type: Number  },
     moveMode:          { type: Boolean },
+    removeMode:        { type: Boolean },
     nomMode:           { type: String  },
     nomFrom:           { type: Number  },
     nomVoteKey:        { type: String  },
@@ -32,7 +33,6 @@ export class BotcApp extends LitElement {
     nominations:       { type: Object  },
     poisonSnapshots:   { type: Object  },
     gameNotes:         { type: Object  },
-    dayMode:           { type: Boolean },
     alignHints:        { type: Boolean },
     storyView:         { type: Boolean },
     compactMode:       { type: Boolean },
@@ -75,6 +75,7 @@ export class BotcApp extends LitElement {
     this.seatPositions     = [];
     this.selected          = null;
     this.moveMode          = false;
+    this.removeMode        = false;
     this.nomMode           = false;
     this.nomFrom           = null;
     this.nomVoteKey        = null;
@@ -82,7 +83,6 @@ export class BotcApp extends LitElement {
     this.nominations       = {};
     this.poisonSnapshots   = {};
     this.gameNotes         = {};
-    this.dayMode           = false;
     this.alignHints        = false;
     this.storyView         = false;
     this.compactMode       = false;
@@ -182,7 +182,6 @@ export class BotcApp extends LitElement {
     this._loadNominations();
     this._loadPoisonSnapshots();
     this._loadCollapsePrefs();
-    this._loadTheme();
     this._loadAlignHints();
     this._loadStoryView();
     this._loadCompactMode();
@@ -195,7 +194,6 @@ export class BotcApp extends LitElement {
       this._initSeats(this.seatCount);
     }
     while (this.seatPositions.length < this.seatCount) this.seatPositions.push(null);
-    this._applyTheme();
     this._applyAlignHints();
     this._applyStoryView();
     this._applyCompactMode();
@@ -316,10 +314,6 @@ export class BotcApp extends LitElement {
         this.allseatsCollapsed = !!p.allseats;
       }
     } catch(e) {}
-  }
-
-  _loadTheme() {
-    this.dayMode = localStorage.getItem('botc_theme') === 'day';
   }
 
   _loadAlignHints() {
@@ -443,6 +437,215 @@ export class BotcApp extends LitElement {
     } catch(e) {}
   }
 
+  _backupPayload() {
+    return {
+      schema: 1,
+      exportedAt: new Date().toISOString(),
+      app: {
+        seatCount: this.seatCount,
+        round: this.round,
+        phase: this.phase,
+        seats: this.seats,
+        seatPositions: this.seatPositions,
+        nominations: this.nominations,
+        poisonSnapshots: this.poisonSnapshots,
+        gameNotes: this.gameNotes,
+        customScripts: this.customScripts,
+        script: this.script,
+        playerPool: this.playerPool,
+        deathsCollapsed: this.deathsCollapsed,
+        poisonedCollapsed: this.poisonedCollapsed,
+        allseatsCollapsed: this.allseatsCollapsed,
+        alignHints: this.alignHints,
+        storyView: this.storyView,
+        compactMode: this.compactMode,
+        hideRole: this.hideRole,
+        hideDeadPlayers: this.hideDeadPlayers,
+      },
+    };
+  }
+
+  _serializeBackupXml(payload) {
+    const json = JSON.stringify(payload);
+    const safeJson = json.replace(/]]>/g, ']]]]><![CDATA[>');
+    return [
+      '<?xml version="1.0" encoding="UTF-8"?>',
+      '<botc-helper-backup format="json" schema="1">',
+      `<data><![CDATA[${safeJson}]]></data>`,
+      '</botc-helper-backup>',
+    ].join('\n');
+  }
+
+  async _saveXmlToFile(xml, suggestedName) {
+    if (window.showSaveFilePicker) {
+      const handle = await window.showSaveFilePicker({
+        suggestedName,
+        types: [{
+          description: 'BOTC Helper XML Backup',
+          accept: { 'application/xml': ['.xml'] },
+        }],
+      });
+      const writable = await handle.createWritable();
+      await writable.write(xml);
+      await writable.close();
+      return;
+    }
+
+    const blob = new Blob([xml], { type: 'application/xml' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = suggestedName;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  async _pickImportFile() {
+    if (window.showOpenFilePicker) {
+      const [handle] = await window.showOpenFilePicker({
+        multiple: false,
+        types: [{
+          description: 'BOTC Helper XML Backup',
+          accept: { 'application/xml': ['.xml'], 'text/xml': ['.xml'] },
+        }],
+      });
+      return handle ? handle.getFile() : null;
+    }
+
+    return await new Promise(resolve => {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.xml,text/xml,application/xml';
+
+      const onChange = () => {
+        const file = input.files && input.files[0] ? input.files[0] : null;
+        cleanup();
+        resolve(file);
+      };
+
+      const onFocus = () => {
+        setTimeout(() => {
+          if (input.files && input.files.length) return;
+          cleanup();
+          resolve(null);
+        }, 200);
+      };
+
+      const cleanup = () => {
+        input.removeEventListener('change', onChange);
+        window.removeEventListener('focus', onFocus);
+      };
+
+      input.addEventListener('change', onChange, { once: true });
+      window.addEventListener('focus', onFocus, { once: true });
+      input.click();
+    });
+  }
+
+  _parseBackupXml(xmlText) {
+    const doc = new DOMParser().parseFromString(xmlText, 'application/xml');
+    if (doc.querySelector('parsererror')) throw new Error('Invalid XML file.');
+
+    const root = doc.querySelector('botc-helper-backup');
+    const dataNode = root?.querySelector('data');
+    if (!root || !dataNode) throw new Error('Unsupported backup format.');
+
+    const payload = JSON.parse(dataNode.textContent || '{}');
+    if (!payload || typeof payload !== 'object' || !payload.app) {
+      throw new Error('Backup file is missing game data.');
+    }
+    return payload;
+  }
+
+  _applyBackupPayload(payload) {
+    const app = payload.app || {};
+    const count = Math.min(MAX, Math.max(MIN, app.seatCount || 12));
+
+    this.seatCount = count;
+    this.round = Math.max(1, app.round || 1);
+    this.phase = app.phase === 'night' ? 'night' : 'day';
+    this.seats = Array.from(
+      { length: count },
+      (_, i) => Object.assign(blankSeat(), app.seats?.[i] || {})
+    );
+    this.seatPositions = Array.from(
+      { length: count },
+      (_, i) => app.seatPositions?.[i] ? app.seatPositions[i] : null
+    );
+
+    this.nominations = app.nominations && typeof app.nominations === 'object' ? app.nominations : {};
+    this.poisonSnapshots = app.poisonSnapshots && typeof app.poisonSnapshots === 'object' ? app.poisonSnapshots : {};
+    this.gameNotes = app.gameNotes && typeof app.gameNotes === 'object' ? app.gameNotes : {};
+    this.customScripts = Array.isArray(app.customScripts) ? app.customScripts : [];
+    setCustomScripts(this.customScripts);
+    this.script = normalizeScript(app.script || 'tb');
+    this.playerPool = Array.isArray(app.playerPool) ? app.playerPool : [];
+
+    this.deathsCollapsed = !!app.deathsCollapsed;
+    this.poisonedCollapsed = !!app.poisonedCollapsed;
+    this.allseatsCollapsed = !!app.allseatsCollapsed;
+    this.alignHints = !!app.alignHints;
+    this.storyView = !!app.storyView;
+    this.compactMode = !!app.compactMode;
+    this.hideRole = !!app.hideRole;
+    this.hideDeadPlayers = !!app.hideDeadPlayers;
+
+    this.selected = null;
+    this.moveMode = false;
+    this.removeMode = false;
+    this.nomMode = false;
+    this.nomFrom = null;
+    this.nomVoteKey = null;
+    this.nomVoteIdx = null;
+    this._editOpen = false;
+    this._listOpen = false;
+    this._nomsOpen = false;
+
+    this._applyAlignHints();
+    this._applyStoryView();
+    this._applyCompactMode();
+    this._applyHideRole();
+    this._applyHideDeadPlayers();
+
+    this._saveState();
+    this._saveNominations();
+    this._savePoisonSnapshots();
+    this._saveGameNotes();
+    this._saveCustomScripts();
+    this._saveScript();
+    this._savePlayerPool();
+    this._saveCollapsePrefs();
+    this.requestUpdate();
+  }
+
+  async _exportGameBackup() {
+    try {
+      this._flushPersistence();
+      const payload = this._backupPayload();
+      const xml = this._serializeBackupXml(payload);
+      const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+      await this._saveXmlToFile(xml, `botc-helper-backup-${stamp}.xml`);
+    } catch (e) {
+      if (e?.name === 'AbortError') return;
+      window.alert('Export failed. Please try again.');
+    }
+  }
+
+  async _importGameBackup() {
+    try {
+      const file = await this._pickImportFile();
+      if (!file) return;
+      const xml = await file.text();
+      const payload = this._parseBackupXml(xml);
+      this._applyBackupPayload(payload);
+    } catch (e) {
+      if (e?.name === 'AbortError') return;
+      window.alert('Import failed. Please choose a valid backup XML file.');
+    }
+  }
+
   _applyCompactMode() {
     document.body.classList.toggle('compact-mode', this.compactMode);
     try {
@@ -468,13 +671,6 @@ export class BotcApp extends LitElement {
     } catch(e) {}
   }
 
-  _applyTheme() {
-    document.body.classList.toggle('day-mode', this.dayMode);
-    try {
-      localStorage.setItem('botc_theme', this.dayMode ? 'day' : 'dark');
-    } catch(e) {}
-  }
-
   _applyAlignHints() {
     document.body.classList.toggle('align-hints', this.alignHints);
     try {
@@ -493,6 +689,76 @@ export class BotcApp extends LitElement {
   _seatLabel(idx) {
     const s = this.seats[idx];
     return (s && s.name) ? s.name : 'Seat ' + (idx + 1);
+  }
+
+  _remapSeatIndex(idx, removedIdx) {
+    if (idx === null || idx === undefined) return idx;
+    if (idx === removedIdx) return null;
+    return idx > removedIdx ? idx - 1 : idx;
+  }
+
+  _removeSeatFromNominations(removedIdx) {
+    const nominations = {};
+
+    Object.entries(this.nominations || {}).forEach(([key, entries]) => {
+      const nextEntries = (entries || []).map(entry => {
+        const from = this._remapSeatIndex(entry.from, removedIdx);
+        const to = this._remapSeatIndex(entry.to, removedIdx);
+        if (from === null || to === null) return null;
+
+        const votes = (entry.votes || [])
+          .map(idx => this._remapSeatIndex(idx, removedIdx))
+          .filter(idx => idx !== null);
+        const ghostVoters = (entry.ghostVoters || [])
+          .map(idx => this._remapSeatIndex(idx, removedIdx))
+          .filter(idx => idx !== null);
+
+        return { ...entry, from, to, votes, ghostVoters };
+      }).filter(Boolean);
+
+      if (nextEntries.length) nominations[key] = nextEntries;
+    });
+
+    this.nominations = nominations;
+  }
+
+  _removeSeatFromPoisonSnapshots(removedIdx) {
+    const poisonSnapshots = {};
+
+    Object.entries(this.poisonSnapshots || {}).forEach(([key, seats]) => {
+      poisonSnapshots[key] = (seats || [])
+        .map(idx => this._remapSeatIndex(idx, removedIdx))
+        .filter(idx => idx !== null);
+    });
+
+    this.poisonSnapshots = poisonSnapshots;
+  }
+
+  _removeSeat(idx) {
+    if (this.seatCount <= MIN) return;
+
+    this.seats = this.seats.filter((_, seatIdx) => seatIdx !== idx);
+    this.seatPositions = this.seatPositions.filter((_, seatIdx) => seatIdx !== idx);
+    this.seatCount -= 1;
+    this.selected = this._remapSeatIndex(this.selected, idx);
+
+    if (this.nomMode) {
+      this.nomMode = false;
+      this.nomFrom = null;
+      this.nomVoteKey = null;
+      this.nomVoteIdx = null;
+    }
+    this._nomsOpen = false;
+
+    this._removeSeatFromNominations(idx);
+    this._removeSeatFromPoisonSnapshots(idx);
+
+    if (this.seatCount <= MIN) this.removeMode = false;
+
+    this._saveState();
+    this._saveNominations();
+    this._savePoisonSnapshots();
+    this.requestUpdate();
   }
 
   // ── Cycle (phase/round) ──────────────────────────────────────────────
@@ -541,7 +807,7 @@ export class BotcApp extends LitElement {
   }
 
   _startNomMode() {
-    if (this.moveMode) return;
+    if (this.moveMode || this.removeMode) return;
     if (this.phase === 'night') return;
     this._editOpen = false;
     this._listOpen = false;
@@ -732,6 +998,7 @@ export class BotcApp extends LitElement {
     this.seatPositions = Array.from({ length: this.seatCount }, () => null);
     this.selected      = null;
     this.moveMode      = false;
+    this.removeMode    = false;
     this.nomMode       = false;
     this.nomFrom       = null;
     this.round         = 1;
@@ -761,9 +1028,10 @@ export class BotcApp extends LitElement {
     ];
     EXTRA_KEYS.forEach(k => { try { localStorage.removeItem(k); } catch(e) {} });
 
-    this.selected = null;
-    this.round    = 1;
-    this.phase    = 'day';
+    this.selected   = null;
+    this.removeMode = false;
+    this.round      = 1;
+    this.phase      = 'day';
 
     this._confirmSoftOpen = false;
     this._editOpen        = false;
@@ -857,6 +1125,10 @@ export class BotcApp extends LitElement {
           <button class="btn-sm btn-move-done"
             @click="${() => { this.moveMode = false; this.requestUpdate(); }}">✓ Done Moving</button>
         ` : nothing}
+        ${this.removeMode ? html`
+          <button class="btn-sm btn-remove-done"
+            @click="${() => { this.removeMode = false; this.requestUpdate(); }}">✓ Done Removing</button>
+        ` : nothing}
 
         <div class="topbar-right">
           <span class="bar-meta bar-meta-cues" aria-label="Player status summary">
@@ -884,6 +1156,7 @@ export class BotcApp extends LitElement {
           .script="${this.script}"
           .selected="${this.selected}"
           .moveMode="${this.moveMode}"
+          .removeMode="${this.removeMode}"
           .storyView="${this.storyView}"
           .nomMode="${this.nomMode}"
           .nomFrom="${this.nomFrom}"
@@ -894,6 +1167,7 @@ export class BotcApp extends LitElement {
           .phase="${this.phase}"
           @seat-click="${e => this._openSeat(e.detail.idx)}"
           @nom-click="${e => this._handleNomClick(e.detail.idx)}"
+          @seat-remove="${e => this._removeSeat(e.detail.idx)}"
           @seat-drag-end="${e => this._onSeatDragEnd(e.detail)}"
         ></botc-circle>
 
@@ -1043,7 +1317,6 @@ export class BotcApp extends LitElement {
         .allRoles="${getAllRoles()}"
         .selectedCustomScript="${this.customScripts.find(s => s.id === this.script) || null}"
         .alignHints="${this.alignHints}"
-        .dayMode="${this.dayMode}"
         .storyView="${this.storyView}"
         .compactMode="${this.compactMode}"
         @count-change="${e => {
@@ -1089,21 +1362,42 @@ export class BotcApp extends LitElement {
           this._applyCompactMode();
           this.requestUpdate();
         }}"
-        @theme-toggle="${() => {
-          this.dayMode = !this.dayMode;
-          this._applyTheme();
-          this.requestUpdate();
-        }}"
         @move-mode="${() => {
           this.moveMode  = true;
+          this.removeMode = false;
           this._editOpen = false;
           this.selected  = null;
+          this.requestUpdate();
+        }}"
+        @remove-mode="${() => {
+          if (this.seatCount <= MIN) return;
+          this.removeMode = true;
+          this.moveMode = false;
+          this._editOpen = false;
+          this._nomsOpen = false;
+          this.selected = null;
+          if (this.nomMode) {
+            this.nomMode = false;
+            this.nomFrom = null;
+            this.nomVoteKey = null;
+            this.nomVoteIdx = null;
+          }
           this.requestUpdate();
         }}"
         @open-player-pool="${() => {
           this._settingsOpen = false;
           this._poolManageOpen = true;
           this.requestUpdate();
+        }}"
+        @export-game="${() => {
+          this._settingsOpen = false;
+          this.requestUpdate();
+          this._exportGameBackup();
+        }}"
+        @import-game="${() => {
+          this._settingsOpen = false;
+          this.requestUpdate();
+          this._importGameBackup();
         }}"
         @clear-table="${() => {
           this._settingsOpen    = false;
