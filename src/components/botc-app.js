@@ -518,28 +518,39 @@ export class BotcApp extends LitElement {
       const input = document.createElement('input');
       input.type = 'file';
       input.accept = '.xml,text/xml,application/xml';
+      input.style.display = 'none';
+      document.body.appendChild(input);
+
+      let settled = false;
+      let cancelTimer = null;
+
+      const finish = (file) => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        resolve(file || null);
+      };
 
       const onChange = () => {
         const file = input.files && input.files[0] ? input.files[0] : null;
-        cleanup();
-        resolve(file);
+        finish(file);
       };
 
-      const onFocus = () => {
-        setTimeout(() => {
-          if (input.files && input.files.length) return;
-          cleanup();
-          resolve(null);
-        }, 200);
-      };
+      const onCancel = () => finish(null);
 
       const cleanup = () => {
+        if (cancelTimer) clearTimeout(cancelTimer);
         input.removeEventListener('change', onChange);
-        window.removeEventListener('focus', onFocus);
+        input.removeEventListener('cancel', onCancel);
+        input.remove();
       };
 
       input.addEventListener('change', onChange, { once: true });
-      window.addEventListener('focus', onFocus, { once: true });
+      input.addEventListener('cancel', onCancel, { once: true });
+
+      // Fallback in case a browser never emits cancel for a dismissed picker.
+      cancelTimer = setTimeout(() => finish(null), 120000);
+
       input.click();
     });
   }
