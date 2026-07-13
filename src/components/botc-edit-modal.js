@@ -68,6 +68,14 @@ export class BotcEditModal extends LitElement {
     }
   }
 
+  disconnectedCallback() {
+    super.disconnectedCallback?.();
+    if (this._onDocClick) {
+      document.removeEventListener('pointerdown', this._onDocClick);
+      this._onDocClick = null;
+    }
+  }
+
   _populateForm(s) {
     const nameInput = this.querySelector('#f-name');
     const alignSel  = this.querySelector('#f-alignment');
@@ -214,6 +222,25 @@ export class BotcEditModal extends LitElement {
     const inner   = overlay?.querySelector('.modal-inner');
     if (!overlay || !sheet || !dragbar) return;
 
+    // Close pool dropdown when clicking outside the name field
+    this._onDocClick = (e) => {
+      if (!this._poolOpen && !this._poolManageOpen) return;
+      const field = this.querySelector('.field');
+      const nameControl = this.querySelector('.player-name-control');
+      const poolFloat = this.querySelector('.pool-float');
+      if (
+        (nameControl && nameControl.contains(e.target)) ||
+        (poolFloat && poolFloat.contains(e.target))
+      ) return;
+      if (this._poolOpen || this._poolManageOpen) {
+        this._poolOpen = false;
+        this._poolManageOpen = false;
+        this._poolManageAdding = false;
+        this._poolManageName = '';
+      }
+    };
+    document.addEventListener('pointerdown', this._onDocClick);
+
     let ty0 = 0, dragging = false, startedNearTop = false;
 
     dragbar.addEventListener('click', () => this._onClose());
@@ -263,18 +290,7 @@ export class BotcEditModal extends LitElement {
 
             <div class="field-grid">
               <div class="field">
-                <label class="name-label">
-                  Player name
-                  ${this.fullPool?.length ? html`
-                    <button class="pool-icon-btn" type="button"
-                      @mousedown="${e => { e.preventDefault(); this._startLongPress(); }}"
-                      @touchstart="${e => { e.preventDefault(); this._startLongPress(); }}"
-                      @mouseup="${() => this._endLongPress(true)}"
-                      @touchend="${e => { e.stopPropagation(); this._endLongPress(true); }}"
-                      @mouseleave="${() => this._endLongPress(false)}"
-                      @touchcancel="${() => this._endLongPress(false)}">&#x1f465;</button>
-                  ` : nothing}
-                </label>
+                <label class="name-label">Player name</label>
                 ${this._poolOpen && this.playerPool?.length ? html`
                   <div class="pool-float">
                     ${this.playerPool.map(n => html`
@@ -309,9 +325,20 @@ export class BotcEditModal extends LitElement {
                     `}
                   </div>
                 ` : nothing}
-                <input type="text" id="f-name" placeholder="e.g. Alice" autocomplete="off"
-                  @keydown="${e => { if (e.key === 'Enter') this._onSave(); }}"
-                  @focus="${() => { this._poolOpen = false; this._poolManageOpen = false; }}">
+                <div class="player-name-control ${this._poolOpen ? 'open' : ''}">
+                  <input type="text" id="f-name" placeholder="e.g. Alice" autocomplete="off"
+                    @keydown="${e => { if (e.key === 'Enter') this._onSave(); }}"
+                    @focus="${() => { this._poolOpen = false; this._poolManageOpen = false; }}">
+                  ${this.fullPool?.length ? html`
+                    <button class="pool-toggle-btn" type="button" aria-label="Open player names"
+                      @mousedown="${e => { e.preventDefault(); this._startLongPress(); }}"
+                      @touchstart="${e => { e.preventDefault(); this._startLongPress(); }}"
+                      @mouseup="${() => this._endLongPress(true)}"
+                      @touchend="${e => { e.stopPropagation(); this._endLongPress(true); }}"
+                      @mouseleave="${() => this._endLongPress(false)}"
+                      @touchcancel="${() => this._endLongPress(false)}">▾</button>
+                  ` : nothing}
+                </div>
               </div>
               <div class="field">
                 <label>Role claimed</label>
@@ -322,12 +349,15 @@ export class BotcEditModal extends LitElement {
             <div class="field-grid">
               <div class="field">
                 <label>Alignment</label>
-                <select id="f-alignment">
-                  <option value="unknown">Unknown</option>
-                  <option value="good">Good</option>
-                  <option value="evil">Evil</option>
-                  <option value="suspicious">Suspicious</option>
-                </select>
+                <div class="select-wrap">
+                  <select id="f-alignment">
+                    <option value="unknown">Unknown</option>
+                    <option value="good">Good</option>
+                    <option value="evil">Evil</option>
+                    <option value="suspicious">Suspicious</option>
+                  </select>
+                  <span class="select-chevron" aria-hidden="true">▾</span>
+                </div>
               </div>
               <div class="field">
                 <label>True role (ST only)</label>

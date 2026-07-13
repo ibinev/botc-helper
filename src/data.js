@@ -675,11 +675,13 @@ const ROLE_NIGHT_INDEX = {
   'Monk': { firstNight: 0, otherNight: 12 },
   'Moonchild': { firstNight: 0, otherNight: 50 },
   'No Dashii': { firstNight: 0, otherNight: 30 },
+  'Ogre': { firstNight: 38.2, otherNight: 0 },
   'Oracle': { firstNight: 0, otherNight: 59 },
   'Philosopher': { firstNight: 2, otherNight: 2 },
   'Pit-Hag': { firstNight: 0, otherNight: 16 },
   'Po': { firstNight: 0, otherNight: 28 },
   'Poisoner': { firstNight: 17, otherNight: 7 },
+  'Pixie': { firstNight: 38.1, otherNight: 0 },
   'Professor': { firstNight: 0, otherNight: 43 },
   'Pukka': { firstNight: 28, otherNight: 26 },
   'Ravenkeeper': { firstNight: 0, otherNight: 52 },
@@ -712,6 +714,19 @@ const OTHER_HINT_BY_NAME = new Map();
   (order.other || []).forEach(entry => {
     if (!OTHER_HINT_BY_NAME.has(entry.name)) OTHER_HINT_BY_NAME.set(entry.name, entry);
   });
+});
+
+[
+  {
+    name: 'Pixie',
+    hint: 'Learns one in-play Townsfolk character',
+  },
+  {
+    name: 'Ogre',
+    hint: 'Chooses a player and becomes their alignment (without learning which)',
+  },
+].forEach(entry => {
+  if (!FIRST_HINT_BY_NAME.has(entry.name)) FIRST_HINT_BY_NAME.set(entry.name, entry);
 });
 
 function buildCustomNightOrder(custom) {

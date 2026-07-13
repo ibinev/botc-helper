@@ -31,7 +31,6 @@ const SLOT_TEMPLATE_ORDER = ['townsfolk', 'outsider', 'minion', 'demon', 'travel
  *   open-player-pool   – (no detail)
  *   align-hints-toggle – (no detail)
  *   move-mode          – (no detail)
- *   remove-mode        – (no detail)
  *   export-game        – (no detail)
  *   import-game        – (no detail)
  *   export-script      – { detail: { id, label, roles, layout } }
@@ -589,14 +588,11 @@ export class BotcSettingsModal extends LitElement {
             <div class="settings-row">
               <div>
                 <div class="settings-label">Seats</div>
-                <div class="settings-sub">Drag seats to rearrange the circle</div>
+                <div class="settings-sub">Drag seats to rearrange the circle and tap red X to remove seats</div>
               </div>
               <div class="settings-control">
                 <button class="btn btn-gold"
                   @click="${() => { this._onClose(); this._fire('move-mode', {}); }}">⣿ Move</button>
-                <button class="btn btn-danger btn-gold"
-                  ?disabled="${this.seatCount <= MIN}"
-                  @click="${() => { if (this.seatCount > MIN) { this._onClose(); this._fire('remove-mode', {}); } }}">✕ Remove</button>
               </div>
             </div>
 
@@ -608,8 +604,6 @@ export class BotcSettingsModal extends LitElement {
               <div class="settings-control">
                 <button class="btn btn-gold settings-pool-btn"
                   @click="${() => { this._onClose(); this._fire('open-player-pool', {}); }}">👥 Open</button>
-                <button class="btn btn-gold settings-pool-clear-btn" title="Clear player pool" aria-label="Clear player pool"
-                  @click="${() => this._confirmClearPlayerPool()}">↺</button>
               </div>
             </div>
 

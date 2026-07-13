@@ -1203,17 +1203,13 @@ export class BotcApp extends LitElement {
 
         ${this.moveMode ? html`
           <button class="btn-sm btn-move-done"
-            @click="${() => { this.moveMode = false; this.requestUpdate(); }}">✓ Done Moving</button>
-        ` : nothing}
-        ${this.removeMode ? html`
-          <button class="btn-sm btn-remove-done"
-            @click="${() => { this.removeMode = false; this.requestUpdate(); }}">✓ Done Removing</button>
+            @click="${() => { this.moveMode = false; this.removeMode = false; this.requestUpdate(); }}">✓ Done Moving</button>
         ` : nothing}
 
         <div class="topbar-right">
           <span class="bar-meta bar-meta-cues" aria-label="Player status summary">
-            <span class="meta-pill meta-pill-alive meta-pill-clickable" title="Alive players" @click="${() => { this.hideDeadPlayers = !this.hideDeadPlayers; this._applyHideDeadPlayers(); }}">🟢 <strong>${meta.alive}</strong></span>
-            <span class="meta-pill meta-pill-dead" title="Dead players">💀 <strong>${meta.dead}</strong></span>
+            <span class="meta-pill meta-pill-alive">🟢 <strong>${meta.alive}</strong></span>
+            <span class="meta-pill meta-pill-dead meta-pill-clickable ${this.hideDeadPlayers ? 'meta-pill-dead--hidden' : 'meta-pill-dead--active'}" title="${this.hideDeadPlayers ? 'Show dead players' : 'Hide dead players'}" @click="${() => { this.hideDeadPlayers = !this.hideDeadPlayers; this._applyHideDeadPlayers(); }}">💀 <strong>${meta.dead}</strong></span>
           </span>
           <button class="topbar-icon-btn" title="${this.hideRole ? 'Show roles' : 'Hide roles'}"
             @click="${() => { this.hideRole = !this.hideRole; this._applyHideRole(); this.requestUpdate(); }}">${this.hideRole ? '👁️' : '🚫'}</button>
@@ -1274,7 +1270,19 @@ export class BotcApp extends LitElement {
           <div class="pool-manage-sheet">
             <div class="pool-manage-header">
               <span class="pool-manage-title">👥 Player pool</span>
-              <button class="btn-sm" @click="${() => { this._poolManageOpen = false; this._poolManageAdding = false; this._poolManageName = ''; this.requestUpdate(); }}">✕</button>
+              <div class="pool-manage-actions">
+                <button class="btn-sm" ?disabled="${!this.playerPool.length}"
+                  @click="${() => {
+                    const ok = window.confirm('Clear all saved player pool names? This cannot be undone.');
+                    if (!ok) return;
+                    this.playerPool = [];
+                    this._savePlayerPool();
+                    this._poolManageAdding = false;
+                    this._poolManageName = '';
+                    this.requestUpdate();
+                  }}">↺ Clear</button>
+                <button class="btn-sm" @click="${() => { this._poolManageOpen = false; this._poolManageAdding = false; this._poolManageName = ''; this.requestUpdate(); }}">✕</button>
+              </div>
             </div>
             <div class="pool-list">
               ${this.playerPool.map((name, i) => html`
@@ -1444,24 +1452,9 @@ export class BotcApp extends LitElement {
         }}"
         @move-mode="${() => {
           this.moveMode  = true;
-          this.removeMode = false;
+          this.removeMode = true;
           this._editOpen = false;
           this.selected  = null;
-          this.requestUpdate();
-        }}"
-        @remove-mode="${() => {
-          if (this.seatCount <= MIN) return;
-          this.removeMode = true;
-          this.moveMode = false;
-          this._editOpen = false;
-          this._nomsOpen = false;
-          this.selected = null;
-          if (this.nomMode) {
-            this.nomMode = false;
-            this.nomFrom = null;
-            this.nomVoteKey = null;
-            this.nomVoteIdx = null;
-          }
           this.requestUpdate();
         }}"
         @open-player-pool="${() => {
