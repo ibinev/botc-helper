@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="90" fill="#1a120a"/>
+  <!-- Outer gold ring -->
+  <circle cx="256" cy="256" r="210" fill="none" stroke="#c9973a" stroke-width="10"/>
+  <!-- Clock face -->
+  <circle cx="256" cy="256" r="160" fill="#2e2015"/>
+  <!-- Clock hands pointing to midnight -->
+  <line x1="256" y1="256" x2="256" y2="120" stroke="#f5ead6" stroke-width="10" stroke-linecap="round"/>
+  <line x1="256" y1="256" x2="256" y2="160" stroke="#f5ead6" stroke-width="7" stroke-linecap="round"/>
+  <!-- Blood drop -->
+  <ellipse cx="256" cy="380" rx="22" ry="28" fill="#8b1a1a"/>
+  <path d="M256 338 L234 370 Q234 408 256 408 Q278 408 278 370 Z" fill="#c0392b"/>
+  <!-- Center dot -->
+  <circle cx="256" cy="256" r="10" fill="#c9973a"/>
+</svg>
