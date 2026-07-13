@@ -438,18 +438,6 @@ export class BotcEditModal extends LitElement {
                 </div>
               </div>
               <div class="field">
-                <label>Role claimed</label>
-                <botc-combo id="combo-role" .script="${this.script}" .showInfo="${true}" placeholder="Washerwoman…"
-                  @combo-change="${e => {
-                    this._claimedRoleValue = e.detail?.value || '';
-                    if (this._roleInfoOpen === 'claimed') this._closeRoleInfo();
-                  }}"
-                  @combo-info="${() => this._toggleRoleInfo('claimed')}"></botc-combo>
-              </div>
-            </div>
-
-            <div class="field-grid">
-              <div class="field">
                 <label>Alignment</label>
                 <div class="align-combo-wrap">
                   <button
@@ -472,14 +460,31 @@ export class BotcEditModal extends LitElement {
                   ` : nothing}
                 </div>
               </div>
+            </div>
+
+            <div class="field-grid full">
+              <div class="field">
+                <label>Role claimed</label>
+                <botc-combo id="combo-role" .script="${this.script}" .infoButton="${true}" placeholder="Washerwoman…"
+                  @combo-change="${e => {
+                    this._claimedRoleValue = e.detail?.value || '';
+                    if (this._roleInfoOpen === 'claimed') this._closeRoleInfo();
+                  }}"
+                  @combo-info-click="${() => this._toggleRoleInfo('claimed')}"
+                ></botc-combo>
+              </div>
+            </div>
+
+            <div class="field-grid full">
               <div class="field">
                 <label>True role (ST only)</label>
-                <botc-combo id="combo-true-role" .script="${this.script}" .showInfo="${true}" placeholder="Actual role…"
+                <botc-combo id="combo-true-role" .script="${this.script}" .infoButton="${true}" placeholder="Actual role…"
                   @combo-change="${e => {
                     this._trueRoleValue = e.detail?.value || '';
                     if (this._roleInfoOpen === 'true') this._closeRoleInfo();
                   }}"
-                  @combo-info="${() => this._toggleRoleInfo('true')}"></botc-combo>
+                  @combo-info-click="${() => this._toggleRoleInfo('true')}"
+                ></botc-combo>
               </div>
             </div>
 

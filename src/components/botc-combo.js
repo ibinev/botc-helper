@@ -19,7 +19,7 @@ export class BotcCombo extends LitElement {
     value:       { type: String },
     placeholder: { type: String },
     script:      { type: String },
-    showInfo:    { type: Boolean },
+    infoButton:  { type: Boolean, attribute: 'info-button' },
   };
 
   // Disable shadow DOM so global style.css applies
@@ -30,7 +30,7 @@ export class BotcCombo extends LitElement {
     this.value       = '';
     this.placeholder = 'Search…';
     this.script      = 'tb';
-    this.showInfo    = false;
+    this.infoButton  = false;
     this._dropdown   = null;
     this._currentVal = '';
     this._isOpen     = false;
@@ -91,8 +91,6 @@ export class BotcCombo extends LitElement {
   _updateClearBtn() {
     const cb = this._clearBtn();
     if (cb) cb.classList.toggle('visible', !!this._currentVal);
-    const ib = this._infoBtn();
-    if (ib) ib.classList.toggle('visible', this.showInfo && !!this._currentVal);
   }
 
   _getFilteredGroups(q) {
@@ -271,7 +269,7 @@ export class BotcCombo extends LitElement {
     input.addEventListener('blur', () => {
       setTimeout(() => {
         const af = document.activeElement;
-        if (af === toggleBtn || af === clearBtn || (af && this._dropdown?.contains(af))) return;
+        if (af === toggleBtn || af === clearBtn || af === infoBtn || (af && this._dropdown?.contains(af))) return;
         this._close();
       }, 200);
     });
@@ -333,9 +331,9 @@ export class BotcCombo extends LitElement {
     if (infoBtn) {
       infoBtn.addEventListener('mousedown', e => e.preventDefault());
       infoBtn.addEventListener('click', () => {
-        if (!this._currentVal || !this.showInfo) return;
-        this.dispatchEvent(new CustomEvent('combo-info', {
-          detail: { value: this._currentVal }, bubbles: true, composed: true
+        this.dispatchEvent(new CustomEvent('combo-info-click', {
+          bubbles: true,
+          composed: true
         }));
       });
     }
@@ -345,14 +343,21 @@ export class BotcCombo extends LitElement {
     return html`
       <div class="combo-wrap">
         <div class="combo-input-row">
-          <input class="combo-text"
-            placeholder="${this.placeholder}"
-            autocomplete="off"
-            role="combobox"
-            aria-expanded="false"
-            aria-haspopup="listbox">
+          <div class="combo-text-wrap">
+            <input class="combo-text"
+              placeholder="${this.placeholder}"
+              autocomplete="off"
+              role="combobox"
+              aria-expanded="false"
+              aria-haspopup="listbox">
+          </div>
           <button class="combo-clear" tabindex="-1">✕</button>
-          <button class="combo-info" tabindex="-1" aria-label="View role details">i</button>
+          ${this.infoButton ? html`<button class="combo-info" tabindex="-1" aria-label="View role details" title="View role details">
+            <svg class="combo-info-svg" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1"/>
+              <text x="8" y="8" text-anchor="middle" dominant-baseline="central" font-size="10" font-weight="700" fill="currentColor" font-family="sans-serif">i</text>
+            </svg>
+          </button>` : ''}
           <button class="combo-toggle" tabindex="-1">▾</button>
         </div>
       </div>

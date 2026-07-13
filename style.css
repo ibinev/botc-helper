@@ -438,7 +438,7 @@ body.align-hints .seat.nom-voted.suspicious .seat-inner { background: rgba(155,7
   box-shadow: 0 0 0 2px rgba(201,151,58,0.15);
 }
 .align-combo-text { text-align: left; }
-.align-combo-chevron { color: var(--text-muted); font-size: 13px; line-height: 1; }
+.align-combo-chevron { color: var(--text-muted); font-size: 16px; line-height: 1; }
 .align-combo-dropdown {
   position: absolute;
   top: calc(100% + 2px);
@@ -1409,7 +1409,7 @@ body.align-hints .seat.nom-voted.suspicious .seat-inner { background: rgba(155,7
 .player-name-control.open { border-color: var(--gold); box-shadow: 0 0 0 2px rgba(201,151,58,0.15); }
 .player-name-control input { border: none; box-shadow: none; border-radius: 0; background: transparent; }
 .player-name-control input:focus { box-shadow: none; }
-.pool-toggle-btn { background: none; border: none; border-left: 0.5px solid var(--border); cursor: pointer; color: var(--text-muted); font-size: 13px; padding: 0 12px; line-height: 1; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: color 0.12s, background 0.12s; -webkit-tap-highlight-color: transparent; }
+.pool-toggle-btn { background: none; border: none; border-left: 0.5px solid var(--border); cursor: pointer; color: var(--text-muted); font-size: 16px; padding: 0 12px; line-height: 1; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: color 0.12s, background 0.12s; -webkit-tap-highlight-color: transparent; }
 .pool-toggle-btn:hover { color: var(--gold); }
 .pool-toggle-btn:active { background: rgba(201,151,58,0.1); }
 .field { position: relative; }
@@ -1473,18 +1473,24 @@ button:focus-visible {
 .combo-role-icon { width: 20px; height: 20px; object-fit: contain; margin-left: auto; flex-shrink: 0; }
 
 /* ── Combobox ─────────────────────────────────────────── */
-.combo-wrap { position: relative; }
-.combo-input-row { display: flex; align-items: center; background: var(--bg-input); border: 0.5px solid var(--border); border-radius: var(--radius-sm); transition: border-color 0.12s, box-shadow 0.12s; overflow: hidden; }
+botc-combo { display: block; border-radius: var(--radius-sm); }
+.combo-wrap { position: relative; border-radius: inherit; }
+.combo-input-row { display: flex; align-items: stretch; background: var(--bg-input); border: 0.5px solid var(--border); border-radius: inherit; transition: border-color 0.12s, box-shadow 0.12s; overflow: hidden; }
 .combo-input-row:focus-within { border-color: var(--gold); box-shadow: 0 0 0 2px rgba(201,151,58,0.15); }
-.combo-text { flex: 1; min-width: 60px; background: none; border: none; outline: none; color: var(--text-primary); font-family: var(--font-sans); font-size: 14px; padding: 8px 8px; }
+.combo-text-wrap { flex: 1; min-width: 0; background: transparent; border-radius: var(--radius-sm) 0 0 var(--radius-sm); overflow: hidden; }
+botc-combo .combo-text { border-radius: 0; border: 0; }
+.combo-text { width: 100%; min-width: 60px; height: 100%; background: none; border: none; -webkit-appearance: none; appearance: none; box-shadow: none; outline: none; color: var(--text-primary); font-family: var(--font-sans); font-size: 14px; padding: 8px 8px; }
 .combo-text::placeholder { color: var(--text-muted); }
-.combo-toggle { background: none; border: none; cursor: pointer; color: var(--text-muted); font-size: 14px; padding: 0 10px 0 4px; line-height: 1; display: flex; align-items: center; flex-shrink: 0; transition: color 0.12s; -webkit-tap-highlight-color: transparent; }
+.combo-text:focus { border-radius: 0; box-shadow: none; }
+.combo-toggle { background: none; border: none; border-left: 0.5px solid var(--border); cursor: pointer; color: var(--text-muted); font-size: 16px; min-width: 40px; padding: 0 12px; line-height: 1; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: color 0.12s, background 0.12s; -webkit-tap-highlight-color: transparent; }
 .combo-toggle:hover { color: var(--gold); }
-.combo-clear { background: none; border: none; cursor: pointer; color: var(--text-muted); font-size: 14px; padding: 0 9px; margin-right: 4px; line-height: 1; display: none; align-items: center; }
+.combo-info { background: none; border: none; border-left: 0.5px solid var(--border); cursor: pointer; color: var(--text-muted); min-width: 36px; padding: 0 9px; line-height: 1; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: color 0.12s, background 0.12s; -webkit-tap-highlight-color: transparent; }
+.combo-info-svg { display: block; }
+.combo-info:hover { color: var(--gold); }
+.combo-clear { background: none; border: none; border-left: 0.5px solid var(--border); cursor: pointer; color: var(--text-muted); font-size: 14px; min-width: 34px; padding: 0 9px; line-height: 1; display: none; align-items: center; justify-content: center; transition: color 0.12s, background 0.12s; -webkit-tap-highlight-color: transparent; }
 .combo-clear.visible { display: flex; }
-.combo-info { background: none; border: none; cursor: pointer; color: var(--text-muted); font-size: 14px; font-weight: 700; width: 28px; height: 28px; padding: 0; border-radius: 999px; display: none; align-items: center; justify-content: center; border: 0.5px solid var(--border); margin: 0 8px 0 2px; }
-.combo-info.visible { display: inline-flex; }
-.combo-dropdown { display: none; position: fixed; background: var(--bg-card); border: 0.5px solid var(--border-strong); border-radius: var(--radius-md); z-index: 9999; overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent; -webkit-overflow-scrolling: touch; box-shadow: 0 8px 32px rgba(0,0,0,0.6); }
+.combo-clear:hover { color: var(--gold); }
+.combo-dropdown { display: none; position: fixed; background: var(--bg-card); border: 0.5px solid var(--border-strong); border-radius: var(--radius-md); z-index: 9999; overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent; -webkit-overflow-scrolling: touch; box-shadow: 0 6px 24px rgba(0,0,0,0.5); }
 .combo-dropdown.open { display: block; }
 .combo-group-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; padding: 8px 10px 4px; color: var(--text-muted); user-select: none; position: sticky; top: 0; background: var(--bg-card); }
 .combo-option { display: flex; align-items: center; gap: 8px; padding: 9px 10px; cursor: pointer; font-size: 14px; color: var(--text-primary); transition: background 0.08s; -webkit-tap-highlight-color: transparent; }
