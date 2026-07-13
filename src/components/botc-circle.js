@@ -134,6 +134,7 @@ export class BotcCircle extends LitElement {
 
     const onStart = (e) => {
       if (!this.moveMode) return;
+      if (e.target instanceof Element && e.target.closest('.seat-remove-btn')) return;
       e.preventDefault();
       dragged = false;
 

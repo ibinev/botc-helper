@@ -194,6 +194,7 @@ export class BotcApp extends LitElement {
       this._initSeats(this.seatCount);
     }
     while (this.seatPositions.length < this.seatCount) this.seatPositions.push(null);
+    this._applyPhaseCycle();
     this._applyAlignHints();
     this._applyStoryView();
     this._applyCompactMode();
@@ -744,6 +745,10 @@ export class BotcApp extends LitElement {
     document.body.classList.toggle('hide-dead', this.hideDeadPlayers);
   }
 
+  _applyPhaseCycle() {
+    document.body.classList.toggle('night-cycle', this.phase === 'night');
+  }
+
   _applyStoryView() {
     document.body.classList.toggle('story-view', this.storyView);
     try {
@@ -832,6 +837,7 @@ export class BotcApp extends LitElement {
 
     this._removeSeatFromNominations(idx);
     this._removeSeatFromPoisonSnapshots(idx);
+      this._applyPhaseCycle();
 
     if (this.seatCount <= MIN) this.removeMode = false;
 
@@ -867,6 +873,7 @@ export class BotcApp extends LitElement {
     });
     this.poisonSnapshots = snap;
     this.seats = seats;
+    this._applyPhaseCycle();
     this._savePoisonSnapshots();
     this._saveState();
     if (this.phase === 'night') {
@@ -1203,7 +1210,7 @@ export class BotcApp extends LitElement {
 
         ${this.moveMode ? html`
           <button class="btn-sm btn-move-done"
-            @click="${() => { this.moveMode = false; this.removeMode = false; this.requestUpdate(); }}">✓ Done Moving</button>
+            @click="${() => { this.moveMode = false; this.removeMode = false; this.requestUpdate(); }}">✓ Done</button>
         ` : nothing}
 
         <div class="topbar-right">
