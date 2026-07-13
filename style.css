@@ -415,9 +415,58 @@ body.align-hints .seat.nom-voted.suspicious .seat-inner { background: rgba(155,7
 .field input:focus, .field textarea:focus, .field select:focus { border-color: var(--gold); box-shadow: 0 0 0 2px rgba(201,151,58,0.15); }
 .field textarea { resize: none; height: 92px; line-height: 1.5; }
 .field select option { background: var(--bg-card); }
-.select-wrap { position: relative; cursor: pointer; }
-.select-wrap select { padding-right: 34px; cursor: pointer; }
-.select-chevron { position: absolute; top: 50%; right: 12px; transform: translateY(-50%); color: var(--text-muted); font-size: 13px; pointer-events: none; }
+.align-combo-wrap { position: relative; }
+.align-combo-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-input);
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  padding: 8px 10px;
+  cursor: pointer;
+  transition: border-color 0.12s, box-shadow 0.12s;
+  -webkit-tap-highlight-color: transparent;
+}
+.align-combo-btn.open,
+.align-combo-btn:focus-visible {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 2px rgba(201,151,58,0.15);
+}
+.align-combo-text { text-align: left; }
+.align-combo-chevron { color: var(--text-muted); font-size: 13px; line-height: 1; }
+.align-combo-dropdown {
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 0;
+  right: 0;
+  z-index: 220;
+  background: var(--bg-card);
+  border: 0.5px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 22px rgba(0,0,0,0.5);
+  overflow: hidden;
+}
+.align-combo-option {
+  width: 100%;
+  background: none;
+  border: none;
+  border-bottom: 0.5px solid var(--border);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  text-align: left;
+  padding: 9px 10px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.align-combo-option:last-child { border-bottom: none; }
+.align-combo-option:active,
+.align-combo-option.selected { background: rgba(201,151,58,0.1); color: var(--gold-light); }
 .status-section label { display: block; font-size: 10px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; }
 .toggles { display: flex; gap: 8px; flex-wrap: wrap; }
 .tog { padding: 7px 14px; border-radius: 999px; border: 0.5px solid var(--border); background: var(--bg-input); color: var(--text-secondary); font-size: 13px; cursor: pointer; font-family: var(--font-sans); transition: all 0.12s; -webkit-tap-highlight-color: transparent; }
@@ -1429,10 +1478,12 @@ button:focus-visible {
 .combo-input-row:focus-within { border-color: var(--gold); box-shadow: 0 0 0 2px rgba(201,151,58,0.15); }
 .combo-text { flex: 1; min-width: 60px; background: none; border: none; outline: none; color: var(--text-primary); font-family: var(--font-sans); font-size: 14px; padding: 8px 8px; }
 .combo-text::placeholder { color: var(--text-muted); }
-.combo-toggle { background: none; border: none; cursor: pointer; color: var(--text-muted); font-size: 14px; padding: 0 8px; line-height: 1; display: flex; align-items: center; flex-shrink: 0; transition: color 0.12s; -webkit-tap-highlight-color: transparent; }
+.combo-toggle { background: none; border: none; cursor: pointer; color: var(--text-muted); font-size: 14px; padding: 0 10px 0 4px; line-height: 1; display: flex; align-items: center; flex-shrink: 0; transition: color 0.12s; -webkit-tap-highlight-color: transparent; }
 .combo-toggle:hover { color: var(--gold); }
-.combo-clear { background: none; border: none; cursor: pointer; color: var(--text-muted); font-size: 14px; padding: 0 8px; line-height: 1; display: none; align-items: center; }
+.combo-clear { background: none; border: none; cursor: pointer; color: var(--text-muted); font-size: 14px; padding: 0 9px; margin-right: 4px; line-height: 1; display: none; align-items: center; }
 .combo-clear.visible { display: flex; }
+.combo-info { background: none; border: none; cursor: pointer; color: var(--text-muted); font-size: 14px; font-weight: 700; width: 28px; height: 28px; padding: 0; border-radius: 999px; display: none; align-items: center; justify-content: center; border: 0.5px solid var(--border); margin: 0 8px 0 2px; }
+.combo-info.visible { display: inline-flex; }
 .combo-dropdown { display: none; position: fixed; background: var(--bg-card); border: 0.5px solid var(--border-strong); border-radius: var(--radius-md); z-index: 9999; overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent; -webkit-overflow-scrolling: touch; box-shadow: 0 8px 32px rgba(0,0,0,0.6); }
 .combo-dropdown.open { display: block; }
 .combo-group-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; padding: 8px 10px 4px; color: var(--text-muted); user-select: none; position: sticky; top: 0; background: var(--bg-card); }
@@ -1441,3 +1492,26 @@ button:focus-visible {
 .combo-option.selected-opt { color: var(--gold-light); }
 .combo-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 .combo-no-results { padding: 10px 12px; font-size: 13px; color: var(--text-muted); font-style: italic; }
+
+/* ── Role info popup ─────────────────────────────────── */
+.role-info-modal-backdrop { position: absolute; inset: 0; z-index: 260; background: rgba(8,6,4,0.72); display: flex; align-items: center; justify-content: center; padding: 16px; }
+.role-info-modal-card { width: min(460px, 100%); max-height: min(72dvh, 560px); overflow: auto; border-radius: 16px; border: 0.5px solid var(--border-strong); background: linear-gradient(180deg, rgba(201,151,58,0.12) 0%, rgba(0,0,0,0) 36%), var(--bg-surface); box-shadow: 0 12px 40px rgba(0,0,0,0.58); }
+.role-info-modal-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; padding: 14px 14px 10px; border-bottom: 0.5px solid var(--border); }
+.role-info-modal-title-wrap { display: flex; align-items: flex-start; gap: 10px; min-width: 0; }
+.role-info-modal-icon { width: 54px; height: 54px; object-fit: contain; flex-shrink: 0; }
+.role-info-modal-title { font-size: 17px; color: var(--gold-light); font-family: var(--font-serif); line-height: 1.1; }
+.role-info-modal-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+.role-info-modal-tag { display: inline-flex; align-items: center; border-radius: 999px; border: 0.5px solid rgba(255,255,255,0.18); padding: 2px 8px; font-size: 10px; color: var(--text-secondary); background: rgba(0,0,0,0.24); text-transform: uppercase; letter-spacing: 0.07em; }
+.role-info-modal-tag.cat-townsfolk { color: #8fca4b; border-color: rgba(90,158,47,0.45); background: rgba(90,158,47,0.18); }
+.role-info-modal-tag.cat-outsider  { color: #7ab8f5; border-color: rgba(58,127,193,0.45); background: rgba(58,127,193,0.2); }
+.role-info-modal-tag.cat-minion    { color: #e06060; border-color: rgba(192,57,43,0.45); background: rgba(192,57,43,0.2); }
+.role-info-modal-tag.cat-demon     { color: #ff8a78; border-color: rgba(192,57,43,0.6); background: rgba(139,26,26,0.3); }
+.role-info-modal-tag.cat-traveler  { color: #e6b85a; border-color: rgba(201,151,58,0.5); background: rgba(201,151,58,0.18); }
+.role-info-modal-tag.cat-loric,
+.role-info-modal-tag.cat-fabled,
+.role-info-modal-tag.cat-unknown   { color: var(--text-secondary); border-color: var(--border); background: rgba(0,0,0,0.22); }
+.role-info-modal-tag.align-good       { color: var(--good-text); border-color: rgba(90,158,47,0.45); background: rgba(63,107,17,0.25); }
+.role-info-modal-tag.align-evil       { color: var(--evil-text); border-color: rgba(192,57,43,0.5); background: rgba(139,26,26,0.3); }
+.role-info-modal-tag.align-suspicious { color: #d08ef0; border-color: rgba(155,77,202,0.5); background: rgba(155,77,202,0.2); }
+.role-info-modal-tag.align-unknown    { color: var(--text-secondary); border-color: var(--border); background: rgba(0,0,0,0.22); }
+.role-info-modal-body { padding: 12px 14px 14px; color: var(--text-primary); font-size: 14px; line-height: 1.6; }

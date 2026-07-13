@@ -19,6 +19,7 @@ export class BotcCombo extends LitElement {
     value:       { type: String },
     placeholder: { type: String },
     script:      { type: String },
+    showInfo:    { type: Boolean },
   };
 
   // Disable shadow DOM so global style.css applies
@@ -29,6 +30,7 @@ export class BotcCombo extends LitElement {
     this.value       = '';
     this.placeholder = 'Search…';
     this.script      = 'tb';
+    this.showInfo    = false;
     this._dropdown   = null;
     this._currentVal = '';
     this._isOpen     = false;
@@ -83,11 +85,14 @@ export class BotcCombo extends LitElement {
   // ── Private helpers ──────────────────────────────────────────────────
   _input()    { return this.querySelector('.combo-text'); }
   _clearBtn() { return this.querySelector('.combo-clear'); }
+  _infoBtn()  { return this.querySelector('.combo-info'); }
   _toggleBtn(){ return this.querySelector('.combo-toggle'); }
 
   _updateClearBtn() {
     const cb = this._clearBtn();
     if (cb) cb.classList.toggle('visible', !!this._currentVal);
+    const ib = this._infoBtn();
+    if (ib) ib.classList.toggle('visible', this.showInfo && !!this._currentVal);
   }
 
   _getFilteredGroups(q) {
@@ -225,6 +230,7 @@ export class BotcCombo extends LitElement {
   firstUpdated() {
     const input     = this._input();
     const clearBtn  = this._clearBtn();
+    const infoBtn   = this._infoBtn();
     const toggleBtn = this._toggleBtn();
 
     if (!input) return;
@@ -322,6 +328,17 @@ export class BotcCombo extends LitElement {
         }));
       });
     }
+
+    // ── Info button ──────────────────────────────────────────────────
+    if (infoBtn) {
+      infoBtn.addEventListener('mousedown', e => e.preventDefault());
+      infoBtn.addEventListener('click', () => {
+        if (!this._currentVal || !this.showInfo) return;
+        this.dispatchEvent(new CustomEvent('combo-info', {
+          detail: { value: this._currentVal }, bubbles: true, composed: true
+        }));
+      });
+    }
   }
 
   render() {
@@ -335,6 +352,7 @@ export class BotcCombo extends LitElement {
             aria-expanded="false"
             aria-haspopup="listbox">
           <button class="combo-clear" tabindex="-1">✕</button>
+          <button class="combo-info" tabindex="-1" aria-label="View role details">i</button>
           <button class="combo-toggle" tabindex="-1">▾</button>
         </div>
       </div>

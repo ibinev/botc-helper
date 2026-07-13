@@ -1,6 +1,6 @@
 import { LitElement, html, nothing } from 'lit';
 import './botc-combo.js';
-import { ROLE_ICONS } from '../data.js';
+import { ROLE_ICONS, getAllRoles, CAT_LABELS } from '../data.js';
 
 /**
  * <botc-edit-modal>
@@ -29,6 +29,12 @@ export class BotcEditModal extends LitElement {
     _poolManageOpen:   { state: true   },
     _poolManageAdding: { state: true   },
     _poolManageName:   { state: true   },
+    _roleInfoOpen:     { state: true   },
+    _roleInfoRole:     { state: true   },
+    _alignOpen:        { state: true   },
+    _alignmentValue:   { state: true   },
+    _claimedRoleValue: { state: true   },
+    _trueRoleValue:    { state: true   },
   };
 
   createRenderRoot() { return this; }
@@ -45,8 +51,15 @@ export class BotcEditModal extends LitElement {
     this._poolManageOpen    = false;
     this._poolManageAdding  = false;
     this._poolManageName    = '';
+    this._roleInfoOpen      = '';
+    this._roleInfoRole      = '';
+    this._alignOpen         = false;
+    this._alignmentValue    = 'unknown';
+    this._claimedRoleValue  = '';
+    this._trueRoleValue     = '';
     this._poolLpTimer       = null;
     this._poolLpFired       = false;
+    this._roleByName        = new Map(getAllRoles().map(r => [r.name, r]));
     // Internal toggle state (not in seat object — updated imperatively)
     this._deadActive     = false;
     this._voteActive     = false;
@@ -61,9 +74,15 @@ export class BotcEditModal extends LitElement {
       if (!this.open) {
         this._poolOpen = false;
         this._poolManageOpen = false;
+        this._roleInfoOpen = '';
+        this._roleInfoRole = '';
+        this._alignOpen = false;
       }
     }
     if (changed.has('seat') && this.seat) {
+      this._roleInfoOpen = '';
+      this._roleInfoRole = '';
+      this._alignOpen = false;
       this._populateForm(this.seat);
     }
   }
@@ -78,16 +97,17 @@ export class BotcEditModal extends LitElement {
 
   _populateForm(s) {
     const nameInput = this.querySelector('#f-name');
-    const alignSel  = this.querySelector('#f-alignment');
     const notesTA   = this.querySelector('#f-notes');
     const roleCombo = this.querySelector('#combo-role');
     const trueCombo = this.querySelector('#combo-true-role');
 
     if (nameInput) nameInput.value = s.name ?? '';
-    if (alignSel)  alignSel.value  = s.alignment ?? 'unknown';
+    this._alignmentValue = s.alignment ?? 'unknown';
     if (notesTA)   notesTA.value   = s.notes ?? '';
     if (roleCombo)     { roleCombo.setValue(s.role ?? ''); }
     if (trueCombo)     { trueCombo.setValue(s.trueRole ?? ''); }
+    this._claimedRoleValue = s.role ?? '';
+    this._trueRoleValue = s.trueRole ?? '';
 
     this._deadActive     = !!s.dead;
     this._voteActive     = !!s.usedVote;
@@ -178,9 +198,12 @@ export class BotcEditModal extends LitElement {
   _onSave() {
     this._poolOpen = false;
     this._poolManageOpen = false;
+    this._roleInfoOpen = '';
+    this._roleInfoRole = '';
+    this._alignOpen = false;
     const roleCombo = this.querySelector('#combo-role');
     const trueCombo = this.querySelector('#combo-true-role');
-    const alignment = this.querySelector('#f-alignment')?.value ?? 'unknown';
+    const alignment = this._alignmentValue || 'unknown';
     const data = {
       name:      (this.querySelector('#f-name')?.value ?? '').trim(),
       role:      roleCombo?.getValue() ?? '',
@@ -201,17 +224,87 @@ export class BotcEditModal extends LitElement {
   _onClear() {
     this._poolOpen = false;
     this._poolManageOpen = false;
+    this._roleInfoOpen = '';
+    this._roleInfoRole = '';
+    this._alignOpen = false;
     this.dispatchEvent(new CustomEvent('seat-clear', {
       detail: { idx: this.seatIdx }, bubbles: true, composed: true
     }));
   }
 
   _onClose() {
+    this._alignOpen = false;
     this.dispatchEvent(new CustomEvent('modal-close', { bubbles: true, composed: true }));
   }
 
   _onBackdrop(e) {
     if (e.target === this.querySelector('#modal-edit')) this._onClose();
+  }
+
+  _roleMeta(roleName) {
+    const name = (roleName || '').trim();
+    if (!name) return null;
+    return this._roleByName.get(name) || { name, cat: 'unknown', align: 'unknown', ability: 'No description available for this role.' };
+  }
+
+  _toggleRoleInfo(kind) {
+    if (this._roleInfoOpen === kind) {
+      this._roleInfoOpen = '';
+      this._roleInfoRole = '';
+      return;
+    }
+    const roleName = kind === 'claimed' ? this._claimedRoleValue : this._trueRoleValue;
+    if (!roleName) return;
+    this._roleInfoOpen = kind;
+    this._roleInfoRole = roleName;
+  }
+
+  _closeRoleInfo() {
+    this._roleInfoOpen = '';
+    this._roleInfoRole = '';
+  }
+
+  _alignmentLabel(v) {
+    if (v === 'good') return 'Good';
+    if (v === 'evil') return 'Evil';
+    if (v === 'suspicious') return 'Suspicious';
+    return 'Unknown';
+  }
+
+  _setAlignment(v) {
+    this._alignmentValue = v || 'unknown';
+    this._alignOpen = false;
+  }
+
+  _renderRoleInfoModal() {
+    const role = this._roleMeta(this._roleInfoRole);
+    if (!role) return nothing;
+    const icon = ROLE_ICONS[role.name];
+    const catLabel = CAT_LABELS[role.cat] || 'Role';
+    const alignLabel = role.align ? role.align[0].toUpperCase() + role.align.slice(1) : 'Unknown';
+    const catClass = role.cat ? `cat-${role.cat}` : 'cat-unknown';
+    const alignClass = role.align ? `align-${role.align}` : 'align-unknown';
+
+    return html`
+      <div class="role-info-modal-backdrop" @click="${e => { if (e.target === e.currentTarget) this._closeRoleInfo(); }}">
+        <div class="role-info-modal-card" role="dialog" aria-modal="true" aria-label="${role.name} details">
+          <div class="role-info-modal-header">
+            <div class="role-info-modal-title-wrap">
+              ${icon ? html`<img class="role-info-modal-icon" src="${icon}" alt="" loading="lazy" decoding="async">` : nothing}
+              <div>
+                <div class="role-info-modal-title">${role.name}</div>
+                <div class="role-info-modal-tags">
+                  <span class="role-info-modal-tag ${catClass}">${catLabel}</span>
+                  <span class="role-info-modal-tag ${alignClass}">${alignLabel}</span>
+                </div>
+              </div>
+            </div>
+            <button class="btn btn-close-sm" type="button" @click="${this._closeRoleInfo}">✕</button>
+          </div>
+          <div class="role-info-modal-body">${role.ability || 'No description available for this role.'}</div>
+        </div>
+      </div>
+    `;
   }
 
   // Swipe-down to close
@@ -224,13 +317,15 @@ export class BotcEditModal extends LitElement {
 
     // Close pool dropdown when clicking outside the name field
     this._onDocClick = (e) => {
-      if (!this._poolOpen && !this._poolManageOpen) return;
-      const field = this.querySelector('.field');
+      if (!this._poolOpen && !this._poolManageOpen && !this._roleInfoOpen && !this._alignOpen) return;
+      if (e.target instanceof Element && e.target.closest('.role-info-modal-card')) return;
       const nameControl = this.querySelector('.player-name-control');
       const poolFloat = this.querySelector('.pool-float');
+      const alignWrap = this.querySelector('.align-combo-wrap');
       if (
         (nameControl && nameControl.contains(e.target)) ||
-        (poolFloat && poolFloat.contains(e.target))
+        (poolFloat && poolFloat.contains(e.target)) ||
+        (alignWrap && alignWrap.contains(e.target))
       ) return;
       if (this._poolOpen || this._poolManageOpen) {
         this._poolOpen = false;
@@ -238,6 +333,8 @@ export class BotcEditModal extends LitElement {
         this._poolManageAdding = false;
         this._poolManageName = '';
       }
+      if (this._alignOpen) this._alignOpen = false;
+      if (this._roleInfoOpen) this._closeRoleInfo();
     };
     document.addEventListener('pointerdown', this._onDocClick);
 
@@ -342,26 +439,47 @@ export class BotcEditModal extends LitElement {
               </div>
               <div class="field">
                 <label>Role claimed</label>
-                <botc-combo id="combo-role" .script="${this.script}" placeholder="Washerwoman…"></botc-combo>
+                <botc-combo id="combo-role" .script="${this.script}" .showInfo="${true}" placeholder="Washerwoman…"
+                  @combo-change="${e => {
+                    this._claimedRoleValue = e.detail?.value || '';
+                    if (this._roleInfoOpen === 'claimed') this._closeRoleInfo();
+                  }}"
+                  @combo-info="${() => this._toggleRoleInfo('claimed')}"></botc-combo>
               </div>
             </div>
 
             <div class="field-grid">
               <div class="field">
                 <label>Alignment</label>
-                <div class="select-wrap">
-                  <select id="f-alignment">
-                    <option value="unknown">Unknown</option>
-                    <option value="good">Good</option>
-                    <option value="evil">Evil</option>
-                    <option value="suspicious">Suspicious</option>
-                  </select>
-                  <span class="select-chevron" aria-hidden="true">▾</span>
+                <div class="align-combo-wrap">
+                  <button
+                    type="button"
+                    class="align-combo-btn ${this._alignOpen ? 'open' : ''}"
+                    aria-haspopup="listbox"
+                    aria-expanded="${this._alignOpen ? 'true' : 'false'}"
+                    @click="${() => { this._alignOpen = !this._alignOpen; }}"
+                  >
+                    <span class="align-combo-text">${this._alignmentLabel(this._alignmentValue)}</span>
+                    <span class="align-combo-chevron" aria-hidden="true">▾</span>
+                  </button>
+                  ${this._alignOpen ? html`
+                    <div class="align-combo-dropdown" role="listbox" aria-label="Alignment">
+                      <button class="align-combo-option ${this._alignmentValue === 'unknown' ? 'selected' : ''}" type="button" @click="${() => this._setAlignment('unknown')}">Unknown</button>
+                      <button class="align-combo-option ${this._alignmentValue === 'good' ? 'selected' : ''}" type="button" @click="${() => this._setAlignment('good')}">Good</button>
+                      <button class="align-combo-option ${this._alignmentValue === 'evil' ? 'selected' : ''}" type="button" @click="${() => this._setAlignment('evil')}">Evil</button>
+                      <button class="align-combo-option ${this._alignmentValue === 'suspicious' ? 'selected' : ''}" type="button" @click="${() => this._setAlignment('suspicious')}">Suspicious</button>
+                    </div>
+                  ` : nothing}
                 </div>
               </div>
               <div class="field">
                 <label>True role (ST only)</label>
-                <botc-combo id="combo-true-role" .script="${this.script}" placeholder="Actual role…"></botc-combo>
+                <botc-combo id="combo-true-role" .script="${this.script}" .showInfo="${true}" placeholder="Actual role…"
+                  @combo-change="${e => {
+                    this._trueRoleValue = e.detail?.value || '';
+                    if (this._roleInfoOpen === 'true') this._closeRoleInfo();
+                  }}"
+                  @combo-info="${() => this._toggleRoleInfo('true')}"></botc-combo>
               </div>
             </div>
 
@@ -399,6 +517,7 @@ export class BotcEditModal extends LitElement {
 
           </div>
         </div>
+        ${this._roleInfoOpen ? this._renderRoleInfoModal() : nothing}
       </div>
     `;
   }
