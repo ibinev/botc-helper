@@ -1200,12 +1200,12 @@ export class BotcApp extends LitElement {
 
         <div class="cycle-controls">
           <button class="cycle-btn" ?disabled="${step === 0}"
-            @click="${() => this.advanceCycle(-1)}">&#8249;</button>
+            @click="${e => { this.advanceCycle(-1); e.currentTarget.blur(); }}">&#8249;</button>
           <span class="cycle-label ${this.phase === 'day' ? 'phase-day' : 'phase-night'}">
             ${this.phase === 'day' ? 'Day' : 'Night'} ${this.round}
           </span>
           <button class="cycle-btn" ?disabled="${step === MAX_STEP}"
-            @click="${() => this.advanceCycle(+1)}">&#8250;</button>
+            @click="${e => { this.advanceCycle(+1); e.currentTarget.blur(); }}">&#8250;</button>
         </div>
 
         ${this.moveMode ? html`
@@ -1329,6 +1329,7 @@ export class BotcApp extends LitElement {
       <botc-edit-modal
         .open="${this._editOpen}"
         .script="${this.script}"
+        .alignHints="${this.alignHints}"
         .seat="${this.selected !== null ? this.seats[this.selected] : null}"
         .seatIdx="${this.selected}"
         .playerPool="${this.playerPool.filter(n => !this.seats.some((s, i) => i !== this.selected && s.name === n))}"

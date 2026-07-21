@@ -125,7 +125,7 @@ Tap any seat to open seat editor.
 Editable fields:
 - Player name
 - Claimed role (searchable role combobox)
-- Alignment (Unknown, Good, Evil, Suspicious)
+- Alignment (Unknown, Good, Evil, Suspicious) — only visible when Alignment is enabled in Settings
 - True role (Storyteller field)
 - Notes
 - Status toggles:
@@ -230,6 +230,7 @@ Top bar Reference opens a 3-tab reference module:
 1. Roles
 - Script role cards with ability text
 - In-play roles highlighted based on seat data
+- Role count shown per group in section header (e.g. Townsfolk (13))
 
 2. Night Order
 - First Night and Other Nights tabs
@@ -255,6 +256,8 @@ Top bar Reference opens a 3-tab reference module:
   - Copy currently selected script into a custom draft
   - Edit selected custom script
   - Delete selected custom script (with confirmation)
+  - Export selected custom script as XML file
+  - Import a custom script from an XML file
 
 Custom script builder:
 - Name field first
@@ -263,10 +266,10 @@ Custom script builder:
 - In Slots mode, filtering is in the slot popup (`Choose a role for ...`)
 
 ### Appearance
-- Theme toggle (dark/day)
 
 ### Alignment
 - Adds alignment ring cues on seats
+- When Off, the Alignment combobox is hidden in the seat editor and the Player name field expands to fill the full row
 
 ### Compact mode
 - Shrinks seat visuals and reduces clutter
@@ -280,8 +283,14 @@ Custom script builder:
 
 ### Data management
 - Clear table: reset game state but keep names and seat positions
-- Player pool clear: use ↺ button in the Player pool row (with confirmation)
 - Reset everything: full reset including seat positions
+
+### Export / Import
+- Export game: saves all seats, roles, votes, notes and setup as an XML file
+- Import game: loads a previously exported XML game backup
+
+### Player pool
+- Open: opens the player pool management sheet directly from Settings
 
 ## 11. 🧲 Move Mode and Custom Layout
 
@@ -360,4 +369,4 @@ If running locally fails:
 
 ---
 
-Version in app source at time of writing: v6.2.3
+Version in app source at time of writing: v7.5.4

@@ -199,10 +199,19 @@ export class BotcReferenceModal extends LitElement {
     const hasTravelers = travelers.length > 0;
     const hasLorics    = lorics.length > 0;
     const hasFabls     = fabls.length > 0;
+    const countTownsfolk = customLayout?.townsfolk
+      ? leftTownsfolk.length + rightTownsfolk.length
+      : townsfolk.filter(r => !r.__spacer).length;
+    const countOutsiders = outsiders.filter(r => !r.__spacer).length;
+    const countMinions   = minions.filter(r => !r.__spacer).length;
+    const countDemons    = demons.filter(r => !r.__spacer).length;
+    const countTravelers = travelers.filter(r => !r.__spacer).length;
+    const countLorics    = lorics.length;
+    const countFabls     = fabls.length;
     return html`
       <div class="ref-body">
         ${hasTownsfolk ? html`
-          <div class="rc-section-header rc-section-header--townsfolk"><span class="rc-section-dot"></span>Townsfolk</div>
+          <div class="rc-section-header rc-section-header--townsfolk"><span class="rc-section-dot"></span>Townsfolk <span class="rc-section-count">(${countTownsfolk})</span></div>
           ${customLayout?.townsfolk ? html`
             <div class="rc-two-col">
               <div class="rc-two-col-left">${leftTownsfolk.map(r => this._roleCard(r, inPlay))}</div>
@@ -214,32 +223,32 @@ export class BotcReferenceModal extends LitElement {
         ` : nothing}
 
         ${hasOutsiders ? html`
-          <div class="rc-section-header rc-section-header--outsider"><span class="rc-section-dot"></span>Outsiders</div>
+          <div class="rc-section-header rc-section-header--outsider"><span class="rc-section-dot"></span>Outsiders <span class="rc-section-count">(${countOutsiders})</span></div>
           <div class="rc-grid rc-grid--2">${outsiders.map(r => this._roleCard(r, inPlay))}</div>
         ` : nothing}
 
         ${hasMinions ? html`
-          <div class="rc-section-header rc-section-header--minion"><span class="rc-section-dot"></span>Minions</div>
+          <div class="rc-section-header rc-section-header--minion"><span class="rc-section-dot"></span>Minions <span class="rc-section-count">(${countMinions})</span></div>
           <div class="rc-grid rc-grid--2">${minions.map(r => this._roleCard(r, inPlay))}</div>
         ` : nothing}
 
         ${hasDemons ? html`
-          <div class="rc-section-header rc-section-header--demon"><span class="rc-section-dot"></span>Demon</div>
+          <div class="rc-section-header rc-section-header--demon"><span class="rc-section-dot"></span>Demon <span class="rc-section-count">(${countDemons})</span></div>
           <div class="rc-grid ${this.script === 'bmr' || this.script === 'snv' || hasCustomLayout ? 'rc-grid--2' : 'rc-grid--1 rc-grid--demon'}">${demons.map(r => this._roleCard(r, inPlay))}</div>
         ` : nothing}
 
         ${hasTravelers ? html`
-          <div class="rc-section-header rc-section-header--traveler"><span class="rc-section-dot"></span>Travelers</div>
+          <div class="rc-section-header rc-section-header--traveler"><span class="rc-section-dot"></span>Travelers <span class="rc-section-count">(${countTravelers})</span></div>
           <div class="rc-grid rc-grid--2">${this._orderedRoles(travelers, 'traveler').map(r => this._roleCard(r, inPlay))}</div>
         ` : nothing}
 
         ${hasLorics ? html`
-          <div class="rc-section-header rc-section-header--loric"><span class="rc-section-dot"></span>Loric</div>
+          <div class="rc-section-header rc-section-header--loric"><span class="rc-section-dot"></span>Loric <span class="rc-section-count">(${countLorics})</span></div>
           <div class="rc-grid rc-grid--2">${lorics.map(r => this._roleCard(r, inPlay))}</div>
         ` : nothing}
 
         ${hasFabls ? html`
-          <div class="rc-section-header rc-section-header--fabled"><span class="rc-section-dot"></span>Fabled</div>
+          <div class="rc-section-header rc-section-header--fabled"><span class="rc-section-dot"></span>Fabled <span class="rc-section-count">(${countFabls})</span></div>
           <div class="rc-grid rc-grid--2">${fabls.map(r => this._roleCard(r, inPlay))}</div>
         ` : nothing}
       </div>

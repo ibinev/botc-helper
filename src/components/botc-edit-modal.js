@@ -35,6 +35,7 @@ export class BotcEditModal extends LitElement {
     _alignmentValue:   { state: true   },
     _claimedRoleValue: { state: true   },
     _trueRoleValue:    { state: true   },
+    alignHints:        { type: Boolean  },
   };
 
   createRenderRoot() { return this; }
@@ -55,6 +56,7 @@ export class BotcEditModal extends LitElement {
     this._roleInfoRole      = '';
     this._alignOpen         = false;
     this._alignmentValue    = 'unknown';
+    this.alignHints         = false;
     this._claimedRoleValue  = '';
     this._trueRoleValue     = '';
     this._poolLpTimer       = null;
@@ -385,7 +387,7 @@ export class BotcEditModal extends LitElement {
               <button class="btn btn-close-sm" @click="${this._onClose}">✕</button>
             </div>
 
-            <div class="field-grid">
+            <div class="field-grid ${this.alignHints ? '' : 'full'}">
               <div class="field">
                 <label class="name-label">Player name</label>
                 ${this._poolOpen && this.playerPool?.length ? html`
@@ -437,6 +439,7 @@ export class BotcEditModal extends LitElement {
                   ` : nothing}
                 </div>
               </div>
+              ${this.alignHints ? html`
               <div class="field">
                 <label>Alignment</label>
                 <div class="align-combo-wrap">
@@ -460,6 +463,7 @@ export class BotcEditModal extends LitElement {
                   ` : nothing}
                 </div>
               </div>
+              ` : nothing}
             </div>
 
             <div class="field-grid full">
@@ -477,7 +481,7 @@ export class BotcEditModal extends LitElement {
 
             <div class="field-grid full">
               <div class="field">
-                <label>True role (ST only)</label>
+                <label>True role</label>
                 <botc-combo id="combo-true-role" .script="${this.script}" .infoButton="${true}" placeholder="Actual role…"
                   @combo-change="${e => {
                     this._trueRoleValue = e.detail?.value || '';

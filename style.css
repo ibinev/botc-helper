@@ -126,7 +126,9 @@ body.night-cycle botc-app::before, body.night-cycle #app::before {
 .bar-title { font-family: var(--font-serif); font-size: 16px; color: var(--gold-light); letter-spacing: 0.03em; margin-right: 4px; }
 .cycle-controls { display: flex; align-items: center; gap: 2px; background: var(--bg-surface); border: 1px solid var(--gold); border-radius: var(--radius-md); overflow: hidden; box-shadow: 0 0 10px rgba(201,151,58,0.25), inset 0 0 0 1px rgba(255,255,255,0.04); }
 .cycle-btn { width: 44px; height: 34px; display: flex; align-items: center; justify-content: center; background: none; border: none; cursor: pointer; color: var(--gold-light); font-size: 24px; font-weight: 700; -webkit-tap-highlight-color: transparent; transition: background 0.1s, color 0.1s; flex-shrink: 0; }
-.cycle-btn:hover { background: rgba(201,151,58,0.12); color: #fff; }
+.cycle-btn:focus { outline: none; background: none; }
+.cycle-btn:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+@media (hover: hover) and (pointer: fine) { .cycle-btn:hover { background: rgba(201,151,58,0.12); color: #fff; } }
 .cycle-btn:active { background: rgba(201,151,58,0.22); }
 .cycle-btn:disabled { color: var(--text-muted); cursor: default; box-shadow: none; }
 .cycle-label { padding: 0 8px; font-size: 12px; font-weight: 700; white-space: nowrap; min-width: 68px; text-align: center; }
@@ -620,6 +622,7 @@ body.align-hints .seat.nom-voted.suspicious .seat-inner { background: rgba(155,7
 #roles-sheet-body { flex: 1; overflow-y: auto; padding: 14px 12px 32px; max-width: 900px; margin: 0 auto; width: 100%; box-sizing: border-box; }
 
 .rc-section-header { display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; padding: 14px 2px 6px; border-bottom: 1px solid; margin-bottom: 8px; }
+.rc-section-count { font-weight: 600; opacity: 0.65; letter-spacing: 0; }
 .rc-section-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
 .rc-section-header--townsfolk { color: #8fca4b; border-color: rgba(90,158,47,0.35); }
 .rc-section-header--townsfolk .rc-section-dot { background: #5a9e2f; }
@@ -845,8 +848,10 @@ body.align-hints .seat.nom-voted.suspicious .seat-inner { background: rgba(155,7
   -webkit-appearance: none;
   appearance: none;
 }
-.settings-script-select:hover {
-  border-color: var(--gold);
+@media (hover: hover) and (pointer: fine) {
+  .settings-script-select:hover {
+    border-color: var(--gold);
+  }
 }
 .settings-script-select:focus,
 .settings-script-select:focus-visible {
@@ -1410,7 +1415,7 @@ body.align-hints .seat.nom-voted.suspicious .seat-inner { background: rgba(155,7
 .player-name-control input { border: none; box-shadow: none; border-radius: 0; background: transparent; }
 .player-name-control input:focus { box-shadow: none; }
 .pool-toggle-btn { background: none; border: none; border-left: 0.5px solid var(--border); cursor: pointer; color: var(--text-muted); font-size: 16px; padding: 0 12px; line-height: 1; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: color 0.12s, background 0.12s; -webkit-tap-highlight-color: transparent; }
-.pool-toggle-btn:hover { color: var(--gold); }
+@media (hover: hover) and (pointer: fine) { .pool-toggle-btn:hover { color: var(--gold); } }
 .pool-toggle-btn:active { background: rgba(201,151,58,0.1); }
 .field { position: relative; }
 .pool-float { position: absolute; top: 100%; left: 0; right: 0; z-index: 200; background: var(--bg-card); border: 0.5px solid var(--border-strong); border-radius: var(--radius-md); box-shadow: 0 6px 24px rgba(0,0,0,0.5); overflow: hidden; margin-top: 2px; }
@@ -1430,12 +1435,12 @@ body.align-hints .seat.nom-voted.suspicious .seat-inner { background: rgba(155,7
 .pool-row:last-child { border-bottom: none; }
 .pool-name { flex: 1; font-size: 14px; color: var(--text-primary); }
 .pool-remove { background: none; border: none; cursor: pointer; color: var(--text-muted); font-size: 13px; padding: 2px 4px; -webkit-tap-highlight-color: transparent; flex-shrink: 0; }
-.pool-remove:hover { color: var(--evil-text); }
+@media (hover: hover) and (pointer: fine) { .pool-remove:hover { color: var(--evil-text); } }
 .pool-confirm { background: none; border: none; cursor: pointer; color: var(--gold); font-size: 13px; padding: 2px 4px; -webkit-tap-highlight-color: transparent; flex-shrink: 0; }
 .pool-add-input { flex: 1; min-width: 0; padding: 6px 10px; background: var(--bg-input); border: 0.5px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font-sans); font-size: 14px; color: var(--text-primary); outline: none; }
 .pool-add-input:focus { border-color: var(--gold); box-shadow: 0 0 0 2px rgba(201,151,58,0.15); }
 .pool-add-btn { display: block; width: 100%; padding: 10px 16px; background: none; border: none; color: var(--gold); font-size: 14px; font-family: var(--font-sans); cursor: pointer; text-align: left; -webkit-tap-highlight-color: transparent; }
-.pool-add-btn:hover { color: var(--gold-light); }
+@media (hover: hover) and (pointer: fine) { .pool-add-btn:hover { color: var(--gold-light); } }
 
 button:focus { outline: none; }
 button:focus-visible {
@@ -1483,13 +1488,13 @@ botc-combo .combo-text { border-radius: 0; border: 0; }
 .combo-text::placeholder { color: var(--text-muted); }
 .combo-text:focus { border-radius: 0; box-shadow: none; }
 .combo-toggle { background: none; border: none; border-left: 0.5px solid var(--border); cursor: pointer; color: var(--text-muted); font-size: 16px; min-width: 40px; padding: 0 12px; line-height: 1; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: color 0.12s, background 0.12s; -webkit-tap-highlight-color: transparent; }
-.combo-toggle:hover { color: var(--gold); }
+@media (hover: hover) and (pointer: fine) { .combo-toggle:hover { color: var(--gold); } }
 .combo-info { background: none; border: none; border-left: 0.5px solid var(--border); cursor: pointer; color: var(--text-muted); min-width: 36px; padding: 0 9px; line-height: 1; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: color 0.12s, background 0.12s; -webkit-tap-highlight-color: transparent; }
 .combo-info-svg { display: block; }
-.combo-info:hover { color: var(--gold); }
+@media (hover: hover) and (pointer: fine) { .combo-info:hover { color: var(--gold); } }
 .combo-clear { background: none; border: none; border-left: 0.5px solid var(--border); cursor: pointer; color: var(--text-muted); font-size: 14px; min-width: 34px; padding: 0 9px; line-height: 1; display: none; align-items: center; justify-content: center; transition: color 0.12s, background 0.12s; -webkit-tap-highlight-color: transparent; }
 .combo-clear.visible { display: flex; }
-.combo-clear:hover { color: var(--gold); }
+@media (hover: hover) and (pointer: fine) { .combo-clear:hover { color: var(--gold); } }
 .combo-dropdown { display: none; position: fixed; background: var(--bg-card); border: 0.5px solid var(--border-strong); border-radius: var(--radius-md); z-index: 9999; overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent; -webkit-overflow-scrolling: touch; box-shadow: 0 6px 24px rgba(0,0,0,0.5); }
 .combo-dropdown.open { display: block; }
 .combo-group-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; padding: 8px 10px 4px; color: var(--text-muted); user-select: none; position: sticky; top: 0; background: var(--bg-card); }

@@ -177,6 +177,15 @@ export class BotcRolesModal extends LitElement {
     const hasTravelers = travelers.some(r => !r.__spacer);
     const hasLorics    = lorics.length > 0;
     const hasFabls     = fabls.length > 0;
+    const countTownsfolk = customLayout?.townsfolk
+      ? leftTownsfolk.length + rightTownsfolk.length
+      : townsfolk.filter(r => !r.__spacer).length;
+    const countOutsiders = outsiders.filter(r => !r.__spacer).length;
+    const countMinions   = minions.filter(r => !r.__spacer).length;
+    const countDemons    = demons.filter(r => !r.__spacer).length;
+    const countTravelers = travelers.filter(r => !r.__spacer).length;
+    const countLorics    = lorics.length;
+    const countFabls     = fabls.length;
 
     return html`
       <div class="modal-overlay modal-overlay--fullscreen" id="roles-sheet-overlay"
@@ -191,7 +200,7 @@ export class BotcRolesModal extends LitElement {
             <!-- ── Townsfolk ── -->
             ${hasTownsfolk ? html`
               <div class="rc-section-header rc-section-header--townsfolk">
-                <span class="rc-section-dot"></span>Townsfolk
+                <span class="rc-section-dot"></span>Townsfolk <span class="rc-section-count">(${countTownsfolk})</span>
               </div>
               ${customLayout?.townsfolk ? html`
                 <div class="rc-two-col">
@@ -208,7 +217,7 @@ export class BotcRolesModal extends LitElement {
             <!-- ── Outsiders ── -->
             ${hasOutsiders ? html`
               <div class="rc-section-header rc-section-header--outsider">
-                <span class="rc-section-dot"></span>Outsiders
+                <span class="rc-section-dot"></span>Outsiders <span class="rc-section-count">(${countOutsiders})</span>
               </div>
               <div class="rc-grid rc-grid--2">
                 ${outsiders.map(r => this._roleCard(r, inPlay))}
@@ -218,7 +227,7 @@ export class BotcRolesModal extends LitElement {
             <!-- ── Minions ── -->
             ${hasMinions ? html`
               <div class="rc-section-header rc-section-header--minion">
-                <span class="rc-section-dot"></span>Minions
+                <span class="rc-section-dot"></span>Minions <span class="rc-section-count">(${countMinions})</span>
               </div>
               <div class="rc-grid rc-grid--2">
                 ${minions.map(r => this._roleCard(r, inPlay))}
@@ -228,7 +237,7 @@ export class BotcRolesModal extends LitElement {
             <!-- ── Demon ── -->
             ${hasDemons ? html`
               <div class="rc-section-header rc-section-header--demon">
-                <span class="rc-section-dot"></span>Demon
+                <span class="rc-section-dot"></span>Demon <span class="rc-section-count">(${countDemons})</span>
               </div>
               <div class="rc-grid ${this.script === 'bmr' || this.script === 'snv' || hasCustomLayout ? 'rc-grid--2' : 'rc-grid--1 rc-grid--demon'}">
                 ${demons.map(r => this._roleCard(r, inPlay))}
@@ -238,7 +247,7 @@ export class BotcRolesModal extends LitElement {
             <!-- ── Travelers ── -->
             ${hasTravelers ? html`
               <div class="rc-section-header rc-section-header--traveler">
-                <span class="rc-section-dot"></span>Travelers
+                <span class="rc-section-dot"></span>Travelers <span class="rc-section-count">(${countTravelers})</span>
               </div>
               <div class="rc-grid rc-grid--2">
                 ${travelers.map(r => this._roleCard(r, inPlay))}
@@ -248,7 +257,7 @@ export class BotcRolesModal extends LitElement {
             <!-- ── Loric ── -->
             ${hasLorics ? html`
               <div class="rc-section-header rc-section-header--loric">
-                <span class="rc-section-dot"></span>Loric
+                <span class="rc-section-dot"></span>Loric <span class="rc-section-count">(${countLorics})</span>
               </div>
               <div class="rc-grid rc-grid--2">
                 ${lorics.map(r => this._roleCard(r, inPlay))}
@@ -258,7 +267,7 @@ export class BotcRolesModal extends LitElement {
             <!-- ── Fabled ── -->
             ${hasFabls ? html`
               <div class="rc-section-header rc-section-header--fabled">
-                <span class="rc-section-dot"></span>Fabled
+                <span class="rc-section-dot"></span>Fabled <span class="rc-section-count">(${countFabls})</span>
               </div>
               <div class="rc-grid rc-grid--2">
                 ${fabls.map(r => this._roleCard(r, inPlay))}
