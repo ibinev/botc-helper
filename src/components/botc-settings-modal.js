@@ -39,6 +39,9 @@ const SLOT_TEMPLATE_ORDER = ['townsfolk', 'outsider', 'minion', 'demon', 'travel
  *   clear-player-pool  – (no detail)
  *   reset              – (no detail)
  *   open-readme        – (no detail)
+ *   bg-image-change    – { detail: { dataUrl } }
+ *   bg-image-reset     – (no detail)
+ *   bg-fog-toggle      – (no detail)
  *   modal-close        – (no detail)
  */
 export class BotcSettingsModal extends LitElement {
@@ -55,6 +58,8 @@ export class BotcSettingsModal extends LitElement {
     alignHints: { type: Boolean },
     storyView:  { type: Boolean },
     compactMode:{ type: Boolean },
+    hasBgImage: { type: Boolean },
+    bgFog:      { type: Boolean },
     _customOpen:{ state: true },
     _customName:{ state: true },
     _customQuery:{ state: true },
@@ -84,6 +89,8 @@ export class BotcSettingsModal extends LitElement {
     this.alignHints = false;
     this.storyView  = false;
     this.compactMode= false;
+    this.hasBgImage = false;
+    this.bgFog      = true;
     this._customOpen = false;
     this._customName = '';
     this._customQuery = '';
@@ -546,6 +553,18 @@ export class BotcSettingsModal extends LitElement {
     this._fire('open-readme', {});
   }
 
+  _onBgFileChange(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      this._fire('bg-image-change', { dataUrl: ev.target.result });
+      // reset the input so the same file can be re-selected
+      e.target.value = '';
+    };
+    reader.readAsDataURL(file);
+  }
+
   _fire(name, detail) {
     this.dispatchEvent(new CustomEvent(name, {
       detail, bubbles: true, composed: true
@@ -646,9 +665,10 @@ export class BotcSettingsModal extends LitElement {
                             layout: this.selectedScriptLayout || {},
                           });
                         }}"><span class="settings-script-menu-icon">⤓</span><span class="settings-script-menu-label">Export</span></button>
-                      <button class="settings-script-menu-item" type="button" role="menuitem" title="Import a script from XML"
-                        @click="${() => { this._closeScriptMenu(); this._fire('import-script', {}); }}"><span class="settings-script-menu-icon">⤒</span><span class="settings-script-menu-label">Import</span></button>
                     ` : nothing}
+                    <div class="settings-script-menu-divider"></div>
+                    <button class="settings-script-menu-item" type="button" role="menuitem" title="Import a script from XML"
+                      @click="${() => { this._closeScriptMenu(); this._fire('import-script', {}); }}"><span class="settings-script-menu-icon">⤒</span><span class="settings-script-menu-label">Import</span></button>
                   </div>
                 ` : nothing}
               </div>
@@ -658,6 +678,24 @@ export class BotcSettingsModal extends LitElement {
 
             <div class="settings-group">
             <div class="settings-group-title">Appearance</div>
+            <div class="settings-row">
+              <div>
+                <div class="settings-label">Background image</div>
+                <div class="settings-sub">Recommended: 9:16 portrait, at least 1080×1920 px</div>
+              </div>
+              <div class="settings-control settings-control--bg">
+                <label class="btn btn-gold settings-bg-upload-btn" title="Upload background image">
+                  ⤒ Upload
+                  <input type="file" accept="image/*" class="settings-bg-file-input" @change="${e => this._onBgFileChange(e)}">
+                </label>
+                ${this.hasBgImage ? html`
+                  <button class="btn btn-sm btn-hints ${this.bgFog ? 'active' : ''}" title="Toggle fog/dimming overlay"
+                    @click="${() => this._fire('bg-fog-toggle', {})}">Fog</button>
+                  <button class="btn btn-sm settings-bg-reset-btn" title="Remove custom background"
+                    @click="${() => this._fire('bg-image-reset', {})}">✕ Reset</button>
+                ` : nothing}
+              </div>
+            </div>
             <div class="settings-row">
               <div>
                 <div class="settings-label">Alignment</div>

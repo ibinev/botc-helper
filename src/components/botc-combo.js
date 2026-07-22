@@ -63,6 +63,7 @@ export class BotcCombo extends LitElement {
       if (input && document.activeElement !== input) {
         input.value = this._currentVal;
         this._updateClearBtn();
+        this._updateIcon();
       }
     }
   }
@@ -74,12 +75,14 @@ export class BotcCombo extends LitElement {
     const input = this._input();
     if (input) { input.value = v; }
     this._updateClearBtn();
+    this._updateIcon();
   }
   clear() {
     this._currentVal = '';
     const input = this._input();
     if (input) input.value = '';
     this._updateClearBtn();
+    this._updateIcon();
   }
 
   // ── Private helpers ──────────────────────────────────────────────────
@@ -87,6 +90,22 @@ export class BotcCombo extends LitElement {
   _clearBtn() { return this.querySelector('.combo-clear'); }
   _infoBtn()  { return this.querySelector('.combo-info'); }
   _toggleBtn(){ return this.querySelector('.combo-toggle'); }
+  _iconEl()   { return this.querySelector('.combo-selected-icon'); }
+
+  _updateIcon() {
+    const icon = this._iconEl();
+    if (!icon) return;
+    const src = this._currentVal ? (ROLE_ICONS[this._currentVal] || '') : '';
+    if (src) {
+      icon.src = src;
+      icon.style.display = 'block';
+    } else {
+      icon.src = '';
+      icon.style.display = 'none';
+    }
+    const input = this._input();
+    if (input) input.style.paddingLeft = src ? '4px' : '8px';
+  }
 
   _updateClearBtn() {
     const cb = this._clearBtn();
@@ -202,6 +221,7 @@ export class BotcCombo extends LitElement {
     this._dropdown?.classList.remove('open');
     this._input()?.setAttribute('aria-expanded', 'false');
     this._updateClearBtn();
+    this._updateIcon();
     this._input()?.blur();
     this.dispatchEvent(new CustomEvent('combo-change', {
       detail: { value: name }, bubbles: true, composed: true
@@ -294,6 +314,7 @@ export class BotcCombo extends LitElement {
         case 'Escape':
           this._currentVal = '';
           input.value = '';
+          this._updateIcon();
           this._close();
           break;
       }
@@ -307,6 +328,7 @@ export class BotcCombo extends LitElement {
         this._currentVal = '';
         input.value = '';
         this._updateClearBtn();
+        this._updateIcon();
         this._open('');
         requestAnimationFrame(() => this._positionDropdown());
         this.dispatchEvent(new CustomEvent('combo-change', {
@@ -319,6 +341,7 @@ export class BotcCombo extends LitElement {
         this._currentVal = '';
         input.value = '';
         this._updateClearBtn();
+        this._updateIcon();
         this._open('');
         requestAnimationFrame(() => requestAnimationFrame(() => this._positionDropdown()));
         this.dispatchEvent(new CustomEvent('combo-change', {
@@ -344,6 +367,7 @@ export class BotcCombo extends LitElement {
       <div class="combo-wrap">
         <div class="combo-input-row">
           <div class="combo-text-wrap">
+            <img class="combo-selected-icon" src="" alt="" style="display:none">
             <input class="combo-text"
               placeholder="${this.placeholder}"
               autocomplete="off"

@@ -105,6 +105,13 @@ body.night-cycle botc-app::before, body.night-cycle #app::before {
     radial-gradient(ellipse 110% 88% at 50% 50%, rgba(0,0,0,0.52) 0%, rgba(0,0,0,0.78) 100%),
     linear-gradient(to bottom, rgba(0,0,0,0.58) 0%, rgba(0,0,0,0.34) 40%, rgba(0,0,0,0.68) 100%);
 }
+/* General fog off — night-cycle still takes precedence via higher specificity above */
+body.no-bg-fog botc-app::before, body.no-bg-fog #app::before { background: none; }
+body.no-bg-fog.night-cycle botc-app::before, body.no-bg-fog.night-cycle #app::before {
+  background:
+    radial-gradient(ellipse 110% 88% at 50% 50%, rgba(0,0,0,0.52) 0%, rgba(0,0,0,0.78) 100%),
+    linear-gradient(to bottom, rgba(0,0,0,0.58) 0%, rgba(0,0,0,0.34) 40%, rgba(0,0,0,0.68) 100%);
+}
 #topbar, #circle-wrap, .modal-overlay { position: relative; z-index: 1; }
 #topbar { z-index: 10; }
 
@@ -817,6 +824,16 @@ body.align-hints .seat.nom-voted.suspicious .seat-inner { background: rgba(155,7
   justify-content: center;
   gap: 6px;
 }
+.settings-control--bg { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.settings-bg-upload-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  cursor: pointer; font-size: 13px; padding: 7px 14px;
+  border: 0.5px solid var(--gold); border-radius: var(--radius-sm);
+  color: var(--gold-light); background: var(--bg-surface);
+  font-family: var(--font-sans); white-space: nowrap;
+}
+.settings-bg-file-input { display: none; }
+.settings-bg-reset-btn { flex-shrink: 0; color: var(--evil-text); border-color: rgba(192,57,43,0.5); }
 .settings-pool-clear-btn {
   width: 32px;
   height: 32px;
@@ -1482,7 +1499,8 @@ botc-combo { display: block; border-radius: var(--radius-sm); }
 .combo-wrap { position: relative; border-radius: inherit; }
 .combo-input-row { display: flex; align-items: stretch; background: var(--bg-input); border: 0.5px solid var(--border); border-radius: inherit; transition: border-color 0.12s, box-shadow 0.12s; overflow: hidden; }
 .combo-input-row:focus-within { border-color: var(--gold); box-shadow: 0 0 0 2px rgba(201,151,58,0.15); }
-.combo-text-wrap { flex: 1; min-width: 0; background: transparent; border-radius: var(--radius-sm) 0 0 var(--radius-sm); overflow: hidden; }
+.combo-text-wrap { flex: 1; min-width: 0; background: transparent; border-radius: var(--radius-sm) 0 0 var(--radius-sm); overflow: hidden; display: flex; align-items: center; }
+.combo-selected-icon { width: 22px; height: 22px; object-fit: contain; flex-shrink: 0; margin-left: 6px; }
 botc-combo .combo-text { border-radius: 0; border: 0; }
 .combo-text { width: 100%; min-width: 60px; height: 100%; background: none; border: none; -webkit-appearance: none; appearance: none; box-shadow: none; outline: none; color: var(--text-primary); font-family: var(--font-sans); font-size: 14px; padding: 8px 8px; }
 .combo-text::placeholder { color: var(--text-muted); }

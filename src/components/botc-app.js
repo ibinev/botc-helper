@@ -38,6 +38,8 @@ export class BotcApp extends LitElement {
     compactMode:       { type: Boolean },
     hideRole:          { type: Boolean },
     hideDeadPlayers:   { type: Boolean },
+    hasBgImage:        { type: Boolean },
+    bgFog:             { type: Boolean },
     script:            { type: String  },
     customScripts:     { type: Array   },
     playerPool:        { type: Array   },
@@ -88,6 +90,8 @@ export class BotcApp extends LitElement {
     this.compactMode       = false;
     this.hideRole          = false;
     this.hideDeadPlayers   = false;
+    this.hasBgImage        = false;
+    this.bgFog             = true;
     this.script            = 'tb';
     this.customScripts     = [];
     this.playerPool        = [];
@@ -187,6 +191,8 @@ export class BotcApp extends LitElement {
     this._loadCompactMode();
     this._loadHideRole();
     this._loadHideDeadPlayers();
+    this._loadBgImage();
+    this._loadBgFog();
     this._loadScript();
     this._loadPlayerPool();
     const restored = this._loadState();
@@ -200,6 +206,8 @@ export class BotcApp extends LitElement {
     this._applyCompactMode();
     this._applyHideRole();
     this._applyHideDeadPlayers();
+    this._applyBgImage();
+    this._applyBgFog();
     this._saveScript();
     requestAnimationFrame(() => requestAnimationFrame(() => this.requestUpdate()));
   }
@@ -337,6 +345,36 @@ export class BotcApp extends LitElement {
   _loadHideDeadPlayers() {
     // Default startup behavior: dead players are visible.
     this.hideDeadPlayers = false;
+  }
+
+  _loadBgImage() {
+    try {
+      const stored = localStorage.getItem('botc_bg_image');
+      this.hasBgImage = !!stored;
+      this._bgImageDataUrl = stored || null;
+    } catch(e) {}
+  }
+
+  _applyBgImage() {
+    const el = document.querySelector('botc-app') || document.getElementById('app');
+    if (!el) return;
+    if (this._bgImageDataUrl) {
+      el.style.backgroundImage = `url('${this._bgImageDataUrl}')`;
+    } else {
+      el.style.backgroundImage = '';
+    }
+  }
+
+  _loadBgFog() {
+    const stored = localStorage.getItem('botc_bg_fog');
+    this.bgFog = stored !== 'off';
+  }
+
+  _applyBgFog() {
+    document.body.classList.toggle('no-bg-fog', !this.bgFog);
+    try {
+      localStorage.setItem('botc_bg_fog', this.bgFog ? 'on' : 'off');
+    } catch(e) {}
   }
 
   _loadPlayerPool() {
@@ -1415,6 +1453,8 @@ export class BotcApp extends LitElement {
         .alignHints="${this.alignHints}"
         .storyView="${this.storyView}"
         .compactMode="${this.compactMode}"
+        .hasBgImage="${this.hasBgImage}"
+        .bgFog="${this.bgFog}"
         @count-change="${e => {
           this.seatCount = e.detail.count;
           this._initSeats(this.seatCount);
@@ -1508,6 +1548,25 @@ export class BotcApp extends LitElement {
         @open-readme="${() => {
           this._settingsOpen = false;
           this._readmeOpen = true;
+          this.requestUpdate();
+        }}"
+        @bg-image-change="${e => {
+          this._bgImageDataUrl = e.detail.dataUrl;
+          this.hasBgImage = true;
+          this._applyBgImage();
+          try { localStorage.setItem('botc_bg_image', e.detail.dataUrl); } catch(err) {}
+          this.requestUpdate();
+        }}"
+        @bg-image-reset="${() => {
+          this._bgImageDataUrl = null;
+          this.hasBgImage = false;
+          this._applyBgImage();
+          try { localStorage.removeItem('botc_bg_image'); } catch(err) {}
+          this.requestUpdate();
+        }}"
+        @bg-fog-toggle="${() => {
+          this.bgFog = !this.bgFog;
+          this._applyBgFog();
           this.requestUpdate();
         }}"
         @modal-close="${() => {
