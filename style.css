@@ -586,8 +586,8 @@ body.align-hints .seat.nom-voted.suspicious .seat-inner { background: rgba(155,7
 .no-row--cond { border-style: dashed; }
 .no-step { min-width: 20px; font-size: 11px; color: var(--text-secondary); font-weight: 700; padding-top: 2px; text-align: right; }
 .no-check { min-width: 16px; font-size: 13px; color: #5a9e2f; font-weight: 700; padding-top: 1px; }
-.no-icon { width: 32px; height: 32px; object-fit: contain; flex-shrink: 0; filter: drop-shadow(0 1px 3px rgba(0,0,0,0.7)); }
-.no-icon--st { display: inline-flex; align-items: center; justify-content: center; font-size: 18px; width: 32px; height: 32px; }
+.no-icon { width: 45px; height: 45px; object-fit: contain; flex-shrink: 0; filter: drop-shadow(0 1px 3px rgba(0,0,0,0.7)); }
+.no-icon--st { display: inline-flex; align-items: center; justify-content: center; font-size: 25px; width: 45px; height: 45px; }
 .no-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
 .no-name-row { display: flex; align-items: baseline; gap: 6px; min-width: 0; flex-wrap: wrap; }
 .no-name { font-size: 16px; font-weight: 700; color: var(--text); }
