@@ -1562,6 +1562,9 @@ export class BotcApp extends LitElement {
           this.hasBgImage = false;
           this._applyBgImage();
           try { localStorage.removeItem('botc_bg_image'); } catch(err) {}
+          this.bgFog = true;
+          document.body.classList.remove('no-bg-fog');
+          try { localStorage.removeItem('botc_bg_fog'); } catch(err) {}
           this.requestUpdate();
         }}"
         @bg-fog-toggle="${() => {
