@@ -229,12 +229,9 @@ export class BotcSettingsModal extends LitElement {
       });
 
       const missing = (roles || []).filter(name => this._roleCat(name) === cat && !left.includes(name) && !right.includes(name));
-      missing.forEach((name, idx) => {
-        if (idx % 2 === 0) left.push(name);
-        else right.push(name);
-      });
-
-      layout[cat] = { left, right };
+      const flatAll = [...left, ...right, ...missing];
+      const mid = Math.ceil(flatAll.length / 2);
+      layout[cat] = { left: flatAll.slice(0, mid), right: flatAll.slice(mid) };
     });
 
     return layout;
@@ -428,6 +425,7 @@ export class BotcSettingsModal extends LitElement {
   }
 
   _nextListPlacement(cat) {
+    // kept for compatibility but no longer used in _toggleCustomRole
     const c = this._ensureLayoutCat(cat);
     const rows = Math.max(c.left.length, c.right.length);
     for (let i = 0; i <= rows; i += 1) {
@@ -437,22 +435,29 @@ export class BotcSettingsModal extends LitElement {
     return { col: 'left', index: rows };
   }
 
+  _rebuildListCat(cat, flatOrder) {
+    const mid = Math.ceil(flatOrder.length / 2);
+    const c = this._ensureLayoutCat(cat);
+    c.left  = flatOrder.slice(0, mid);
+    c.right = flatOrder.slice(mid);
+  }
+
   _toggleCustomRole(name) {
     const cat = this._roleCat(name);
     if (!cat) return;
-    const selected = new Set(this._customSelected);
-    if (selected.has(name)) {
-      selected.delete(name);
-      this._removeRoleFromLayout(name, cat);
+    const c = this._ensureLayoutCat(cat);
+    const flat = [...c.left, ...c.right];
+    const idx = flat.indexOf(name);
+    if (idx !== -1) {
+      flat.splice(idx, 1);
     } else {
-      selected.add(name);
-      const c = this._ensureLayoutCat(cat);
-      const place = this._nextListPlacement(cat);
-      const arr = [...c[place.col]];
-      arr[place.index] = name;
-      c[place.col] = arr;
+      flat.push(name);
     }
-    this._customSelected = [...selected];
+    this._rebuildListCat(cat, flat);
+    this._customSelected = CAT_ORDER.flatMap(k => {
+      const kc = this._customLayout[k];
+      return kc ? [...(kc.left || []), ...(kc.right || [])] : [];
+    });
     this._customLayout = { ...this._customLayout };
     this._customQuery = '';
   }
