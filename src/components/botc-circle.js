@@ -203,12 +203,19 @@ export class BotcCircle extends LitElement {
     const roleData = s.role ? roles.find(r => r.name === s.role) : null;
     const isBluff  = !!(s.role && s.trueRole && s.role !== s.trueRole);
 
+    // When bluffed: left = bluffed role, right = true role.
+    // When not bluffed: left = trueRole || role, right = drunk/poisoned.
+    const leftRole      = isBluff ? s.role : (s.trueRole || s.role);
+    const leftRoleData  = leftRole ? roles.find(r => r.name === leftRole) : null;
+    const iconSrc       = leftRole && ROLE_ICONS[leftRole] ? ROLE_ICONS[leftRole] : null;
+
+    const trueIconSrc   = isBluff && s.trueRole && ROLE_ICONS[s.trueRole] ? ROLE_ICONS[s.trueRole] : null;
+    const drunkIconSrc  = !isBluff
+      ? (s.poisoned ? ROLE_ICONS['Poisoner'] : s.drunk ? ROLE_ICONS['Drunk'] : null)
+      : null;
+
     const displayRole     = s.trueRole || s.role;
     const displayRoleData = displayRole ? roles.find(r => r.name === displayRole) : null;
-    const iconSrc         = displayRole && ROLE_ICONS[displayRole] ? ROLE_ICONS[displayRole] : null;
-    const drunkIconSrc    = s.poisoned
-      ? ROLE_ICONS['Poisoner']
-      : s.drunk ? ROLE_ICONS['Drunk'] : null;
     const dotClass = displayRoleData
       ? ` dot-${displayRoleData.cat}`
       : (roleData ? ` dot-${roleData.cat}` : '');
@@ -263,7 +270,10 @@ export class BotcCircle extends LitElement {
             }}">✕</button>
         ` : nothing}
         ${iconSrc
-          ? html`<img class="seat-role-icon" src="${iconSrc}" alt="${displayRole}" title="${displayRole}">`
+          ? html`<img class="seat-role-icon" src="${iconSrc}" alt="${leftRole}" title="${leftRole}">`
+          : nothing}
+        ${trueIconSrc
+          ? html`<img class="seat-true-icon" src="${trueIconSrc}" alt="${s.trueRole}" title="${s.trueRole}">`
           : nothing}
         ${drunkIconSrc
           ? html`<img class="seat-drunk-icon" src="${drunkIconSrc}"

@@ -57,6 +57,20 @@ function normalizeLayout(layout, roleList) {
     });
   });
 
+  // Auto-place any roles not covered by the stored layout (split at midpoint per category).
+  ROLE_CATEGORY_ORDER.forEach(cat => {
+    const placed = new Set([...byCat[cat].left, ...byCat[cat].right]);
+    const missing = (roleList || []).filter(name => {
+      if (!known.has(name) || placed.has(name)) return false;
+      const r = ROLE_BY_NAME.get(name);
+      return r?.cat === cat;
+    });
+    if (!missing.length) return;
+    const flat = [...byCat[cat].left, ...byCat[cat].right, ...missing];
+    const mid = Math.ceil(flat.length / 2);
+    byCat[cat] = { left: flat.slice(0, mid), right: flat.slice(mid) };
+  });
+
   return byCat;
 }
 

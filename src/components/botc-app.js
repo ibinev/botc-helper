@@ -413,7 +413,7 @@ export class BotcApp extends LitElement {
     } catch (e) {}
   }
 
-  _createCustomScript(name, roles, layout = null) {
+  _createCustomScript(name, roles, layout = null, author = '') {
     const base = String(name || '').trim();
     const selectedRoles = [...new Set((roles || []).filter(Boolean))];
     if (!base || !selectedRoles.length) return;
@@ -432,7 +432,7 @@ export class BotcApp extends LitElement {
 
     this.customScripts = [
       ...this.customScripts,
-      { id, label: base, roles: selectedRoles, layout },
+      { id, label: base, author: String(author || '').trim(), roles: selectedRoles, layout },
     ];
     this._saveCustomScripts();
     this.script = id;
@@ -444,14 +444,14 @@ export class BotcApp extends LitElement {
     return this.customScripts.some(s => s.id === id);
   }
 
-  _editCustomScript(id, name, roles, layout = null) {
+  _editCustomScript(id, name, roles, layout = null, author = '') {
     if (!this._isCustomScript(id)) return;
     const label = String(name || '').trim();
     const selectedRoles = [...new Set((roles || []).filter(Boolean))];
     if (!label || !selectedRoles.length) return;
 
     this.customScripts = this.customScripts.map(s =>
-      s.id === id ? { ...s, label, roles: selectedRoles, layout } : s
+      s.id === id ? { ...s, label, author: String(author || '').trim(), roles: selectedRoles, layout } : s
     );
     this._saveCustomScripts();
     this.script = id;
@@ -478,70 +478,78 @@ export class BotcApp extends LitElement {
 
   async _exportScriptBackup(scriptData) {
     try {
-      const payload = {
-        schema: 1,
-        exportedAt: new Date().toISOString(),
-        script: {
-          id: scriptData.id,
-          label: scriptData.label,
-          roles: scriptData.roles || [],
-          layout: scriptData.layout || {},
-        },
-      };
-      const json = JSON.stringify(payload);
-      const safeJson = json.replace(/]]>/g, ']]]]><![CDATA[>');
-      const xml = [
-        '<?xml version="1.0" encoding="UTF-8"?>',
-        '<botc-script format="json" schema="1">',
-        `<data><![CDATA[${safeJson}]]></data>`,
-        '</botc-script>',
-      ].join('\n');
+      // Standard BotC JSON script format
       const safeName = (scriptData.label || 'script').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/, '');
+      const arr = [
+        { id: '_meta', name: scriptData.label || 'Custom Script', author: scriptData.author || '' },
+        ...(scriptData.roles || []).map(name => this._roleNameToId(name)),
+      ];
       const stamp = new Date().toISOString().slice(0, 10);
-      await this._saveXmlToFile(xml, `botc-script-${safeName}-${stamp}.xml`);
+      await this._saveJsonToFile(JSON.stringify(arr, null, 2), `botc-script-${safeName}-${stamp}.json`);
     } catch (e) {
       if (e?.name === 'AbortError') return;
       window.alert('Script export failed. Please try again.');
     }
   }
 
+  _roleNameToId(name) {
+    // Convert display name to standard BotC ID (lowercase, no spaces/apostrophes/hyphens)
+    return name.toLowerCase().replace(/[\s'\-]/g, '');
+  }
+
+  _buildRoleIdMap() {
+    const map = new Map();
+    getAllRoles().forEach(r => {
+      map.set(this._roleNameToId(r.name), r.name);
+    });
+    return map;
+  }
+
   async _importScriptBackup() {
     try {
-      const file = await this._pickImportFile();
+      const file = await this._pickImportFile('.json,application/json');
       if (!file) return;
-      const xml = await file.text();
-      const doc = new DOMParser().parseFromString(xml, 'application/xml');
-      if (doc.querySelector('parsererror')) throw new Error('Invalid XML.');
-      const root = doc.querySelector('botc-script');
-      const dataNode = root?.querySelector('data');
-      if (!root || !dataNode) throw new Error('Not a script backup.');
-      const payload = JSON.parse(dataNode.textContent || '{}');
-      const s = payload?.script;
-      if (!s?.label || !Array.isArray(s?.roles) || !s.roles.length) throw new Error('Script file is missing data.');
+      const text = await file.text();
+      let arr;
+      try { arr = JSON.parse(text); } catch { throw new Error('Invalid JSON.'); }
+      if (!Array.isArray(arr)) throw new Error('Not a valid BotC script file.');
 
-      const used = new Set(getScriptOptions().map(o => o.id));
-      let targetId = s.id && used.has(s.id) ? s.id : (s.id || null);
+      // Extract _meta entry
+      const meta = arr.find(e => typeof e === 'object' && e !== null && e.id === '_meta');
+      const label = meta?.name || meta?.label || 'Imported Script';
+      const author = meta?.author || '';
 
-      // If it matches an existing custom script, replace it.
-      const existingCustom = this.customScripts.find(c => c.id === targetId);
-      if (existingCustom) {
-        this._editCustomScript(targetId, s.label, s.roles, s.layout || null);
-      } else {
-        // Generate a fresh id if the stored one collides with a built-in.
-        const base = (s.label || 'imported').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/, '') || 'custom-script';
-        let id = targetId && !['tb','bmr','snv'].includes(targetId) ? targetId : ('custom-' + base);
-        let suffix = 2;
-        while (this.customScripts.some(c => c.id === id)) id = `custom-${base}-${suffix++}`;
-        this.customScripts = [...this.customScripts, { id, label: s.label, roles: s.roles, layout: s.layout || {} }];
-        this._saveCustomScripts();
-        this.script = id;
-        this._saveScript();
-        this.requestUpdate();
-      }
-      window.alert(`Script "${s.label}" imported successfully.`);
+      // Build id→name map
+      const idMap = this._buildRoleIdMap();
+
+      // Collect role names from remaining entries
+      const roles = [];
+      arr.forEach(e => {
+        if (typeof e === 'string' && e !== '_meta') {
+          const name = idMap.get(e.toLowerCase());
+          if (name) roles.push(name);
+        } else if (typeof e === 'object' && e !== null && e.id && e.id !== '_meta') {
+          const name = idMap.get(e.id.toLowerCase());
+          if (name) roles.push(name);
+        }
+      });
+
+      if (!roles.length) throw new Error('No recognised roles found in script file.');
+
+      const base = label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/, '') || 'custom-script';
+      let id = 'custom-' + base;
+      let suffix = 2;
+      while (this.customScripts.some(c => c.id === id)) id = `custom-${base}-${suffix++}`;
+
+      this.customScripts = [...this.customScripts, { id, label, author, roles, layout: {} }];
+      this._saveCustomScripts();
+      this.script = id;
+      this._saveScript();
+      this.requestUpdate();
+      window.alert(`Script "${label}" imported successfully (${roles.length} roles).`);
     } catch (e) {
       if (e?.name === 'AbortError') return;
-      window.alert('Script import failed. Please choose a valid script XML file.');
+      window.alert('Script import failed: ' + (e?.message || 'Please choose a valid BotC script JSON file.'));
     }
   }
 
@@ -610,13 +618,41 @@ export class BotcApp extends LitElement {
     URL.revokeObjectURL(url);
   }
 
-  async _pickImportFile() {
+  async _saveJsonToFile(json, suggestedName) {
+    if (window.showSaveFilePicker) {
+      const handle = await window.showSaveFilePicker({
+        suggestedName,
+        types: [{
+          description: 'BotC Script JSON',
+          accept: { 'application/json': ['.json'] },
+        }],
+      });
+      const writable = await handle.createWritable();
+      await writable.write(json);
+      await writable.close();
+      return;
+    }
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = suggestedName;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  async _pickImportFile(accept = '.xml,text/xml,application/xml') {
     if (window.showOpenFilePicker) {
+      const isJson = accept.includes('json');
       const [handle] = await window.showOpenFilePicker({
         multiple: false,
         types: [{
-          description: 'BOTC Helper XML Backup',
-          accept: { 'application/xml': ['.xml'], 'text/xml': ['.xml'] },
+          description: isJson ? 'BotC Script JSON' : 'BOTC Helper XML Backup',
+          accept: isJson
+            ? { 'application/json': ['.json'], 'text/plain': ['.json'] }
+            : { 'application/xml': ['.xml'], 'text/xml': ['.xml'] },
         }],
       });
       return handle ? handle.getFile() : null;
@@ -625,7 +661,7 @@ export class BotcApp extends LitElement {
     return await new Promise(resolve => {
       const input = document.createElement('input');
       input.type = 'file';
-      input.accept = '.xml,text/xml,application/xml';
+      input.accept = accept;
       input.style.display = 'none';
       document.body.appendChild(input);
 
@@ -1476,10 +1512,10 @@ export class BotcApp extends LitElement {
           this.requestUpdate();
         }}"
         @custom-script-create="${e => {
-          this._createCustomScript(e.detail.name, e.detail.roles, e.detail.layout || null);
+          this._createCustomScript(e.detail.name, e.detail.roles, e.detail.layout || null, e.detail.author || '');
         }}"
         @custom-script-edit="${e => {
-          this._editCustomScript(e.detail.id, e.detail.name, e.detail.roles, e.detail.layout || null);
+          this._editCustomScript(e.detail.id, e.detail.name, e.detail.roles, e.detail.layout || null, e.detail.author || '');
         }}"
         @custom-script-delete="${e => {
           this._deleteCustomScript(e.detail.id);

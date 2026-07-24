@@ -62,6 +62,7 @@ export class BotcSettingsModal extends LitElement {
     bgFog:      { type: Boolean },
     _customOpen:{ state: true },
     _customName:{ state: true },
+    _customAuthor:{ state: true },
     _customQuery:{ state: true },
     _customSelected:{ state: true },
     _customLayout:{ state: true },
@@ -93,12 +94,13 @@ export class BotcSettingsModal extends LitElement {
     this.bgFog      = true;
     this._customOpen = false;
     this._customName = '';
+    this._customAuthor = '';
     this._customQuery = '';
     this._customSelected = [];
     this._customLayout = {};
     this._customMode = 'create';
     this._showExperimental = true;
-    this._customBuilderMode = 'list';
+    this._customBuilderMode = 'slots';
     this._slotTargetCat = null;
     this._slotTargetIndex = -1;
     this._scriptMenuOpen = false;
@@ -203,7 +205,7 @@ export class BotcSettingsModal extends LitElement {
     this._customQuery = '';
     this._customSelected = [];
     this._customLayout = {};
-    this._customBuilderMode = 'list';
+    this._customBuilderMode = 'slots';
     this._slotTargetCat = null;
     this._slotTargetIndex = -1;
     // Close settings while opening the detached custom-script popup.
@@ -245,10 +247,11 @@ export class BotcSettingsModal extends LitElement {
     this._customMode = 'create';
     this._customOpen = true;
     this._customName = `${this.selectedScriptLabel || 'Script'} Copy`;
+    this._customAuthor = this.selectedCustomScript?.author || '';
     this._customQuery = '';
     this._customSelected = roles;
     this._customLayout = this._buildLayoutFromRoles(roles, this.selectedScriptLayout);
-    this._customBuilderMode = 'list';
+    this._customBuilderMode = 'slots';
     this._slotTargetCat = null;
     this._slotTargetIndex = -1;
     // Close settings while opening the detached custom-script popup.
@@ -263,6 +266,7 @@ export class BotcSettingsModal extends LitElement {
     this._customMode = 'edit';
     this._customOpen = true;
     this._customName = s.label || '';
+    this._customAuthor = s.author || '';
     this._customQuery = '';
     this._customSelected = [...(s.roles || [])];
 
@@ -273,16 +277,19 @@ export class BotcSettingsModal extends LitElement {
       layout[cat] = { left, right };
     });
 
-    // Fallback for older scripts without layout metadata.
-    (s.roles || []).forEach(name => {
-      const cat = this._roleCat(name);
-      if (!cat) return;
+    // Place any roles not already in left/right, split at midpoint per category.
+    CAT_ORDER.forEach(cat => {
       const c = layout[cat];
-      if (!c.left.includes(name) && !c.right.includes(name)) c.left.push(name);
+      const placed = new Set([...c.left, ...c.right]);
+      const missing = (s.roles || []).filter(name => this._roleCat(name) === cat && !placed.has(name));
+      if (!missing.length) return;
+      const flat = [...c.left, ...c.right, ...missing];
+      const mid = Math.ceil(flat.length / 2);
+      layout[cat] = { left: flat.slice(0, mid), right: flat.slice(mid) };
     });
 
     this._customLayout = layout;
-    this._customBuilderMode = 'list';
+    this._customBuilderMode = 'slots';
     this._slotTargetCat = null;
     this._slotTargetIndex = -1;
     // Close settings while opening the detached custom-script popup.
@@ -294,21 +301,28 @@ export class BotcSettingsModal extends LitElement {
     this._customOpen = false;
     this._customMode = 'create';
     this._customName = '';
+    this._customAuthor = '';
     this._customQuery = '';
     this._customSelected = [];
     this._customLayout = {};
-    this._customBuilderMode = 'list';
+    this._customBuilderMode = 'slots';
     this._slotTargetCat = null;
     this._slotTargetIndex = -1;
   }
 
+  _slotCountForCat(cat) {
+    const c = this._ensureLayoutCat(cat);
+    const actual = (c.left ? c.left.filter(Boolean).length : 0) + (c.right ? c.right.filter(Boolean).length : 0);
+    return Math.max(SLOT_TEMPLATE_COUNTS[cat] || 0, actual);
+  }
+
   _splitCountForCat(cat) {
-    const total = SLOT_TEMPLATE_COUNTS[cat] || 0;
+    const total = this._slotCountForCat(cat);
     return Math.ceil(total / 2);
   }
 
   _slotValuesForCat(cat) {
-    const count = SLOT_TEMPLATE_COUNTS[cat] || 0;
+    const count = this._slotCountForCat(cat);
     const split = this._splitCountForCat(cat);
     const rightCount = Math.max(0, count - split);
     const c = this._ensureLayoutCat(cat);
@@ -327,7 +341,7 @@ export class BotcSettingsModal extends LitElement {
   }
 
   _setSlotValue(cat, index, roleName) {
-    const count = SLOT_TEMPLATE_COUNTS[cat] || 0;
+    const count = this._slotCountForCat(cat);
     if (index < 0 || index >= count) return;
 
     // Remove role from all slot categories first, preserving slot coordinates.
@@ -485,6 +499,7 @@ export class BotcSettingsModal extends LitElement {
   _submitCustomScript() {
     const name = this._customName.trim();
     if (!name) return;
+    const author = this._customAuthor.trim();
 
     const roles = [];
     const layout = {};
@@ -519,9 +534,9 @@ export class BotcSettingsModal extends LitElement {
     }
 
     if (this._customMode === 'edit' && this.selectedCustomScript?.id) {
-      this._fire('custom-script-edit', { id: this.selectedCustomScript.id, name, roles, layout });
+      this._fire('custom-script-edit', { id: this.selectedCustomScript.id, name, author, roles, layout });
     } else {
-      this._fire('custom-script-create', { name, roles, layout });
+      this._fire('custom-script-create', { name, author, roles, layout });
     }
     this._closeCustomScriptPicker();
   }
@@ -660,20 +675,21 @@ export class BotcSettingsModal extends LitElement {
                     ` : nothing}
                     ${this.selectedCustomScript ? html`
                       <div class="settings-script-menu-divider"></div>
-                      <button class="settings-script-menu-item" type="button" role="menuitem" title="Export selected script as XML"
+                      <button class="settings-script-menu-item" type="button" role="menuitem" title="Export selected script as JSON"
                         @click="${() => {
                           this._closeScriptMenu();
                           this._fire('export-script', {
                             id: this.script,
                             label: this.selectedScriptLabel || this.script,
+                            author: this.selectedCustomScript?.author || '',
                             roles: Array.isArray(this.selectedScriptRoles) ? [...this.selectedScriptRoles] : [],
                             layout: this.selectedScriptLayout || {},
                           });
-                        }}"><span class="settings-script-menu-icon">⤓</span><span class="settings-script-menu-label">Export</span></button>
+                        }}"><span class="settings-script-menu-icon">⤓</span><span class="settings-script-menu-label">Export JSON</span></button>
                     ` : nothing}
                     <div class="settings-script-menu-divider"></div>
-                    <button class="settings-script-menu-item" type="button" role="menuitem" title="Import a script from XML"
-                      @click="${() => { this._closeScriptMenu(); this._fire('import-script', {}); }}"><span class="settings-script-menu-icon">⤒</span><span class="settings-script-menu-label">Import</span></button>
+                    <button class="settings-script-menu-item" type="button" role="menuitem" title="Import a script from JSON"
+                      @click="${() => { this._closeScriptMenu(); this._fire('import-script', {}); }}"><span class="settings-script-menu-icon">⤒</span><span class="settings-script-menu-label">Import JSON</span></button>
                   </div>
                 ` : nothing}
               </div>
@@ -807,19 +823,28 @@ export class BotcSettingsModal extends LitElement {
                     <button class="btn-sm" @click="${() => this._closeCustomScriptPicker()}">✕</button>
                   </div>
 
-                  <div class="settings-script-form-row">
-                    <label for="custom-script-name" class="settings-script-label">Name</label>
-                    <input id="custom-script-name" class="settings-script-input" type="text" .value="${this._customName}"
-                      placeholder="e.g. BMR + SNV Mix"
-                      @input="${e => { this._customName = e.target.value; }}"
-                      @keydown="${e => { if (e.key === 'Enter') this._submitCustomScript(); }}">
+                  <div class="settings-script-form-row" style="display:flex;gap:10px;">
+                    <div style="flex:1 1 0;min-width:0;">
+                      <label for="custom-script-name" class="settings-script-label">Name</label>
+                      <input id="custom-script-name" class="settings-script-input" type="text" .value="${this._customName}"
+                        placeholder="e.g. BMR + SNV Mix"
+                        @input="${e => { this._customName = e.target.value; }}"
+                        @keydown="${e => { if (e.key === 'Enter') this._submitCustomScript(); }}">
+                    </div>
+                    <div style="flex:1 1 0;min-width:0;">
+                      <label for="custom-script-author" class="settings-script-label">Author</label>
+                      <input id="custom-script-author" class="settings-script-input" type="text" .value="${this._customAuthor}"
+                        placeholder="e.g. Your name"
+                        @input="${e => { this._customAuthor = e.target.value; }}"
+                        @keydown="${e => { if (e.key === 'Enter') this._submitCustomScript(); }}">
+                    </div>
                   </div>
 
                   <div class="settings-script-builder-tabs" role="tablist" aria-label="Custom script builder mode">
-                    <button class="settings-script-builder-tab ${builderMode === 'list' ? 'active' : ''}" type="button"
-                      @click="${() => { this._customBuilderMode = 'list'; this._closeSlotPicker(); }}">List</button>
                     <button class="settings-script-builder-tab ${builderMode === 'slots' ? 'active' : ''}" type="button"
                       @click="${() => { this._customBuilderMode = 'slots'; }}">Slots</button>
+                    <button class="settings-script-builder-tab ${builderMode === 'list' ? 'active' : ''}" type="button"
+                      @click="${() => { this._customBuilderMode = 'list'; this._closeSlotPicker(); }}">List</button>
                   </div>
 
                   ${builderMode === 'list' ? html`
@@ -845,7 +870,7 @@ export class BotcSettingsModal extends LitElement {
                         const rows = Math.max(split, rightCount);
                         return html`
                           <div class="settings-script-role-group">
-                            <div class="settings-script-role-group-label">${CAT_LABELS[cat]} (${SLOT_TEMPLATE_COUNTS[cat]})</div>
+                            <div class="settings-script-role-group-label">${CAT_LABELS[cat]} (${this._slotCountForCat(cat)})</div>
                             <div class="settings-script-slot-grid">
                               ${Array.from({ length: rows }, (_, row) => {
                                 const leftIndex = row;

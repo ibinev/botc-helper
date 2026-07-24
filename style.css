@@ -279,6 +279,7 @@ body.align-hints .seat.align-evil.dead .seat-inner { box-shadow: 0 0 0 3px #c039
 .seat-status-icon { font-size: 9px; line-height: 1; }
 
 .seat-drunk-icon { position: absolute; top: -14px; right: -14px; width: 55px; height: 55px; object-fit: contain; pointer-events: none; filter: drop-shadow(0 1px 4px rgba(0,0,0,0.9)); z-index: 3; }
+.seat-true-icon  { position: absolute; top: -14px; right: -14px; width: 55px; height: 55px; object-fit: contain; pointer-events: none; filter: drop-shadow(0 1px 4px rgba(0,0,0,0.9)); z-index: 3; }
 .seat-role-icon  { position: absolute; top: -14px; left:  -14px; width: 55px; height: 55px; object-fit: contain; pointer-events: none; filter: drop-shadow(0 1px 4px rgba(0,0,0,0.9)); z-index: 3; }
 .pli-role-icon   { width: 26px; height: 26px; object-fit: contain; border-radius: 3px; flex-shrink: 0; }
 .pli-status-icon { font-size: 13px; line-height: 1; }
@@ -310,6 +311,7 @@ body.align-hints .seat.align-evil.dead .seat-inner { box-shadow: 0 0 0 3px #c039
   .seat-num  { font-size: 8px; }
   .seat-status-icon { font-size: 7px; padding: 1px 2px; }
   .seat-drunk-icon { width: 45px; height: 45px; top: -13px; right: -13px; }
+  .seat-true-icon  { width: 45px; height: 45px; top: -13px; right: -13px; }
   .seat-role-icon  { width: 45px; height: 45px; top: -13px; left:  -13px; }
   .seat-dot { bottom: 6px; right: 6px; }
 }
@@ -318,6 +320,7 @@ body.align-hints .seat.align-evil.dead .seat-inner { box-shadow: 0 0 0 3px #c039
   .seat-name { font-size: 14px; }
   .seat-role { font-size: 12px; }
   .seat-drunk-icon { width: 60px; height: 60px; top: -16px; right: -16px; }
+  .seat-true-icon  { width: 60px; height: 60px; top: -16px; right: -16px; }
   .seat-role-icon  { width: 60px; height: 60px; top: -16px; left:  -16px; }
   .seat-dot { bottom: 11px; right: 11px; }
 }
@@ -334,22 +337,26 @@ body.compact-mode .seat-status-icon { font-size: 7px; }
 body.compact-mode .seat-status-strip { bottom: 4px; }
 body.compact-mode .seat-role-icon  { width: 32px; height: 32px; top: -8px; left:  -8px; }
 body.compact-mode .seat-drunk-icon { width: 32px; height: 32px; top: -8px; right: -8px; }
+body.compact-mode .seat-true-icon  { width: 32px; height: 32px; top: -8px; right: -8px; }
 
 @media (max-width: 479px) {
   body.compact-mode .seat-name { font-size: 7px; max-width: 33px; }
   body.compact-mode .seat-num  { font-size: 6px; }
   body.compact-mode .seat-role-icon  { width: 24px; height: 24px; top: -6px; left:  -6px; }
   body.compact-mode .seat-drunk-icon { width: 24px; height: 24px; top: -6px; right: -6px; }
+  body.compact-mode .seat-true-icon  { width: 24px; height: 24px; top: -6px; right: -6px; }
 }
 @media (min-width: 520px) {
   body.compact-mode .seat-name { font-size: 10px; max-width: 48px; }
   body.compact-mode .seat-role-icon  { width: 34px; height: 34px; top: -9px; left:  -9px; }
   body.compact-mode .seat-drunk-icon { width: 34px; height: 34px; top: -9px; right: -9px; }
+  body.compact-mode .seat-true-icon  { width: 34px; height: 34px; top: -9px; right: -9px; }
 }
 
 /* ── Hide role ────────────────────────────────────── */
 body.hide-role .seat-role-icon  { display: none; }
 body.hide-role .seat-drunk-icon { display: none; }
+body.hide-role .seat-true-icon  { display: none; }
 body.hide-role .seat-role       { display: none; }
 body.hide-role .pli-role-icon   { display: none; }
 body.hide-role .pli-badge[class*="tag-"] { display: none; }
