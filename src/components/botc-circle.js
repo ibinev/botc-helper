@@ -283,7 +283,7 @@ export class BotcCircle extends LitElement {
         <div class="seat-inner">
           <span class="seat-num">${i + 1}</span>
           ${s.name
-            ? html`<span class="seat-name">${isBluff ? html`<span class="bluff-mark">*</span>` : nothing}${s.name}</span>`
+            ? html`<span class="seat-name">${s.name}</span>`
             : html`<span class="seat-name empty">Empty</span>`}
           ${displayRole ? html`<span class="seat-role">${displayRole}</span>` : nothing}
           ${statusIcons ? html`<span class="seat-status-strip" .innerHTML="${statusIcons}"></span>` : nothing}

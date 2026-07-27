@@ -490,6 +490,12 @@ body.align-hints .seat.nom-voted.suspicious .seat-inner { background: rgba(155,7
 .tog.on-vote     { background: rgba(186,117,23,0.15); color: var(--text-secondary); border-color: var(--border-strong); }
 .tog.on-drunk    { background: rgba(24,95,165,0.25); color: #7ab8f5; border-color: #3a7fc1; }
 .tog.on-poisoned { background: var(--evil-bg); color: var(--evil-text); border-color: var(--blood); }
+.killed-by-field { margin-top: 10px; }
+.killed-by-label { display: block; font-size: 10px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; }
+.killed-by-opt { font-weight: 400; opacity: 0.6; text-transform: none; letter-spacing: 0; }
+.field-hint { font-weight: 400; opacity: 0.6; text-transform: none; letter-spacing: 0; }
+.nom-killedby { display: inline-flex; align-items: center; margin-left: 4px; vertical-align: middle; }
+.nom-killedby-icon { width: 22px; height: 22px; object-fit: contain; border-radius: 4px; opacity: 0.9; vertical-align: middle; }
 .btn-row {
   display: flex;
   gap: 8px;
@@ -524,6 +530,9 @@ body.align-hints .seat.nom-voted.suspicious .seat-inner { background: rgba(155,7
 .death-group { margin-bottom: 10px; }
 .death-cycle-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--gold-light); font-weight: 700; text-shadow: 0 0 6px rgba(201,151,58,0.45); margin-bottom: 4px; margin-top: 2px; }
 .death-entry { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-radius: var(--radius-sm); background: var(--bg-input); border: 0.5px solid var(--border); margin-bottom: 3px; }
+.death-killedby { display: inline-flex; align-items: center; gap: 4px; margin-left: auto; flex-shrink: 0; background: rgba(192,57,43,0.22); border: 0.5px solid rgba(192,57,43,0.45); border-radius: 999px; padding: 1px 7px 1px 3px; }
+.death-killedby-icon { width: 18px; height: 18px; object-fit: contain; border-radius: 3px; flex-shrink: 0; }
+.death-killedby-name { font-size: 11px; color: var(--text-primary); font-weight: 500; white-space: nowrap; }
 .death-skull { font-size: 13px; flex-shrink: 0; opacity: 0.7; }
 .death-name  { font-size: 13px; color: var(--text-primary); flex: 1; }
 .collapsible-header { display: flex; align-items: center; justify-content: space-between; cursor: pointer; padding: 4px 0; -webkit-tap-highlight-color: transparent; }
@@ -576,6 +585,14 @@ body.align-hints .seat.nom-voted.suspicious .seat-inner { background: rgba(155,7
 .nom-vote-btn.vote-success { border-color: #5a9e2f; color: #8fca4b; background: rgba(90,158,47,0.12); }
 .nom-vote-btn.vote-fail    { border-color: #c0392b; color: #e06060; background: rgba(192,57,43,0.12); }
 .nom-entry-main { display: flex; align-items: center; gap: 8px; width: 100%; }
+.nom-notvoted-section { padding: 8px 10px; border-radius: var(--radius-sm); border: 0.5px dashed var(--border); background: rgba(192,57,43,0.06); margin-bottom: 4px; }
+.nom-notvoted-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--text-muted); display: block; margin-bottom: 5px; }
+.nom-notvoted-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.nom-notvoted-chip { font-size: 11px; padding: 2px 8px; border-radius: 999px; background: rgba(192,57,43,0.13); color: #e06060; border: 0.5px solid rgba(192,57,43,0.28); }
+.nom-notvoted-chip.align-good { background: rgba(90,158,47,0.12); color: #8fca4b; border-color: rgba(90,158,47,0.25); }
+.nom-notvoted-chip.align-evil { background: rgba(192,57,43,0.18); color: #e06060; border-color: rgba(192,57,43,0.35); }
+.nom-notvoted-chip.align-susp { background: rgba(155,77,202,0.15); color: #d08ef0; border-color: rgba(155,77,202,0.28); }
+.nom-notvoted-chip.align-none { background: rgba(160,136,102,0.12); color: var(--text-secondary); border-color: var(--border); }
 
 /* ── Night order modal ────────────────────────────────── */
 .no-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
@@ -620,8 +637,12 @@ body.align-hints .seat.nom-voted.suspicious .seat-inner { background: rgba(155,7
 
 /* ── Reference modal (Roles / Night Order / Char Count) ── */
 #ref-sheet { position: fixed; inset: 0; display: flex; flex-direction: column; background: var(--bg-surface); z-index: 200; }
-#ref-toolbar { flex-shrink: 0; display: flex; align-items: center; gap: 6px; padding: 8px 12px; padding-top: max(8px, env(safe-area-inset-top)); background: var(--bg-surface); border-bottom: 0.5px solid var(--border-strong); }
+#ref-toolbar { flex-shrink: 0; display: flex; flex-direction: column; gap: 0; padding: 0; padding-top: max(8px, env(safe-area-inset-top)); background: var(--bg-surface); border-bottom: 0.5px solid var(--border-strong); }
+.ref-toolbar-top { display: flex; align-items: center; gap: 6px; padding: 8px 12px 6px; }
 .ref-main-tabs { display: flex; gap: 4px; flex: 1; }
+.ref-script-meta { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 4px 16px 10px; border-top: 0.5px solid var(--border); }
+.ref-script-name { font-size: 15px; font-weight: 700; color: var(--gold-light); letter-spacing: 0.01em; text-align: center; line-height: 1.25; }
+.ref-script-author { font-size: 11px; font-weight: 400; color: var(--text-muted); text-align: center; }
 .ref-tab { flex: 1; background: var(--bg-card); border: 1px solid rgba(201,151,58,0.34); box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), inset 0 -1px 0 rgba(0,0,0,0.16); border-radius: var(--radius-sm); color: var(--text-secondary); font-size: 12px; font-weight: 700; padding: 7px 4px; cursor: pointer; transition: background 0.12s, color 0.12s, border-color 0.12s, box-shadow 0.12s; -webkit-tap-highlight-color: transparent; white-space: nowrap; }
 .ref-tab--active { background: rgba(201,151,58,0.18); border-color: var(--gold); box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), inset 0 -1px 0 rgba(0,0,0,0.10), 0 0 0 1px rgba(201,151,58,0.12); color: var(--gold-light); }
 .ref-body { flex: 1; overflow-y: auto; padding: 14px 12px 32px; max-width: 900px; margin: 0 auto; width: 100%; box-sizing: border-box; }
@@ -1530,7 +1551,7 @@ botc-combo .combo-text { border-radius: 0; border: 0; }
 .combo-no-results { padding: 10px 12px; font-size: 13px; color: var(--text-muted); font-style: italic; }
 
 /* ── Role info popup ─────────────────────────────────── */
-.role-info-modal-backdrop { position: absolute; inset: 0; z-index: 260; background: rgba(8,6,4,0.72); display: flex; align-items: center; justify-content: center; padding: 16px; }
+.role-info-modal-backdrop { position: fixed; inset: 0; z-index: 260; background: rgba(8,6,4,0.72); display: flex; align-items: center; justify-content: center; padding: 16px; }
 .role-info-modal-card { width: min(460px, 100%); max-height: min(72dvh, 560px); overflow: auto; border-radius: 16px; border: 0.5px solid var(--border-strong); background: linear-gradient(180deg, rgba(201,151,58,0.12) 0%, rgba(0,0,0,0) 36%), var(--bg-surface); box-shadow: 0 12px 40px rgba(0,0,0,0.58); }
 .role-info-modal-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; padding: 14px 14px 10px; border-bottom: 0.5px solid var(--border); }
 .role-info-modal-title-wrap { display: flex; align-items: flex-start; gap: 10px; min-width: 0; }

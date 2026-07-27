@@ -66,6 +66,19 @@ export class BotcCombo extends LitElement {
         this._updateIcon();
       }
     }
+    // Re-wire info button whenever infoButton toggled on (new element in DOM)
+    if (changed.has('infoButton') && this.infoButton) {
+      const infoBtn = this._infoBtn();
+      if (infoBtn && !infoBtn._wired) {
+        infoBtn._wired = true;
+        infoBtn.addEventListener('mousedown', e => e.preventDefault());
+        infoBtn.addEventListener('click', () => {
+          this.dispatchEvent(new CustomEvent('combo-info-click', {
+            bubbles: true, composed: true
+          }));
+        });
+      }
+    }
   }
 
   // ── Public API (used by parent to programmatically set value) ─────────

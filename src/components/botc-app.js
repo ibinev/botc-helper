@@ -1108,6 +1108,7 @@ export class BotcApp extends LitElement {
       ...data,
       diedAt:     data.dead && !old.dead ? { phase: this.phase, round: this.round } :
                  !data.dead && old.dead  ? null : old.diedAt,
+      killedBy:   data.dead ? (data.killedBy || '') : '',
       poisonedAt: data.poisoned && !old.poisoned ? { phase: this.phase, round: this.round } :
                  !data.poisoned && old.poisoned  ? null : old.poisonedAt,
     };

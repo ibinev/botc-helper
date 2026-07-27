@@ -1,5 +1,5 @@
 import { LitElement, html, nothing } from 'lit';
-import { getRoles, getAllRoles, getNightOrder, getCharacterCount, ROLE_ICONS, getScriptRoleLayout } from '../data.js';
+import { getRoles, getAllRoles, getNightOrder, getCharacterCount, ROLE_ICONS, getScriptRoleLayout, getScriptMeta } from '../data.js';
 import { CHARCOUNT_COLS } from '../utils.js';
 
 const BMR_ROLE_ORDER = {
@@ -376,20 +376,27 @@ export class BotcReferenceModal extends LitElement {
   }
 
   render() {
+    const { label: scriptLabel, author: scriptAuthor } = getScriptMeta(this.script);
     return html`
       <div class="modal-overlay modal-overlay--fullscreen" id="modal-reference"
         @click="${e => { if (e.target === this.querySelector('#modal-reference')) this._onClose(); }}">
         <div id="ref-sheet">
           <div id="ref-toolbar">
-            <div class="ref-main-tabs">
-              <button class="ref-tab ${this._tab === 'roles'      ? 'ref-tab--active' : ''}"
-                @click="${() => this._tab = 'roles'}">📖 Roles</button>
-              <button class="ref-tab ${this._tab === 'nightorder' ? 'ref-tab--active' : ''}"
-                @click="${() => this._tab = 'nightorder'}">🌙 Night</button>
-              <button class="ref-tab ${this._tab === 'charcount'  ? 'ref-tab--active' : ''}"
-                @click="${() => this._tab = 'charcount'}">📊 Count</button>
+            <div class="ref-toolbar-top">
+              <div class="ref-main-tabs">
+                <button class="ref-tab ${this._tab === 'roles'      ? 'ref-tab--active' : ''}"
+                  @click="${() => this._tab = 'roles'}">📖 Roles</button>
+                <button class="ref-tab ${this._tab === 'nightorder' ? 'ref-tab--active' : ''}"
+                  @click="${() => this._tab = 'nightorder'}">🌙 Night</button>
+                <button class="ref-tab ${this._tab === 'charcount'  ? 'ref-tab--active' : ''}"
+                  @click="${() => this._tab = 'charcount'}">📊 Count</button>
+              </div>
+              <button class="btn btn-toolbar-close" @click="${this._onClose}">✕</button>
             </div>
-            <button class="btn btn-toolbar-close" @click="${this._onClose}">✕</button>
+            <div class="ref-script-meta">
+              <span class="ref-script-name">${scriptLabel}</span>
+              ${scriptAuthor ? html`<span class="ref-script-author">by ${scriptAuthor}</span>` : nothing}
+            </div>
           </div>
           ${this._tab === 'roles'      ? this._renderRoles()      : nothing}
           ${this._tab === 'nightorder' ? this._renderNightOrder() : nothing}

@@ -82,6 +82,7 @@ export function setCustomScripts(customScripts = []) {
       return {
       id: String(s?.id || '').trim(),
       label: String(s?.label || '').trim(),
+      author: String(s?.author || '').trim(),
       roles,
       layout: normalizeLayout(s?.layout, roles),
     };
@@ -109,6 +110,13 @@ export function getScriptOptions() {
     ...BASE_SCRIPT_OPTIONS,
     ...CUSTOM_SCRIPTS.filter(s => !bundledIds.has(s.id)).map(s => ({ id: s.id, label: s.label })),
   ];
+}
+
+export function getScriptMeta(script) {
+  const custom = getCustomScript(script);
+  if (custom) return { label: custom.label || script, author: custom.author || '' };
+  const base = BASE_SCRIPT_OPTIONS.find(s => s.id === script);
+  return { label: base?.label || script, author: '' };
 }
 
 export function normalizeScript(script) {

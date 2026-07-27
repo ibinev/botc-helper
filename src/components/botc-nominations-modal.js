@@ -1,4 +1,5 @@
 import { LitElement, html, nothing } from 'lit';
+import { ROLE_ICONS } from '../data.js';
 
 /**
  * <botc-nominations-modal>
@@ -117,6 +118,18 @@ export class BotcNominationsModal extends LitElement {
     this.dispatchEvent(new CustomEvent('new-nom', { bubbles: true, composed: true }));
   }
 
+  _notVotedForDay(key) {
+    const dayNoms = this.nominations[key] || [];
+    // Only show if at least one nomination has votes recorded
+    const anyVotes = dayNoms.some(e => (e.votes || []).length > 0);
+    if (!anyVotes) return [];
+    const voted = new Set();
+    dayNoms.forEach(e => (e.votes || []).forEach(vi => voted.add(vi)));
+    return this.seats
+      .map((s, i) => ({ s, i }))
+      .filter(({ s, i }) => !s.dead && !voted.has(i));
+  }
+
   render() {
     const allKeys = Object.keys(this.nominations)
       .filter(k => this.nominations[k].length > 0)
@@ -154,6 +167,19 @@ export class BotcNominationsModal extends LitElement {
                       ${this.nominations[key].length} nomination${this.nominations[key].length !== 1 ? 's' : ''}
                     </span>
                   </div>
+                  ${(() => {
+                    const notVoted = this._notVotedForDay(key);
+                    return notVoted.length ? html`
+                      <div class="nom-notvoted-section">
+                        <span class="nom-notvoted-label">Not voted</span>
+                        <div class="nom-notvoted-chips">
+                          ${notVoted.map(({ s, i }) => html`
+                            <span class="nom-notvoted-chip ${this._alignClass(i)}">${this._seatLabel(i)}</span>
+                          `)}
+                        </div>
+                      </div>
+                    ` : nothing;
+                  })()}
                   ${entries.map(([origIdx, e]) => {
                     const votes = e.votes || [];
                     const voteLabel = votes.length
@@ -167,6 +193,8 @@ export class BotcNominationsModal extends LitElement {
                     const diedThisDay = target?.dead
                       && target?.diedAt?.phase === 'day'
                       && String(target?.diedAt?.round) === String(dayNum);
+                    const killedByRole = diedThisDay ? (target?.killedBy || '') : '';
+                    const killedByIcon = killedByRole ? (ROLE_ICONS[killedByRole] || null) : null;
                     const hasEnoughVotes = needed !== null && votes.length >= needed;
                     const voteOutcome = votes.length === 0 ? ''
                       : (diedThisDay && hasEnoughVotes) ? 'vote-success'
@@ -177,7 +205,10 @@ export class BotcNominationsModal extends LitElement {
                         <div class="nom-entry-main">
                           <span class="nom-player">${this._seatLabel(e.from)}</span>
                           <span class="nom-arrow">→</span>
-                          <span class="nom-player">${this._seatLabel(e.to)}</span>
+                          <span class="nom-player">${this._seatLabel(e.to)}${killedByIcon ? html`
+                            <span class="nom-killedby" title="Killed by ${killedByRole}">
+                              <img class="nom-killedby-icon" src="${killedByIcon}" alt="${killedByRole}">
+                            </span>` : nothing}</span>
                           <button class="nom-vote-btn ${voteOutcome}"
                             @click="${() => this._onVoteMode(key, origIdx)}">${voteLabel}</button>
                           <button class="nom-del" title="Remove"

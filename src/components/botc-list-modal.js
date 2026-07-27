@@ -130,7 +130,6 @@ export class BotcListModal extends LitElement {
         <span class="pli-num">${i + 1}</span>
         <span class="pli-dot ${s.dead ? 'dead' : ''} ${dotExtra}"></span>
         <span class="pli-name ${s.name ? '' : 'empty'}">
-          ${s.name ? (isBluff ? html`<span class="bluff-mark">*</span>` : nothing) : nothing}
           ${s.name || 'Empty'}
         </span>
         ${s.usedVote ? html`<span class="pli-status-icon">👻</span>` : nothing}
@@ -147,6 +146,7 @@ export class BotcListModal extends LitElement {
     const displayRole = s.trueRole || s.role;
     const roleIconSrc = displayRole && ROLE_ICONS[displayRole] ? ROLE_ICONS[displayRole] : null;
     const rd = displayRole ? roles.find(r => r.name === displayRole) : null;
+    const killedByIcon = s.killedBy ? (ROLE_ICONS[s.killedBy] || null) : null;
 
     return html`
       <div class="death-entry">
@@ -155,6 +155,7 @@ export class BotcListModal extends LitElement {
         ${roleIconSrc ? html`<img class="pli-role-icon" src="${roleIconSrc}" alt="">` : nothing}
         ${rd ? html`<span class="pli-badge tag-${rd.cat}">${displayRole}</span>` :
                displayRole ? html`<span class="pli-role">${displayRole}</span>` : nothing}
+        ${killedByIcon ? html`<span class="death-killedby" title="Killed by ${s.killedBy}"><img class="death-killedby-icon" src="${killedByIcon}" alt="${s.killedBy}"><span class="death-killedby-name">${s.killedBy}</span></span>` : nothing}
       </div>
     `;
   }
