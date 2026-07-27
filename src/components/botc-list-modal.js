@@ -149,7 +149,8 @@ export class BotcListModal extends LitElement {
     const killedByIcon = s.killedBy ? (ROLE_ICONS[s.killedBy] || null) : null;
 
     return html`
-      <div class="death-entry">
+      <div class="death-entry" role="button" tabindex="0"
+        @click="${() => this.dispatchEvent(new CustomEvent('killedby-edit', { detail: { idx: i, value: s.killedBy || '' }, bubbles: true, composed: true }))}">
         <span class="death-icon">${icon}</span>
         <span class="death-name">${s.name || 'Seat ' + (i + 1)}</span>
         ${roleIconSrc ? html`<img class="pli-role-icon" src="${roleIconSrc}" alt="">` : nothing}

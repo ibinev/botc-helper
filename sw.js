@@ -20,6 +20,7 @@ const LOCAL_ASSETS = [
   BASE + '/src/components/botc-circle.js',
   BASE + '/src/components/botc-edit-modal.js',
   BASE + '/src/components/botc-role-field.js',
+  BASE + '/src/components/botc-killedby-popup.js',
   BASE + '/src/components/botc-list-modal.js',
   BASE + '/src/components/botc-notes-modal.js',
   BASE + '/src/components/botc-nominations-modal.js',

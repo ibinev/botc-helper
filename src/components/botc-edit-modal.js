@@ -1,6 +1,7 @@
 import { LitElement, html, nothing } from 'lit';
 import './botc-combo.js';
 import './botc-role-field.js';
+import './botc-killedby-popup.js';
 import { ROLE_ICONS, getAllRoles, CAT_LABELS } from '../data.js';
 
 /**
@@ -33,6 +34,8 @@ export class BotcEditModal extends LitElement {
     _alignOpen:        { state: true   },
     _alignmentValue:   { state: true   },
     _deadActive:       { state: true   },
+    _killedByValue:    { state: true   },
+    _killedByPopupOpen:{ state: true   },
     alignHints:        { type: Boolean  },
   };
 
@@ -53,6 +56,8 @@ export class BotcEditModal extends LitElement {
     this._alignOpen         = false;
     this._alignmentValue    = 'unknown';
     this.alignHints         = false;
+    this._killedByValue     = '';
+    this._killedByPopupOpen = false;
     this._poolLpTimer       = null;
     this._poolLpFired       = false;
     this._roleByName        = new Map(getAllRoles().map(r => [r.name, r]));
@@ -99,13 +104,13 @@ export class BotcEditModal extends LitElement {
     this._voteActive     = !!s.usedVote;
     this._drunkActive    = !!s.drunk;
     this._poisonedActive = !!s.poisoned;
+    this._killedByValue  = s.killedBy || '';
     this._syncToggles();
 
     // Set role fields after Lit has re-rendered
     requestAnimationFrame(() => {
       this.querySelector('#field-role')?.setValue(s.role ?? '');
       this.querySelector('#field-true-role')?.setValue(s.trueRole ?? '');
-      this.querySelector('#field-killed-by')?.setValue(s.killedBy ?? '');
     });
   }
 
@@ -128,7 +133,12 @@ export class BotcEditModal extends LitElement {
     switch (id) {
       case 'tog-dead':
         this._deadActive = !this._deadActive;
-        if (!this._deadActive) this._voteActive = false;
+        if (this._deadActive) {
+          this._killedByPopupOpen = true;
+        } else {
+          this._voteActive = false;
+          this._killedByValue = '';
+        }
         break;
       case 'tog-vote':
         this._voteActive = !this._voteActive;
@@ -196,7 +206,6 @@ export class BotcEditModal extends LitElement {
     this._alignOpen = false;
     const roleCombo     = this.querySelector('#field-role');
     const trueCombo     = this.querySelector('#field-true-role');
-    const killedByField = this.querySelector('#field-killed-by');
     const alignment = this._alignmentValue || 'unknown';
     const data = {
       name:      (this.querySelector('#f-name')?.value ?? '').trim(),
@@ -209,7 +218,7 @@ export class BotcEditModal extends LitElement {
       drunk:     this._drunkActive,
       poisoned:  this._poisonedActive,
       suspicious: alignment === 'suspicious',
-      killedBy:  this._deadActive ? (killedByField?.getValue() || '') : '',
+      killedBy:  this._deadActive ? this._killedByValue : '',
     };
     this.dispatchEvent(new CustomEvent('seat-save', {
       detail: { idx: this.seatIdx, data }, bubbles: true, composed: true
@@ -442,11 +451,6 @@ export class BotcEditModal extends LitElement {
                     alt="Poisoned" class="tog-icon">Poisoned
                 </button>
               </div>
-              ${this._deadActive ? html`
-                <div class="killed-by-field">
-                  <botc-role-field id="field-killed-by" .script="${this.script}" label="Killed by role" hint="(optional)" placeholder="e.g. Virgin, Imp…"></botc-role-field>
-                </div>
-              ` : nothing}
             </div>
 
             <div class="btn-row">
@@ -456,6 +460,12 @@ export class BotcEditModal extends LitElement {
 
           </div>
         </div>
+        <botc-killedby-popup
+          .open="${this._killedByPopupOpen}"
+          .value="${this._killedByValue}"
+          .script="${this.script}"
+          @killedby-save="${e => { this._killedByValue = e.detail.value; this._killedByPopupOpen = false; }}"
+        ></botc-killedby-popup>
       </div>
     `;
   }

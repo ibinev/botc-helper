@@ -13,6 +13,7 @@ import './botc-nightorder-modal.js';
 import './botc-roles-modal.js';
 import './botc-reference-modal.js';
 import './botc-readme-modal.js';
+import './botc-killedby-popup.js';
 
 const LS_KEY = 'botc_town_square_v1';
 
@@ -64,6 +65,9 @@ export class BotcApp extends LitElement {
     _poolManageOpen:   { state: true },
     _poolManageAdding: { state: true },
     _poolManageName:   { state: true },
+    _killedByPopupOpen:  { state: true },
+    _killedByPopupIdx:   { state: true },
+    _killedByPopupValue: { state: true },
   };
 
   createRenderRoot() { return this; }
@@ -115,6 +119,9 @@ export class BotcApp extends LitElement {
     this._poolManageOpen   = false;
     this._poolManageAdding = false;
     this._poolManageName   = '';
+    this._killedByPopupOpen  = false;
+    this._killedByPopupIdx   = null;
+    this._killedByPopupValue = '';
   }
 
   // ── Lifecycle ────────────────────────────────────────────────────────
@@ -1121,6 +1128,15 @@ export class BotcApp extends LitElement {
     this.requestUpdate();
   }
 
+  _saveKilledBy({ idx, value }) {
+    if (idx == null || !this.seats[idx]) return;
+    const seats = [...this.seats];
+    seats[idx] = { ...seats[idx], killedBy: value || '' };
+    this.seats = seats;
+    this._saveState();
+    this.requestUpdate();
+  }
+
   _clearSeat(idx) {
     const seats = [...this.seats];
     seats[idx] = blankSeat();
@@ -1427,6 +1443,12 @@ export class BotcApp extends LitElement {
         .poisonedCollapsed="${this.poisonedCollapsed}"
         .allseatsCollapsed="${this.allseatsCollapsed}"
         @seat-open="${e => { this._listOpen = false; this._openSeat(e.detail.idx); }}"
+        @killedby-edit="${e => {
+          this._killedByPopupIdx   = e.detail.idx;
+          this._killedByPopupValue = e.detail.value;
+          this._killedByPopupOpen  = true;
+          this.requestUpdate();
+        }}"
         @collapse-change="${e => {
           this.deathsCollapsed   = e.detail.deaths;
           this.poisonedCollapsed = e.detail.poisoned;
@@ -1730,6 +1752,18 @@ export class BotcApp extends LitElement {
           </div>
         </div>
       ` : nothing}
+
+      <!-- Killed-by role popup (from Deaths list) -->
+      <botc-killedby-popup
+        .open="${this._killedByPopupOpen}"
+        .value="${this._killedByPopupValue}"
+        .script="${this.script}"
+        @killedby-save="${e => {
+          this._saveKilledBy({ idx: this._killedByPopupIdx, value: e.detail.value });
+          this._killedByPopupOpen = false;
+          this.requestUpdate();
+        }}"
+      ></botc-killedby-popup>
     `;
   }
 }

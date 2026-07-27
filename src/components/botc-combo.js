@@ -342,8 +342,7 @@ export class BotcCombo extends LitElement {
         input.value = '';
         this._updateClearBtn();
         this._updateIcon();
-        this._open('');
-        requestAnimationFrame(() => this._positionDropdown());
+        this._close();
         this.dispatchEvent(new CustomEvent('combo-change', {
           detail: { value: '' }, bubbles: true, composed: true
         }));
@@ -355,8 +354,7 @@ export class BotcCombo extends LitElement {
         input.value = '';
         this._updateClearBtn();
         this._updateIcon();
-        this._open('');
-        requestAnimationFrame(() => requestAnimationFrame(() => this._positionDropdown()));
+        this._close();
         this.dispatchEvent(new CustomEvent('combo-change', {
           detail: { value: '' }, bubbles: true, composed: true
         }));
