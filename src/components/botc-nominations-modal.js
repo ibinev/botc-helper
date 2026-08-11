@@ -26,7 +26,6 @@ export class BotcNominationsModal extends LitElement {
     seats:       { type: Array   },
     phase:       { type: String  },
     round:       { type: Number  },
-    alignHints:  { type: Boolean },
   };
 
   createRenderRoot() { return this; }
@@ -38,7 +37,6 @@ export class BotcNominationsModal extends LitElement {
     this.seats       = [];
     this.phase       = 'day';
     this.round       = 1;
-    this.alignHints  = false;
   }
 
   updated(changed) {
@@ -90,7 +88,6 @@ export class BotcNominationsModal extends LitElement {
   }
 
   _alignClass(idx) {
-    if (!this.alignHints) return '';
     const a = this.seats[idx]?.alignment;
     if (a === 'good') return 'align-good';
     if (a === 'evil') return 'align-evil';

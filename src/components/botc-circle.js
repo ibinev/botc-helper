@@ -20,6 +20,8 @@ import { esc, defaultPos } from '../utils.js';
  *   nomVoteIdx    {Number|null}
  *   round         {Number}
  *   phase         {String}        – 'day' | 'night'
+ *   showGameEnd      {Boolean}    – show the win banner for this exact day/night
+ *   winningAlignment {String}    – 'good' | 'evil'
  *
  * Fires:
  *   seat-click       – { detail: { idx } }            seat tapped (normal mode)
@@ -42,6 +44,8 @@ export class BotcCircle extends LitElement {
     phase:         { type: String  },
     storyView:     { type: Boolean },
     script:        { type: String  },
+    showGameEnd:      { type: Boolean },
+    winningAlignment: { type: String  },
     _w:            { state: true   },
     _h:            { state: true   },
   };
@@ -64,6 +68,8 @@ export class BotcCircle extends LitElement {
     this.phase         = 'day';
     this.storyView     = false;
     this.script        = 'tb';
+    this.showGameEnd      = false;
+    this.winningAlignment = '';
     this._w            = 400;
     this._h            = 400;
     this._ro           = null;
@@ -230,16 +236,29 @@ export class BotcCircle extends LitElement {
       return { to: n.to, count, reached: count >= needed };
     });
 
-    // Skull appears only when there is a unique top nomination that reached threshold.
+    const isTravelerTarget = (idx) => {
+      const seat = this.seats[idx];
+      const roleName = seat?.trueRole || seat?.role;
+      if (!roleName) return false;
+      return roles.find(r => r.name === roleName)?.cat === 'traveler';
+    };
+
+    // A traveler execution doesn't use up the day's single execution, so it
+    // gets its own skull(s) independent of the regular unique-top nomination.
     const reachedEntries = nomEntries.filter(e => e.reached);
-    const topReachedCount = reachedEntries.length
-      ? Math.max(...reachedEntries.map(e => e.count))
+    const nonTravelerReached = reachedEntries.filter(e => !isTravelerTarget(e.to));
+    const travelerReached    = reachedEntries.filter(e =>  isTravelerTarget(e.to));
+
+    const topReachedCount = nonTravelerReached.length
+      ? Math.max(...nonTravelerReached.map(e => e.count))
       : -1;
-    const topReached = reachedEntries.filter(e => e.count === topReachedCount);
+    const topReached = nonTravelerReached.filter(e => e.count === topReachedCount);
     const skullSeat = topReached.length === 1 ? topReached[0].to : null;
+    const travelerSkullSeats = new Set(travelerReached.map(e => e.to));
 
     const isNominated = dayNoms.some(n => n.to === i);
-    const isSkull     = skullSeat === i;
+    const isSkull     = skullSeat === i || travelerSkullSeats.has(i);
+
 
     let nominatedIcon = '';
     if (isSkull) {
@@ -298,6 +317,14 @@ export class BotcCircle extends LitElement {
     return html`
       <div id="circle-stage">
         <div id="circle-inner" class="${isNomMode ? 'nom-mode' : ''} ${this.moveMode ? 'move-mode' : ''} ${this.removeMode ? 'remove-mode' : ''} ${this.storyView ? 'story-view' : ''}">
+          ${this.showGameEnd ? html`
+            <div class="game-end-banner-wrap">
+              <div class="game-end-banner ${this.winningAlignment === 'evil' ? 'evil' : 'good'}">
+                <span class="game-end-banner-icon">${this.winningAlignment === 'evil' ? '💀' : '🎉'}</span>
+                <span class="game-end-banner-text">${this.winningAlignment === 'evil' ? 'Evil' : 'Good'} Wins!</span>
+              </div>
+            </div>
+          ` : nothing}
           <div class="center-label">
             <div class="phase-icon">${this.phase === 'day' ? '☀️' : '🌙'}</div>
             <div class="round-label">${this.phase === 'day' ? 'Day' : 'Night'} ${this.round}</div>

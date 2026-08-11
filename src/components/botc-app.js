@@ -14,6 +14,7 @@ import './botc-roles-modal.js';
 import './botc-reference-modal.js';
 import './botc-readme-modal.js';
 import './botc-killedby-popup.js';
+import './botc-endgame-modal.js';
 
 const LS_KEY = 'botc_town_square_v1';
 
@@ -34,7 +35,6 @@ export class BotcApp extends LitElement {
     nominations:       { type: Object  },
     poisonSnapshots:   { type: Object  },
     gameNotes:         { type: Object  },
-    alignHints:        { type: Boolean },
     storyView:         { type: Boolean },
     compactMode:       { type: Boolean },
     hideRole:          { type: Boolean },
@@ -47,6 +47,8 @@ export class BotcApp extends LitElement {
     deathsCollapsed:   { type: Boolean },
     poisonedCollapsed: { type: Boolean },
     allseatsCollapsed: { type: Boolean },
+    gameEnded:         { type: Boolean },
+    gameEndInfo:       { type: Object  },
     // Modal visibility
     _editOpen:         { state: true },
     _listOpen:         { state: true },
@@ -68,6 +70,7 @@ export class BotcApp extends LitElement {
     _killedByPopupOpen:  { state: true },
     _killedByPopupIdx:   { state: true },
     _killedByPopupValue: { state: true },
+    _endGameOpen:        { state: true },
   };
 
   createRenderRoot() { return this; }
@@ -89,7 +92,6 @@ export class BotcApp extends LitElement {
     this.nominations       = {};
     this.poisonSnapshots   = {};
     this.gameNotes         = {};
-    this.alignHints        = false;
     this.storyView         = false;
     this.compactMode       = false;
     this.hideRole          = false;
@@ -99,9 +101,11 @@ export class BotcApp extends LitElement {
     this.script            = 'tb';
     this.customScripts     = [];
     this.playerPool        = [];
-    this.deathsCollapsed   = false;
-    this.poisonedCollapsed = false;
-    this.allseatsCollapsed = false;
+    this.deathsCollapsed   = true;
+    this.poisonedCollapsed = true;
+    this.allseatsCollapsed = true;
+    this.gameEnded         = false;
+    this.gameEndInfo       = null;
     this._editOpen         = false;
     this._listOpen         = false;
     this._notesOpen        = false;
@@ -122,6 +126,7 @@ export class BotcApp extends LitElement {
     this._killedByPopupOpen  = false;
     this._killedByPopupIdx   = null;
     this._killedByPopupValue = '';
+    this._endGameOpen        = false;
   }
 
   // ── Lifecycle ────────────────────────────────────────────────────────
@@ -193,7 +198,6 @@ export class BotcApp extends LitElement {
     this._loadNominations();
     this._loadPoisonSnapshots();
     this._loadCollapsePrefs();
-    this._loadAlignHints();
     this._loadStoryView();
     this._loadCompactMode();
     this._loadHideRole();
@@ -208,7 +212,6 @@ export class BotcApp extends LitElement {
     }
     while (this.seatPositions.length < this.seatCount) this.seatPositions.push(null);
     this._applyPhaseCycle();
-    this._applyAlignHints();
     this._applyStoryView();
     this._applyCompactMode();
     this._applyHideRole();
@@ -236,6 +239,8 @@ export class BotcApp extends LitElement {
         phase:         this.phase,
         seats:         this.seats,
         seatPositions: this.seatPositions,
+        gameEnded:     this.gameEnded,
+        gameEndInfo:   this.gameEndInfo,
       }));
     } catch(e) {}
   }
@@ -256,6 +261,12 @@ export class BotcApp extends LitElement {
         { length: this.seatCount },
         (_, i) => (s.seatPositions?.[i]) ? s.seatPositions[i] : null
       );
+      this.gameEnded   = !!s.gameEnded;
+      this.gameEndInfo = s.gameEndInfo || null;
+      // Backfill endedStep for saves made before forward-navigation-to-end-day was supported
+      if (this.gameEnded && this.gameEndInfo && this.gameEndInfo.endedStep == null) {
+        this.gameEndInfo = { ...this.gameEndInfo, endedStep: phaseRoundToStep(this.phase, this.round) };
+      }
       return true;
     } catch(e) {
       return false;
@@ -330,10 +341,6 @@ export class BotcApp extends LitElement {
         this.allseatsCollapsed = !!p.allseats;
       }
     } catch(e) {}
-  }
-
-  _loadAlignHints() {
-    this.alignHints = localStorage.getItem('botc_align_hints') === 'on';
   }
 
   _loadStoryView() {
@@ -579,7 +586,6 @@ export class BotcApp extends LitElement {
         deathsCollapsed: this.deathsCollapsed,
         poisonedCollapsed: this.poisonedCollapsed,
         allseatsCollapsed: this.allseatsCollapsed,
-        alignHints: this.alignHints,
         storyView: this.storyView,
         compactMode: this.compactMode,
         hideRole: this.hideRole,
@@ -748,7 +754,6 @@ export class BotcApp extends LitElement {
     this.deathsCollapsed = !!app.deathsCollapsed;
     this.poisonedCollapsed = !!app.poisonedCollapsed;
     this.allseatsCollapsed = !!app.allseatsCollapsed;
-    this.alignHints = !!app.alignHints;
     this.storyView = !!app.storyView;
     this.compactMode = !!app.compactMode;
     this.hideRole = !!app.hideRole;
@@ -765,7 +770,6 @@ export class BotcApp extends LitElement {
     this._listOpen = false;
     this._nomsOpen = false;
 
-    this._applyAlignHints();
     this._applyStoryView();
     this._applyCompactMode();
     this._applyHideRole();
@@ -834,13 +838,6 @@ export class BotcApp extends LitElement {
     document.body.classList.toggle('story-view', this.storyView);
     try {
       localStorage.setItem('botc_story_view', this.storyView ? 'on' : 'off');
-    } catch(e) {}
-  }
-
-  _applyAlignHints() {
-    document.body.classList.toggle('align-hints', this.alignHints);
-    try {
-      localStorage.setItem('botc_align_hints', this.alignHints ? 'on' : 'off');
     } catch(e) {}
   }
 
@@ -933,6 +930,7 @@ export class BotcApp extends LitElement {
 
   advanceCycle(dir) {
     const step = phaseRoundToStep(this.phase, this.round);
+    if (dir > 0 && this.gameEnded && step >= (this.gameEndInfo?.endedStep ?? step)) return;
     const next = Math.max(0, Math.min(MAX_STEP, step + dir));
     if (next === step) return;
     // Save poison snapshot for current cycle
@@ -964,9 +962,16 @@ export class BotcApp extends LitElement {
   }
 
   // ── Nominations ──────────────────────────────────────────────────────
+  _isTraveler(seat) {
+    const roleName = seat?.trueRole || seat?.role;
+    if (!roleName) return false;
+    return getRoles(this.script).find(r => r.name === roleName)?.cat === 'traveler';
+  }
+
   _hasNominatedToday(idx) {
     const key = this._nomKey();
-    return (this.nominations[key] || []).some(n => n.from === idx);
+    // Nominating a traveler doesn't count against the nominator's daily nomination
+    return (this.nominations[key] || []).some(n => n.from === idx && !this._isTraveler(this.seats[n.to]));
   }
 
   _wasNominatedToday(idx) {
@@ -977,6 +982,7 @@ export class BotcApp extends LitElement {
   _startNomMode() {
     if (this.moveMode || this.removeMode) return;
     if (this.phase === 'night') return;
+    if (this.gameEnded) return;
     this._editOpen = false;
     this._listOpen = false;
     this._nomsOpen = false;
@@ -1016,7 +1022,8 @@ export class BotcApp extends LitElement {
       const key = this._nomKey();
       const noms = { ...this.nominations };
       if (!noms[key]) noms[key] = [];
-      noms[key] = [...noms[key], { from: this.nomFrom, to: idx, votes: [], aliveCount: this.seats.filter(s => !s.dead).length }];
+      // Travelers don't count toward the alive total used to compute votes needed
+      noms[key] = [...noms[key], { from: this.nomFrom, to: idx, votes: [], aliveCount: this.seats.filter(s => !s.dead && !this._isTraveler(s)).length }];
       this.nominations = noms;
       this._saveNominations();
       const newIdx = noms[key].length - 1;
@@ -1044,6 +1051,7 @@ export class BotcApp extends LitElement {
 
   _startVoteMode(key, idx) {
     if (this.moveMode) return;
+    if (this.gameEnded) return;
     this._nomsOpen  = false;
     this.nomMode    = 'votes';
     this.nomVoteKey = key;
@@ -1063,10 +1071,12 @@ export class BotcApp extends LitElement {
       const seats = [...this.seats];
       let changed = false;
       const ghostVoters = [];
+      // Voting for a nominated Traveler doesn't spend a dead player's ghost vote
+      const spendsGhostVote = !this._isTraveler(this.seats[entry.to]);
       entry.votes.forEach(vi => {
         if (seats[vi]?.dead) {
           ghostVoters.push(vi);
-          if (!seats[vi].usedVote) {
+          if (spendsGhostVote && !seats[vi].usedVote) {
             seats[vi] = { ...seats[vi], usedVote: true };
             changed = true;
           }
@@ -1162,9 +1172,9 @@ export class BotcApp extends LitElement {
     this.gameNotes         = {};
     this.nominations       = {};
     this.poisonSnapshots   = {};
-    this.deathsCollapsed   = false;
-    this.poisonedCollapsed = false;
-    this.allseatsCollapsed = false;
+    this.deathsCollapsed   = true;
+    this.poisonedCollapsed = true;
+    this.allseatsCollapsed = true;
 
     const EXTRA_KEYS = [
       'botc_game_notes', 'botc_night_notes', 'botc_nominations',
@@ -1181,6 +1191,8 @@ export class BotcApp extends LitElement {
     this.nomFrom       = null;
     this.round         = 1;
     this.phase         = 'day';
+    this.gameEnded     = false;
+    this.gameEndInfo   = null;
 
     this._confirmOpen = false;
     this._editOpen    = false;
@@ -1196,9 +1208,9 @@ export class BotcApp extends LitElement {
     this.gameNotes         = {};
     this.nominations       = {};
     this.poisonSnapshots   = {};
-    this.deathsCollapsed   = false;
-    this.poisonedCollapsed = false;
-    this.allseatsCollapsed = false;
+    this.deathsCollapsed   = true;
+    this.poisonedCollapsed = true;
+    this.allseatsCollapsed = true;
 
     const EXTRA_KEYS = [
       'botc_game_notes', 'botc_night_notes', 'botc_nominations',
@@ -1210,6 +1222,8 @@ export class BotcApp extends LitElement {
     this.removeMode = false;
     this.round      = 1;
     this.phase      = 'day';
+    this.gameEnded   = false;
+    this.gameEndInfo = null;
 
     this._confirmSoftOpen = false;
     this._editOpen        = false;
@@ -1295,8 +1309,11 @@ export class BotcApp extends LitElement {
           <span class="cycle-label ${this.phase === 'day' ? 'phase-day' : 'phase-night'}">
             ${this.phase === 'day' ? 'Day' : 'Night'} ${this.round}
           </span>
-          <button class="cycle-btn" ?disabled="${step === MAX_STEP}"
+          <button class="cycle-btn" ?disabled="${step === MAX_STEP || (this.gameEnded && step >= (this.gameEndInfo?.endedStep ?? step))}"
             @click="${e => { this.advanceCycle(+1); e.currentTarget.blur(); }}">&#8250;</button>
+          <button class="cycle-btn cycle-endgame-btn ${this.gameEnded ? 'ended' : ''}"
+            title="${this.gameEnded ? 'Game ended' : 'End game'}"
+            @click="${e => { this._endGameOpen = true; this.requestUpdate(); e.currentTarget.blur(); }}">🏁</button>
         </div>
 
         ${this.moveMode ? html`
@@ -1339,6 +1356,8 @@ export class BotcApp extends LitElement {
           .nomVoteIdx="${this.nomVoteIdx}"
           .round="${this.round}"
           .phase="${this.phase}"
+          .showGameEnd="${this.gameEnded && this.gameEndInfo?.endedStep === phaseRoundToStep(this.phase, this.round)}"
+          .winningAlignment="${this.gameEndInfo?.alignment || ''}"
           @seat-click="${e => this._openSeat(e.detail.idx)}"
           @nom-click="${e => this._handleNomClick(e.detail.idx)}"
           @seat-remove="${e => this._removeSeat(e.detail.idx)}"
@@ -1420,7 +1439,6 @@ export class BotcApp extends LitElement {
       <botc-edit-modal
         .open="${this._editOpen}"
         .script="${this.script}"
-        .alignHints="${this.alignHints}"
         .seat="${this.selected !== null ? this.seats[this.selected] : null}"
         .seatIdx="${this.selected}"
         .playerPool="${this.playerPool.filter(n => !this.seats.some((s, i) => i !== this.selected && s.name === n))}"
@@ -1485,7 +1503,6 @@ export class BotcApp extends LitElement {
         .seats="${this.seats}"
         .phase="${this.phase}"
         .round="${this.round}"
-        .alignHints="${this.alignHints}"
         @nom-delete="${e => this._deleteNom(e.detail.key, e.detail.idx)}"
         @vote-mode-start="${e => this._startVoteMode(e.detail.key, e.detail.idx)}"
         @new-nom="${() => {
@@ -1509,7 +1526,6 @@ export class BotcApp extends LitElement {
         .selectedScriptLayout="${getScriptRoleLayout(this.script)}"
         .allRoles="${getAllRoles()}"
         .selectedCustomScript="${this.customScripts.find(s => s.id === this.script) || null}"
-        .alignHints="${this.alignHints}"
         .storyView="${this.storyView}"
         .compactMode="${this.compactMode}"
         .hasBgImage="${this.hasBgImage}"
@@ -1522,11 +1538,6 @@ export class BotcApp extends LitElement {
             this._editOpen = false;
           }
           this._saveState();
-          this.requestUpdate();
-        }}"
-        @align-hints-toggle="${() => {
-          this.alignHints = !this.alignHints;
-          this._applyAlignHints();
           this.requestUpdate();
         }}"
         @script-change="${e => {
@@ -1764,6 +1775,26 @@ export class BotcApp extends LitElement {
           this.requestUpdate();
         }}"
       ></botc-killedby-popup>
+
+      <!-- End game popup -->
+      <botc-endgame-modal
+        .open="${this._endGameOpen}"
+        .alignment="${this.gameEndInfo?.alignment || ''}"
+        .reason="${this.gameEndInfo?.reason || ''}"
+        .ended="${this.gameEnded}"
+        @endgame-save="${e => {
+          const endedStep = this.gameEnded
+            ? (this.gameEndInfo?.endedStep ?? phaseRoundToStep(this.phase, this.round))
+            : phaseRoundToStep(this.phase, this.round);
+          this.gameEnded   = true;
+          this.gameEndInfo = { alignment: e.detail.alignment, reason: e.detail.reason, endedStep };
+          if (this.nomMode) this._cancelNomMode();
+          this._endGameOpen = false;
+          this._saveState();
+          this.requestUpdate();
+        }}"
+        @modal-close="${() => { this._endGameOpen = false; this.requestUpdate(); }}"
+      ></botc-endgame-modal>
     `;
   }
 }

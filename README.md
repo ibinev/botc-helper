@@ -94,6 +94,14 @@ The UI has three primary areas:
 - ▶ Right arrow: move one step forward
 - Label shows current phase and round (for example Day 2, Night 2)
 
+### End game
+- 🏁 Opens a popup to record the winning alignment (Good/Evil) and a reason
+- After saving, the game is marked ended: you can't start/resume nominations and votes
+- You can still move backward and forward, but not past the day/night the game ended on
+- Editing seats (roles, notes, dead/drunk/poisoned, etc.) still works
+- Clicking 🏁 again lets you review or update the recorded result
+- On the exact day/night the game ended, a "Good Wins!" / "Evil Wins!" banner appears centered above the sun/moon icon in the circle
+
 ### Alive/Dead visual cue
 - Green pill with count: alive players
 - Red pill with count: dead players
@@ -125,7 +133,7 @@ Tap any seat to open seat editor.
 Editable fields:
 - Player name
 - Claimed role (searchable role combobox)
-- Alignment (Unknown, Good, Evil, Suspicious) — only visible when Alignment is enabled in Settings
+- Alignment (Unknown, Good, Evil, Suspicious)
 - True role (Storyteller field)
 - Notes
 - Status toggles:
@@ -138,6 +146,7 @@ Behavior details:
 - Drunk and Poisoned are mutually exclusive in toggle logic.
 - Dead state stores death timing (phase + round).
 - Poisoned state stores poisoning timing (phase + round).
+- Travelers have no ghost vote — marking a Traveler Dead auto-marks their ghost vote as used/unavailable and it can't be toggled.
 - Clear seat resets that seat to empty.
 
 ## 5. 👤 Player Pool (Name Reuse)
@@ -168,11 +177,15 @@ Nomination constraints:
 - Dead players cannot be nominated
 - A player may nominate only once per day
 - A player may be nominated only once per day
+- Nominating a Traveler doesn't use up the nominator's nomination for the day
+- Travelers don't count toward the alive total used to compute votes needed
 
 ### Voting mode
 After creating nomination, app enters vote mode:
 - Tap seats to add/remove votes
 - Dead players with used ghost vote cannot vote again
+- Travelers have no ghost vote at all — once dead they can never vote again
+- Voting for a nominated Traveler doesn't spend a dead player's ghost vote — they can still vote again on a later (non-Traveler) nomination
 
 ### Finish vote mode
 - Press Done on nominate button
@@ -187,12 +200,13 @@ From top bar nominations icon:
 - Start a new nomination (day only)
 
 Threshold indicator behavior:
-- Required votes = ceil(aliveCount / 2) captured at nomination time
+- Required votes = ceil(aliveCount / 2) captured at nomination time, excluding Travelers
 - Vote outcome badge reflects pass/fail styling in history
 
 Execution marker behavior:
 - 💀 is shown only for a unique highest nomination that reached threshold
 - If top reached nominations are tied, nobody gets 💀 (all tied nominees only show ⚖️)
+- A Traveler execution doesn't use up the day's one-execution limit, so a Traveler and a non-Traveler can both show 💀 the same day
 - If a later nomination exceeds that tie and is uniquely highest, it gets 💀
 
 ## 7. 📜 Notes System
@@ -267,10 +281,6 @@ Custom script builder:
 
 ### Appearance
 
-### Alignment
-- Adds alignment ring cues on seats
-- When Off, the Alignment combobox is hidden in the seat editor and the Player name field expands to fill the full row
-
 ### Compact mode
 - Shrinks seat visuals and reduces clutter
 
@@ -340,7 +350,7 @@ The layout also respects safe-area insets for notch devices.
 
 1. Open Settings and set seat count + script.
 2. Fill names quickly using player pool and seat editor.
-3. During game, use seat status toggles and alignment hints.
+3. During game, use seat status toggles and the alignment field.
 4. Record each nomination and votes with Nominate flow.
 5. Keep day/night notes every cycle.
 6. Use Reference tabs for role text, night order, and counts.

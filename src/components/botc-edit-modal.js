@@ -36,7 +36,6 @@ export class BotcEditModal extends LitElement {
     _deadActive:       { state: true   },
     _killedByValue:    { state: true   },
     _killedByPopupOpen:{ state: true   },
-    alignHints:        { type: Boolean  },
   };
 
   createRenderRoot() { return this; }
@@ -55,7 +54,6 @@ export class BotcEditModal extends LitElement {
     this._poolManageName    = '';
     this._alignOpen         = false;
     this._alignmentValue    = 'unknown';
-    this.alignHints         = false;
     this._killedByValue     = '';
     this._killedByPopupOpen = false;
     this._poolLpTimer       = null;
@@ -66,6 +64,7 @@ export class BotcEditModal extends LitElement {
     this._voteActive     = false;
     this._drunkActive    = false;
     this._poisonedActive = false;
+    this._isTravelerSeat = false;
   }
 
   updated(changed) {
@@ -100,8 +99,9 @@ export class BotcEditModal extends LitElement {
     this._alignmentValue = s.alignment ?? 'unknown';
     if (notesTA)   notesTA.value   = s.notes ?? '';
 
+    this._isTravelerSeat = this._roleMeta(s.trueRole || s.role)?.cat === 'traveler';
     this._deadActive     = !!s.dead;
-    this._voteActive     = !!s.usedVote;
+    this._voteActive     = this._isTravelerSeat ? this._deadActive : !!s.usedVote;
     this._drunkActive    = !!s.drunk;
     this._poisonedActive = !!s.poisoned;
     this._killedByValue  = s.killedBy || '';
@@ -120,7 +120,12 @@ export class BotcEditModal extends LitElement {
     this._setTog('tog-drunk',    this._drunkActive,    'on-drunk');
     this._setTog('tog-poisoned', this._poisonedActive, 'on-poisoned');
     const voteBtn = this.querySelector('#tog-vote');
-    if (voteBtn) voteBtn.style.display = this._deadActive ? '' : 'none';
+    if (voteBtn) {
+      voteBtn.style.display = this._deadActive ? '' : 'none';
+      voteBtn.disabled  = this._isTravelerSeat;
+      voteBtn.classList.toggle('tog-disabled', this._isTravelerSeat);
+      voteBtn.textContent = this._isTravelerSeat ? '\uD83D\uDC7B No ghost vote' : '\uD83D\uDDF3 Ghost vote';
+    }
   }
 
   _setTog(id, active, cls) {
@@ -135,12 +140,15 @@ export class BotcEditModal extends LitElement {
         this._deadActive = !this._deadActive;
         if (this._deadActive) {
           this._killedByPopupOpen = true;
+          // Travelers never get a ghost vote — mark it used immediately on death
+          if (this._isTravelerSeat) this._voteActive = true;
         } else {
           this._voteActive = false;
           this._killedByValue = '';
         }
         break;
       case 'tog-vote':
+        if (this._isTravelerSeat) break; // travelers can't toggle their (non-existent) ghost vote
         this._voteActive = !this._voteActive;
         break;
       case 'tog-drunk':
@@ -339,7 +347,7 @@ export class BotcEditModal extends LitElement {
               <button class="btn btn-close-sm" @click="${this._onClose}">✕</button>
             </div>
 
-            <div class="field-grid ${this.alignHints ? '' : 'full'}">
+            <div class="field-grid">
               <div class="field">
                 <label class="name-label">Player name</label>
                 ${this._poolOpen && this.playerPool?.length ? html`
@@ -391,7 +399,6 @@ export class BotcEditModal extends LitElement {
                   ` : nothing}
                 </div>
               </div>
-              ${this.alignHints ? html`
               <div class="field">
                 <label>Alignment</label>
                 <div class="align-combo-wrap">
@@ -415,7 +422,6 @@ export class BotcEditModal extends LitElement {
                   ` : nothing}
                 </div>
               </div>
-              ` : nothing}
             </div>
 
             <div class="field-grid full">

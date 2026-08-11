@@ -23,13 +23,11 @@ const SLOT_TEMPLATE_ORDER = ['townsfolk', 'outsider', 'minion', 'demon', 'travel
  * Properties:
  *   open       {Boolean}
  *   seatCount  {Number}
- *   alignHints {Boolean}
  *
  * Fires:
  *   count-change       – { detail: { count } }
  *   script-change      – { detail: { script } }
  *   open-player-pool   – (no detail)
- *   align-hints-toggle – (no detail)
  *   move-mode          – (no detail)
  *   export-game        – (no detail)
  *   import-game        – (no detail)
@@ -55,7 +53,6 @@ export class BotcSettingsModal extends LitElement {
     selectedScriptLayout: { type: Object },
     allRoles:   { type: Array },
     selectedCustomScript: { type: Object },
-    alignHints: { type: Boolean },
     storyView:  { type: Boolean },
     compactMode:{ type: Boolean },
     hasBgImage: { type: Boolean },
@@ -66,11 +63,10 @@ export class BotcSettingsModal extends LitElement {
     _customQuery:{ state: true },
     _customSelected:{ state: true },
     _customLayout:{ state: true },
+    _customSlotCounts:{ state: true },
     _showExperimental:{ state: true },
-    _customBuilderMode:{ state: true },
     _slotTargetCat:{ state: true },
     _slotTargetIndex:{ state: true },
-    _advancedScriptLayout:{ state: true },
     _scriptMenuOpen:{ state: true },
   };
 
@@ -87,7 +83,6 @@ export class BotcSettingsModal extends LitElement {
     this.selectedScriptLayout = null;
     this.allRoles   = [];
     this.selectedCustomScript = null;
-    this.alignHints = false;
     this.storyView  = false;
     this.compactMode= false;
     this.hasBgImage = false;
@@ -98,15 +93,12 @@ export class BotcSettingsModal extends LitElement {
     this._customQuery = '';
     this._customSelected = [];
     this._customLayout = {};
+    this._customSlotCounts = {};
     this._customMode = 'create';
     this._showExperimental = true;
-    this._customBuilderMode = 'slots';
     this._slotTargetCat = null;
     this._slotTargetIndex = -1;
     this._scriptMenuOpen = false;
-    this._advancedScriptLayout = typeof window !== 'undefined'
-      ? window.matchMedia('(min-width: 768px)').matches
-      : false;
   }
 
   updated(changed) {
@@ -157,30 +149,12 @@ export class BotcSettingsModal extends LitElement {
       if (scriptControl && !scriptControl.contains(e.target)) this._closeScriptMenu();
     };
     document.addEventListener('pointerdown', this._onDocumentPointerDown);
-
-    this._layoutMedia = window.matchMedia('(min-width: 768px)');
-    this._onLayoutMediaChange = e => {
-      this._advancedScriptLayout = e.matches;
-    };
-    this._advancedScriptLayout = this._layoutMedia.matches;
-    if (this._layoutMedia.addEventListener) {
-      this._layoutMedia.addEventListener('change', this._onLayoutMediaChange);
-    } else if (this._layoutMedia.addListener) {
-      this._layoutMedia.addListener(this._onLayoutMediaChange);
-    }
   }
 
   disconnectedCallback() {
     super.disconnectedCallback();
     if (this._onDocumentPointerDown) {
       document.removeEventListener('pointerdown', this._onDocumentPointerDown);
-    }
-    if (this._layoutMedia && this._onLayoutMediaChange) {
-      if (this._layoutMedia.removeEventListener) {
-        this._layoutMedia.removeEventListener('change', this._onLayoutMediaChange);
-      } else if (this._layoutMedia.removeListener) {
-        this._layoutMedia.removeListener(this._onLayoutMediaChange);
-      }
     }
   }
 
@@ -205,7 +179,7 @@ export class BotcSettingsModal extends LitElement {
     this._customQuery = '';
     this._customSelected = [];
     this._customLayout = {};
-    this._customBuilderMode = 'slots';
+    this._customSlotCounts = {};
     this._slotTargetCat = null;
     this._slotTargetIndex = -1;
     // Close settings while opening the detached custom-script popup.
@@ -251,7 +225,7 @@ export class BotcSettingsModal extends LitElement {
     this._customQuery = '';
     this._customSelected = roles;
     this._customLayout = this._buildLayoutFromRoles(roles, this.selectedScriptLayout);
-    this._customBuilderMode = 'slots';
+    this._customSlotCounts = {};
     this._slotTargetCat = null;
     this._slotTargetIndex = -1;
     // Close settings while opening the detached custom-script popup.
@@ -289,7 +263,7 @@ export class BotcSettingsModal extends LitElement {
     });
 
     this._customLayout = layout;
-    this._customBuilderMode = 'slots';
+    this._customSlotCounts = {};
     this._slotTargetCat = null;
     this._slotTargetIndex = -1;
     // Close settings while opening the detached custom-script popup.
@@ -305,7 +279,7 @@ export class BotcSettingsModal extends LitElement {
     this._customQuery = '';
     this._customSelected = [];
     this._customLayout = {};
-    this._customBuilderMode = 'slots';
+    this._customSlotCounts = {};
     this._slotTargetCat = null;
     this._slotTargetIndex = -1;
   }
@@ -313,7 +287,14 @@ export class BotcSettingsModal extends LitElement {
   _slotCountForCat(cat) {
     const c = this._ensureLayoutCat(cat);
     const actual = (c.left ? c.left.filter(Boolean).length : 0) + (c.right ? c.right.filter(Boolean).length : 0);
-    return Math.max(SLOT_TEMPLATE_COUNTS[cat] || 0, actual);
+    const base = this._customSlotCounts[cat] ?? (SLOT_TEMPLATE_COUNTS[cat] || 0);
+    return Math.max(base, actual);
+  }
+
+  // Extends the category by one slot, alternating which column it lands in
+  // so existing L/R row pairs stay intact (new Left row, or fill the open Right).
+  _addSlot(cat) {
+    this._customSlotCounts = { ...this._customSlotCounts, [cat]: this._slotCountForCat(cat) + 1 };
   }
 
   _splitCountForCat(cat) {
@@ -414,13 +395,6 @@ export class BotcSettingsModal extends LitElement {
     return this.allRoles.find(r => r.name === name)?.cat || null;
   }
 
-  _rolePlacement(name, cat) {
-    const c = this._ensureLayoutCat(cat);
-    if (c.left.includes(name)) return { col: 'left', index: c.left.indexOf(name) };
-    if (c.right.includes(name)) return { col: 'right', index: c.right.indexOf(name) };
-    return null;
-  }
-
   _openSlotPicker(cat, index) {
     this._slotTargetCat = cat;
     this._slotTargetIndex = index;
@@ -438,64 +412,6 @@ export class BotcSettingsModal extends LitElement {
     return `R${index - split + 1}`;
   }
 
-  _nextListPlacement(cat) {
-    // kept for compatibility but no longer used in _toggleCustomRole
-    const c = this._ensureLayoutCat(cat);
-    const rows = Math.max(c.left.length, c.right.length);
-    for (let i = 0; i <= rows; i += 1) {
-      if (!c.left[i]) return { col: 'left', index: i };
-      if (!c.right[i]) return { col: 'right', index: i };
-    }
-    return { col: 'left', index: rows };
-  }
-
-  _rebuildListCat(cat, flatOrder) {
-    const mid = Math.ceil(flatOrder.length / 2);
-    const c = this._ensureLayoutCat(cat);
-    c.left  = flatOrder.slice(0, mid);
-    c.right = flatOrder.slice(mid);
-  }
-
-  _toggleCustomRole(name) {
-    const cat = this._roleCat(name);
-    if (!cat) return;
-    const c = this._ensureLayoutCat(cat);
-    const flat = [...c.left, ...c.right];
-    const idx = flat.indexOf(name);
-    if (idx !== -1) {
-      flat.splice(idx, 1);
-    } else {
-      flat.push(name);
-    }
-    this._rebuildListCat(cat, flat);
-    this._customSelected = CAT_ORDER.flatMap(k => {
-      const kc = this._customLayout[k];
-      return kc ? [...(kc.left || []), ...(kc.right || [])] : [];
-    });
-    this._customLayout = { ...this._customLayout };
-    this._customQuery = '';
-  }
-
-  _setRoleColumn(name, cat, col) {
-    const c = this._ensureLayoutCat(cat);
-    c.left = c.left.filter(r => r !== name);
-    c.right = c.right.filter(r => r !== name);
-    c[col] = [...c[col], name];
-    this._customLayout = { ...this._customLayout };
-  }
-
-  _moveRole(name, cat, dir) {
-    const place = this._rolePlacement(name, cat);
-    if (!place) return;
-    const c = this._ensureLayoutCat(cat);
-    const arr = [...c[place.col]];
-    const to = place.index + dir;
-    if (to < 0 || to >= arr.length) return;
-    [arr[place.index], arr[to]] = [arr[to], arr[place.index]];
-    c[place.col] = arr;
-    this._customLayout = { ...this._customLayout };
-  }
-
   _submitCustomScript() {
     const name = this._customName.trim();
     if (!name) return;
@@ -504,34 +420,23 @@ export class BotcSettingsModal extends LitElement {
     const roles = [];
     const layout = {};
 
-    if (this._customBuilderMode === 'slots') {
-      CAT_ORDER.forEach(cat => {
-        if (SLOT_TEMPLATE_COUNTS[cat]) {
-          const slots = this._slotValuesForCat(cat);
-          const split = this._splitCountForCat(cat);
-          const left = slots.slice(0, split).filter(Boolean);
-          const right = slots.slice(split).filter(Boolean);
-          layout[cat] = { left, right };
-          roles.push(...left, ...right);
-        } else {
-          const c = this._ensureLayoutCat(cat);
-          const left = c.left.filter(r => this._customSelected.includes(r));
-          const right = c.right.filter(r => this._customSelected.includes(r));
-          layout[cat] = { left, right };
-          roles.push(...left, ...right);
-        }
-      });
-      if (!roles.length) return;
-    } else {
-      CAT_ORDER.forEach(cat => {
+    CAT_ORDER.forEach(cat => {
+      if (SLOT_TEMPLATE_COUNTS[cat]) {
+        const slots = this._slotValuesForCat(cat);
+        const split = this._splitCountForCat(cat);
+        const left = slots.slice(0, split).filter(Boolean);
+        const right = slots.slice(split).filter(Boolean);
+        layout[cat] = { left, right };
+        roles.push(...left, ...right);
+      } else {
         const c = this._ensureLayoutCat(cat);
         const left = c.left.filter(r => this._customSelected.includes(r));
         const right = c.right.filter(r => this._customSelected.includes(r));
         layout[cat] = { left, right };
         roles.push(...left, ...right);
-      });
-      if (!roles.length) return;
-    }
+      }
+    });
+    if (!roles.length) return;
 
     if (this._customMode === 'edit' && this.selectedCustomScript?.id) {
       this._fire('custom-script-edit', { id: this.selectedCustomScript.id, name, author, roles, layout });
@@ -556,18 +461,6 @@ export class BotcSettingsModal extends LitElement {
     this._fire('clear-player-pool', {});
   }
 
-  _filteredRoles() {
-    const q = this._customQuery.trim().toLowerCase();
-    const grouped = {};
-    this.allRoles.forEach(role => {
-      if (q && !role.name.toLowerCase().includes(q)) return;
-      const isExp = isExperimentalRole(role.name);
-      if (!this._showExperimental && isExp && role.cat !== 'loric' && role.cat !== 'fabled' && !this._customSelected.includes(role.name)) return;
-      if (!grouped[role.cat]) grouped[role.cat] = [];
-      grouped[role.cat].push(role);
-    });
-    return grouped;
-  }
 
   _onVersionTap() {
     this._fire('open-readme', {});
@@ -592,9 +485,6 @@ export class BotcSettingsModal extends LitElement {
   }
 
   render() {
-    const canUseAdvancedLayout = this._advancedScriptLayout;
-    const builderMode = this._customBuilderMode;
-    const groupedRoles = this._filteredRoles();
     const hasSlotTarget = !!this._slotTargetCat && this._slotTargetIndex >= 0;
     const currentSlotName = hasSlotTarget ? (this._slotValuesForCat(this._slotTargetCat)[this._slotTargetIndex] || null) : null;
     const slotPool = hasSlotTarget ? this._slotRolePool(this._slotTargetCat, currentSlotName) : [];
@@ -717,17 +607,6 @@ export class BotcSettingsModal extends LitElement {
                 ` : nothing}
               </div>
             </div>
-            <div class="settings-row">
-              <div>
-                <div class="settings-label">Alignment</div>
-                <div class="settings-sub">Show coloured ring on seats when alignment is set</div>
-              </div>
-              <div class="settings-control">
-                <button class="btn-sm btn-hints ${this.alignHints ? 'active' : ''}"
-                  @click="${() => this._fire('align-hints-toggle', {})}"
-                >${this.alignHints ? 'On' : 'Off'}</button>
-              </div>
-            </div>
 
             <div class="settings-row">
               <div>
@@ -840,29 +719,7 @@ export class BotcSettingsModal extends LitElement {
                     </div>
                   </div>
 
-                  <div class="settings-script-builder-tabs" role="tablist" aria-label="Custom script builder mode">
-                    <button class="settings-script-builder-tab ${builderMode === 'slots' ? 'active' : ''}" type="button"
-                      @click="${() => { this._customBuilderMode = 'slots'; }}">Slots</button>
-                    <button class="settings-script-builder-tab ${builderMode === 'list' ? 'active' : ''}" type="button"
-                      @click="${() => { this._customBuilderMode = 'list'; this._closeSlotPicker(); }}">List</button>
-                  </div>
-
-                  ${builderMode === 'list' ? html`
-                    <div class="settings-script-form-row settings-script-search-row">
-                      <label for="custom-script-role-search" class="settings-script-label">Roles</label>
-                      <div class="settings-script-search-wrap">
-                        <input id="custom-script-role-search" class="settings-script-input" type="text" .value="${this._customQuery}"
-                          placeholder="Search roles..."
-                          @input="${e => { this._customQuery = e.target.value; }}">
-                        <button class="settings-script-exp-btn ${this._showExperimental ? 'active' : ''}" type="button"
-                          title="Toggle experimental roles"
-                          @click="${() => { this._showExperimental = !this._showExperimental; }}">E</button>
-                      </div>
-                    </div>
-                  ` : nothing}
-
-                  ${builderMode === 'slots' ? html`
-                    <div class="settings-script-slot-list">
+                  <div class="settings-script-slot-list">
                       ${SLOT_TEMPLATE_ORDER.map(cat => {
                         const slots = this._slotValuesForCat(cat);
                         const split = this._splitCountForCat(cat);
@@ -912,6 +769,8 @@ export class BotcSettingsModal extends LitElement {
                                 `;
                               })}
                             </div>
+                            <button class="settings-script-slot-add" type="button" title="Add a slot to ${CAT_LABELS[cat]}"
+                              @click="${() => this._addSlot(cat)}">➕ Add slot</button>
                           </div>
                         `;
                       })}
@@ -961,52 +820,6 @@ export class BotcSettingsModal extends LitElement {
                         </div>
                       </div>
                     ` : nothing}
-                  ` : html`
-                    <div class="settings-script-role-list">
-                      ${CAT_ORDER.map(cat => {
-                        const roles = groupedRoles[cat] || [];
-                        if (!roles.length) return nothing;
-                        return html`
-                          <div class="settings-script-role-group">
-                            <div class="settings-script-role-group-label">${CAT_LABELS[cat]}</div>
-                            ${roles.map(role => {
-                              const selected = this._customSelected.includes(role.name);
-                              const placement = selected ? this._rolePlacement(role.name, role.cat) : null;
-                              const icon = ROLE_ICONS[role.name];
-                              return html`
-                                <button class="settings-script-role-item ${selected ? 'is-selected' : ''}" type="button"
-                                  @click="${() => this._toggleCustomRole(role.name)}">
-                                  <span class="settings-script-role-check">${selected ? '✓' : ''}</span>
-                                  ${icon ? html`<img class="settings-script-role-icon" src="${icon}" alt="" loading="lazy" decoding="async">` : nothing}
-                                  <span class="settings-script-role-name">${role.name}</span>
-                                  ${isExperimentalRole(role.name) ? html`
-                                    <span class="settings-script-role-exp" title="Experimental role" aria-label="Experimental role">E</span>
-                                  ` : nothing}
-                                  ${selected && canUseAdvancedLayout ? html`
-                                    <span class="settings-script-role-pos">${placement?.col === 'left' ? 'L' : 'R'}${(placement?.index ?? 0) + 1}</span>
-                                    <span class="settings-script-role-controls" @click="${e => e.stopPropagation()}">
-                                      <button class="settings-script-mini" type="button"
-                                        title="Left column"
-                                        @click="${() => this._setRoleColumn(role.name, role.cat, 'left')}">L</button>
-                                      <button class="settings-script-mini" type="button"
-                                        title="Right column"
-                                        @click="${() => this._setRoleColumn(role.name, role.cat, 'right')}">R</button>
-                                      <button class="settings-script-mini" type="button"
-                                        title="Move up"
-                                        @click="${() => this._moveRole(role.name, role.cat, -1)}">↑</button>
-                                      <button class="settings-script-mini" type="button"
-                                        title="Move down"
-                                        @click="${() => this._moveRole(role.name, role.cat, 1)}">↓</button>
-                                    </span>
-                                  ` : nothing}
-                                </button>
-                              `;
-                            })}
-                          </div>
-                        `;
-                      })}
-                    </div>
-                  `}
 
                   <div class="settings-script-actions">
                     <span class="settings-script-selected-count">${this._customSelected.length} selected</span>

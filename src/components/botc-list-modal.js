@@ -45,9 +45,9 @@ export class BotcListModal extends LitElement {
     this.phase             = 'day';
     this.round             = 1;
     this.script            = 'tb';
-    this.deathsCollapsed   = false;
-    this.poisonedCollapsed = false;
-    this.allseatsCollapsed = false;
+    this.deathsCollapsed   = true;
+    this.poisonedCollapsed = true;
+    this.allseatsCollapsed = true;
   }
 
   updated(changed) {
@@ -115,9 +115,9 @@ export class BotcListModal extends LitElement {
 
   _pliHtml(s, i) {
     const roles = getRoles(this.script);
-    const rd = s.role ? roles.find(r => r.name === s.role) : null;
-    const roleIconSrc = s.role && ROLE_ICONS[s.role] ? ROLE_ICONS[s.role] : null;
-    const isBluff = !!(s.role && s.trueRole && s.role !== s.trueRole);
+    const displayRole = s.trueRole || s.role;
+    const rd = displayRole ? roles.find(r => r.name === displayRole) : null;
+    const roleIconSrc = displayRole && ROLE_ICONS[displayRole] ? ROLE_ICONS[displayRole] : null;
     const dotExtra = s.alignment === 'suspicious' ? ' susp'
       : s.alignment === 'good' ? ' align-good'
       : s.alignment === 'evil' ? ' align-evil' : '';
@@ -134,8 +134,8 @@ export class BotcListModal extends LitElement {
         </span>
         ${s.usedVote ? html`<span class="pli-status-icon">👻</span>` : nothing}
         ${roleIconSrc ? html`<img class="pli-role-icon" src="${roleIconSrc}" alt="">` : nothing}
-        ${rd ? html`<span class="pli-badge tag-${rd.cat}">${s.role}</span>` :
-               s.role ? html`<span class="pli-role">${s.role}</span>` : nothing}
+        ${rd ? html`<span class="pli-badge tag-${rd.cat}">${displayRole}</span>` :
+               displayRole ? html`<span class="pli-role">${displayRole}</span>` : nothing}
         ${alignBadge}
       </div>
     `;
@@ -208,28 +208,28 @@ export class BotcListModal extends LitElement {
             </div>
 
             <!-- Deaths -->
-            ${dead.length ? html`
-              <div class="divider"></div>
-              <div class="collapsible-header" @click="${() => this._toggleCollapse('deaths')}">
-                <div class="list-section-title list-section-title--flush">Deaths</div>
-                <span class="collapsible-chevron ${this.deathsCollapsed ? 'collapsible-chevron--collapsed' : ''}">▾</span>
-              </div>
-              <div class="collapsible-body ${this.deathsCollapsed ? 'collapsed' : ''}">
-                ${this._buildGroupedLog(dead, 'diedAt', '☠')}
-              </div>
-            ` : nothing}
+            <div class="divider"></div>
+            <div class="collapsible-header" @click="${() => this._toggleCollapse('deaths')}">
+              <div class="list-section-title list-section-title--flush">Deaths</div>
+              <span class="collapsible-chevron ${this.deathsCollapsed ? 'collapsible-chevron--collapsed' : ''}">▾</span>
+            </div>
+            <div class="collapsible-body ${this.deathsCollapsed ? 'collapsed' : ''}">
+              ${dead.length
+                ? this._buildGroupedLog(dead, 'diedAt', '☠')
+                : html`<div class="no-players">No deaths yet.</div>`}
+            </div>
 
             <!-- Poisoned -->
-            ${poisoned.length ? html`
-              <div class="divider"></div>
-              <div class="collapsible-header" @click="${() => this._toggleCollapse('poisoned')}">
-                <div class="list-section-title list-section-title--flush">Poisoned</div>
-                <span class="collapsible-chevron ${this.poisonedCollapsed ? 'collapsible-chevron--collapsed' : ''}">▾</span>
-              </div>
-              <div class="collapsible-body ${this.poisonedCollapsed ? 'collapsed' : ''}">
-                ${this._buildGroupedLog(poisoned, 'poisonedAt', '🧪')}
-              </div>
-            ` : nothing}
+            <div class="divider"></div>
+            <div class="collapsible-header" @click="${() => this._toggleCollapse('poisoned')}">
+              <div class="list-section-title list-section-title--flush">Poisoned</div>
+              <span class="collapsible-chevron ${this.poisonedCollapsed ? 'collapsible-chevron--collapsed' : ''}">▾</span>
+            </div>
+            <div class="collapsible-body ${this.poisonedCollapsed ? 'collapsed' : ''}">
+              ${poisoned.length
+                ? this._buildGroupedLog(poisoned, 'poisonedAt', '🧪')
+                : html`<div class="no-players">No poisoned players.</div>`}
+            </div>
 
           </div>
         </div>
