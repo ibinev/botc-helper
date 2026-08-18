@@ -500,8 +500,8 @@ export class BotcSettingsModal extends LitElement {
             <div class="settings-group-title">Setup</div>
             <div class="settings-row">
               <div>
-                <div class="settings-label">Players &amp; Seats</div>
-                <div class="settings-sub">Set seat count, or drag seats to rearrange the circle</div>
+                <div class="settings-label">Seats</div>
+                <div class="settings-sub">Set seat count or rearrange seats in the circle</div>
               </div>
               <div class="settings-control">
                 <div class="settings-stepper">
@@ -520,8 +520,8 @@ export class BotcSettingsModal extends LitElement {
 
             <div class="settings-row">
               <div>
-                <div class="settings-label">Player pool</div>
-                <div class="settings-sub">Open and manage saved player names</div>
+                <div class="settings-label">Players</div>
+                <div class="settings-sub">Open and manage player pool</div>
               </div>
               <div class="settings-control">
                 <button class="btn btn-gold settings-pool-btn"
@@ -585,7 +585,7 @@ export class BotcSettingsModal extends LitElement {
             <div class="settings-row">
               <div>
                 <div class="settings-label">Compact mode</div>
-                <div class="settings-sub">Shrink seats ~40% — hides role text, keeps icons and name</div>
+                <div class="settings-sub">Shrink seats ~40% - hides role text</div>
               </div>
               <div class="settings-control">
                 <button class="btn btn-sm btn-hints ${this.compactMode ? 'active' : ''}"
@@ -609,7 +609,7 @@ export class BotcSettingsModal extends LitElement {
              <div class="settings-row">
               <div>
                 <div class="settings-label">Background image</div>
-                <div class="settings-sub">Recommended: 9:16 portrait, at least 1080×1920 px</div>
+                <div class="settings-sub">Recommended: 9:16 portrait; 1080×1920 px</div>
               </div>
               <div class="settings-control settings-control--bg">
                 <label class="btn btn-gold settings-bg-upload-btn" title="Upload background image">
