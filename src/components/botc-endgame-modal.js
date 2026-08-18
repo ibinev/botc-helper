@@ -14,6 +14,7 @@ import { LitElement, html, nothing } from 'lit';
  *
  * Fires:
  *   endgame-save  – { detail: { alignment, reason } }
+ *   endgame-clear – (no detail) – un-ends the game (misclick undo)
  *   modal-close   – (no detail)
  */
 export class BotcEndgameModal extends LitElement {
@@ -59,6 +60,10 @@ export class BotcEndgameModal extends LitElement {
     this.dispatchEvent(new CustomEvent('modal-close', { bubbles: true, composed: true }));
   }
 
+  _clear() {
+    this.dispatchEvent(new CustomEvent('endgame-clear', { bubbles: true, composed: true }));
+  }
+
   render() {
     if (!this.open) return nothing;
     return html`
@@ -67,7 +72,6 @@ export class BotcEndgameModal extends LitElement {
         <div class="killedby-card endgame-card">
           <div class="killedby-card-header">
             <span class="killedby-card-title">🏁 ${this.ended ? 'Game result' : 'End game'}</span>
-            <button class="btn btn-close-sm" @click="${this._dismiss}">✕</button>
           </div>
           <div class="killedby-card-body">
             <label class="endgame-label">Winning alignment</label>
@@ -82,6 +86,9 @@ export class BotcEndgameModal extends LitElement {
               placeholder="How did the game end?"></textarea>
           </div>
           <div class="killedby-card-actions">
+            ${this.ended ? html`
+              <button class="btn btn-danger" @click="${this._clear}">Undo end game</button>
+            ` : nothing}
             <button class="btn btn-primary" ?disabled="${!this.alignment}"
               @click="${this._save}">${this.ended ? 'Update' : 'End Game'}</button>
           </div>

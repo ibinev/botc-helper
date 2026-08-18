@@ -500,28 +500,21 @@ export class BotcSettingsModal extends LitElement {
             <div class="settings-group-title">Setup</div>
             <div class="settings-row">
               <div>
-                <div class="settings-label">Players</div>
-                <div class="settings-sub">Number of seats in the circle</div>
+                <div class="settings-label">Players &amp; Seats</div>
+                <div class="settings-sub">Set seat count, or drag seats to rearrange the circle</div>
               </div>
               <div class="settings-control">
-                <button class="btn-sm"
-                  @click="${() => { if (this.seatCount > MIN) this._fire('count-change', { count: this.seatCount - 1 }); }}">−</button>
-                <span class="settings-count-num">
-                  ${this.seatCount}
-                </span>
-                <button class="btn-sm"
-                  @click="${() => { if (this.seatCount < MAX) this._fire('count-change', { count: this.seatCount + 1 }); }}">+</button>
-              </div>
-            </div>
-
-            <div class="settings-row">
-              <div>
-                <div class="settings-label">Seats</div>
-                <div class="settings-sub">Drag seats to rearrange the circle and tap red X to remove seats</div>
-              </div>
-              <div class="settings-control">
-                <button class="btn btn-gold"
-                  @click="${() => { this._onClose(); this._fire('move-mode', {}); }}">⣿ Move</button>
+                <div class="settings-stepper">
+                  <button class="btn-sm settings-step-btn"
+                    @click="${() => { if (this.seatCount > MIN) this._fire('count-change', { count: this.seatCount - 1 }); }}">−</button>
+                  <span class="settings-count-num">
+                    ${this.seatCount}
+                  </span>
+                  <button class="btn-sm settings-step-btn"
+                    @click="${() => { if (this.seatCount < MAX) this._fire('count-change', { count: this.seatCount + 1 }); }}">+</button>
+                </div>
+                <button class="btn-sm settings-move-btn" title="Move seats"
+                  @click="${() => { this._onClose(); this._fire('move-mode', {}); }}">⠿</button>
               </div>
             </div>
 
@@ -591,6 +584,30 @@ export class BotcSettingsModal extends LitElement {
             <div class="settings-group-title">Appearance</div>
             <div class="settings-row">
               <div>
+                <div class="settings-label">Compact mode</div>
+                <div class="settings-sub">Shrink seats ~40% — hides role text, keeps icons and name</div>
+              </div>
+              <div class="settings-control">
+                <button class="btn btn-sm btn-hints ${this.compactMode ? 'active' : ''}"
+                  @click="${() => this._fire('compact-mode-toggle', {})}"
+                >${this.compactMode ? 'On' : 'Off'}</button>
+              </div>
+            </div>
+
+            <div class="settings-row">
+              <div>
+                <div class="settings-label">Storyteller view</div>
+                <div class="settings-sub">Flip the circle 180° to match the Storyteller's perspective</div>
+              </div>
+              <div class="settings-control">
+                <button class="btn btn-sm btn-hints ${this.storyView ? 'active' : ''}"
+                  @click="${() => this._fire('story-view-toggle', {})}"
+                >${this.storyView ? 'On' : 'Off'}</button>
+              </div>
+            </div>
+
+             <div class="settings-row">
+              <div>
                 <div class="settings-label">Background image</div>
                 <div class="settings-sub">Recommended: 9:16 portrait, at least 1080×1920 px</div>
               </div>
@@ -605,30 +622,6 @@ export class BotcSettingsModal extends LitElement {
                   <button class="btn btn-sm settings-bg-reset-btn" title="Remove custom background"
                     @click="${() => this._fire('bg-image-reset', {})}">✕ Reset</button>
                 ` : nothing}
-              </div>
-            </div>
-
-            <div class="settings-row">
-              <div>
-                <div class="settings-label">Compact mode</div>
-                <div class="settings-sub">Shrink seats ~40% — hides role text, keeps icons and name</div>
-              </div>
-              <div class="settings-control">
-                <button class="btn-sm btn-hints ${this.compactMode ? 'active' : ''}"
-                  @click="${() => this._fire('compact-mode-toggle', {})}"
-                >${this.compactMode ? 'On' : 'Off'}</button>
-              </div>
-            </div>
-
-            <div class="settings-row">
-              <div>
-                <div class="settings-label">Storyteller view</div>
-                <div class="settings-sub">Flip the circle 180° to match the Storyteller's perspective</div>
-              </div>
-              <div class="settings-control">
-                <button class="btn-sm btn-hints ${this.storyView ? 'active' : ''}"
-                  @click="${() => this._fire('story-view-toggle', {})}"
-                >${this.storyView ? 'On' : 'Off'}</button>
               </div>
             </div>
             </div>

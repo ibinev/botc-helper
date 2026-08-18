@@ -1793,6 +1793,13 @@ export class BotcApp extends LitElement {
           this._saveState();
           this.requestUpdate();
         }}"
+        @endgame-clear="${() => {
+          this.gameEnded    = false;
+          this.gameEndInfo  = null;
+          this._endGameOpen = false;
+          this._saveState();
+          this.requestUpdate();
+        }}"
         @modal-close="${() => { this._endGameOpen = false; this.requestUpdate(); }}"
       ></botc-endgame-modal>
     `;

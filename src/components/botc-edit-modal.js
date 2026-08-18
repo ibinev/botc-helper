@@ -344,7 +344,6 @@ export class BotcEditModal extends LitElement {
                 <div class="modal-title">${title}</div>
                 <div class="modal-subtitle">${subtitle}</div>
               </div>
-              <button class="btn btn-close-sm" @click="${this._onClose}">✕</button>
             </div>
 
             <div class="field-grid">
