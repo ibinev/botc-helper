@@ -1,5 +1,5 @@
 import { LitElement, html, nothing } from 'lit';
-import { ROLES_IMG_URL, normalizeScript, setCustomScripts, getScriptOptions, getAllRoles, getRoles, getScriptRoleLayout } from '../data.js';
+import { ROLES_IMG_URL, normalizeScript, setCustomScripts, getScriptOptions, getAllRoles, getRoles, getScriptRoleLayout, loadBundledScripts } from '../data.js';
 import { blankSeat, MIN, MAX, MAX_STEP, phaseRoundToStep, stepToPhaseRound } from '../utils.js';
 import './botc-circle.js';
 import './botc-edit-modal.js';
@@ -132,6 +132,13 @@ export class BotcApp extends LitElement {
   // ── Lifecycle ────────────────────────────────────────────────────────
   connectedCallback() {
     super.connectedCallback();
+    // Bundled scripts load async; re-apply the saved script id once they're ready
+    // in case it referred to one that wasn't available yet at initial load.
+    loadBundledScripts().then(() => {
+      const stored = localStorage.getItem('botc_script');
+      if (stored && normalizeScript(stored) === stored) this.script = stored;
+      this.requestUpdate();
+    });
     this._loadAll();
     this._bindVisualViewport();
     window.addEventListener('resize', this._onResize = () => {

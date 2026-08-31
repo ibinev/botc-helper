@@ -3,6 +3,8 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "start": "npx serve . --listen 3000 --no-clipboard"
+    "prestart": "node tools/build-scripts-index.mjs",
+    "start": "npx serve . --listen 3000 --no-clipboard",
+    "build-scripts-index": "node tools/build-scripts-index.mjs"
   }
 }

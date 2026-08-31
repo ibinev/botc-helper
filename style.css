@@ -1190,8 +1190,13 @@ body.hide-role .pli-role        { display: none; }
   gap: 6px;
 }
 .settings-script-slot-grid > button:last-child:nth-child(odd) { grid-column: 1 / -1; }
-.settings-script-slot-add {
-  width: 100%;
+.settings-script-slot-actions {
+  display: flex;
+  gap: 6px;
+}
+.settings-script-slot-add,
+.settings-script-slot-remove {
+  flex: 1;
   margin-top: 6px;
   border: 0.5px dashed var(--border);
   background: transparent;
@@ -1205,10 +1210,16 @@ body.hide-role .pli-role        { display: none; }
   transition: border-color 0.12s, color 0.12s, background 0.12s;
 }
 .settings-script-slot-add:hover,
-.settings-script-slot-add:active {
+.settings-script-slot-add:active,
+.settings-script-slot-remove:hover:not(:disabled),
+.settings-script-slot-remove:active:not(:disabled) {
   border-color: var(--gold);
   color: var(--gold-light);
   background: rgba(201,151,58,0.1);
+}
+.settings-script-slot-remove:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 .settings-script-slot-item {
   width: 100%;

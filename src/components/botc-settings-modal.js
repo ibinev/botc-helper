@@ -297,6 +297,18 @@ export class BotcSettingsModal extends LitElement {
     this._customSlotCounts = { ...this._customSlotCounts, [cat]: this._slotCountForCat(cat) + 1 };
   }
 
+  // Removes the trailing slot; refuses if it still holds a role (clear it first).
+  _canRemoveSlot(cat) {
+    const count = this._slotCountForCat(cat);
+    if (count <= 0) return false;
+    return !this._slotValuesForCat(cat)[count - 1];
+  }
+
+  _removeSlot(cat) {
+    if (!this._canRemoveSlot(cat)) return;
+    this._customSlotCounts = { ...this._customSlotCounts, [cat]: this._slotCountForCat(cat) - 1 };
+  }
+
   _splitCountForCat(cat) {
     const total = this._slotCountForCat(cat);
     return Math.ceil(total / 2);
@@ -549,7 +561,7 @@ export class BotcSettingsModal extends LitElement {
                     <button class="settings-script-menu-item" type="button" role="menuitem" title="Add custom script"
                       @click="${() => this._openCustomScriptPicker()}"><span class="settings-script-menu-icon">➕</span><span class="settings-script-menu-label">Add</span></button>
                     <button class="settings-script-menu-item" type="button" role="menuitem" title="Copy selected script"
-                      @click="${() => this._openDuplicateScriptPicker()}"><span class="settings-script-menu-icon">📄</span><span class="settings-script-menu-label">Copy</span></button>
+                      @click="${() => this._openDuplicateScriptPicker()}"><span class="settings-script-menu-icon">📄</span><span class="settings-script-menu-label">Duplicate</span></button>
                     ${this.selectedCustomScript ? html`
                       <button class="settings-script-menu-item" type="button" role="menuitem" title="Edit custom script"
                         @click="${() => this._openEditCustomScriptPicker()}"><span class="settings-script-menu-icon">✏️</span><span class="settings-script-menu-label">Edit</span></button>
@@ -762,8 +774,13 @@ export class BotcSettingsModal extends LitElement {
                                 `;
                               })}
                             </div>
-                            <button class="settings-script-slot-add" type="button" title="Add a slot to ${CAT_LABELS[cat]}"
-                              @click="${() => this._addSlot(cat)}">➕ Add slot</button>
+                            <div class="settings-script-slot-actions">
+                              <button class="settings-script-slot-add" type="button" title="Add a slot to ${CAT_LABELS[cat]}"
+                                @click="${() => this._addSlot(cat)}">➕ Add slot</button>
+                              <button class="settings-script-slot-remove" type="button" ?disabled="${!this._canRemoveSlot(cat)}"
+                                title="${this._canRemoveSlot(cat) ? `Remove the last slot from ${CAT_LABELS[cat]}` : 'Clear the last slot before removing it'}"
+                                @click="${() => this._removeSlot(cat)}">➖ Remove slot</button>
+                            </div>
                           </div>
                         `;
                       })}

@@ -1,4 +1,10 @@
-import './components/botc-app.js';
+import { loadCoreScripts } from './data.js';
+
+// Base role data (tb/bmr/snv) must be loaded before <botc-app> and its
+// children are defined, since several components read it synchronously
+// at construction time.
+await loadCoreScripts();
+await import('./components/botc-app.js');
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {

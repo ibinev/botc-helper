@@ -7,32 +7,11 @@ const BASE_SCRIPT_OPTIONS = [
   { id: 'tb',  label: 'Trouble Brewing' },
   { id: 'bmr', label: 'Bad Moon Rising' },
   { id: 'snv', label: 'Sects and Violets' },
-  { id: 'pavels-brewing', label: "Pavel's Brewing" },
 ];
 
 // ── Bundled custom scripts (available on every device) ─
-const BUNDLED_SCRIPTS = [
-  {
-    id: 'pavels-brewing',
-    label: "Pavel's Brewing",
-    roles: [
-      'Chef','Investigator','Librarian','Pixie','Empath','Fortune Teller','Undertaker',
-      'Monk','Slayer','Soldier','Ravenkeeper','Mayor','Virgin',
-      'Ogre','Drunk','Recluse','Saint',
-      'Poisoner','Spy','Scarlet Woman','Baron',
-      'No Dashii','Imp',
-    ],
-    layout: {
-      townsfolk: { left: ['Chef','Investigator','Librarian','Pixie','Empath','Fortune Teller','Undertaker'], right: ['Monk','Slayer','Soldier','Ravenkeeper','Mayor','Virgin'] },
-      outsider:  { left: ['Ogre','Drunk'], right: ['Recluse','Saint'] },
-      minion:    { left: ['Poisoner','Spy'], right: ['Scarlet Woman','Baron'] },
-      demon:     { left: ['No Dashii'], right: ['Imp'] },
-      traveler:  { left: [], right: [] },
-      loric:     { left: [], right: [] },
-      fabled:    { left: [], right: [] },
-    },
-  },
-];
+// Populated at startup by loadBundledScripts() from assets/scripts/*.json
+let BUNDLED_SCRIPTS = [];
 
 const ROLE_CATEGORY_ORDER = ['townsfolk','outsider','minion','demon','traveler','loric','fabled'];
 
@@ -108,8 +87,73 @@ export function getScriptOptions() {
   const bundledIds = new Set(BUNDLED_SCRIPTS.map(s => s.id));
   return [
     ...BASE_SCRIPT_OPTIONS,
+    ...BUNDLED_SCRIPTS.map(s => ({ id: s.id, label: s.label })),
     ...CUSTOM_SCRIPTS.filter(s => !bundledIds.has(s.id)).map(s => ({ id: s.id, label: s.label })),
   ];
+}
+
+function slugifyScriptId(text) {
+  return String(text || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+}
+
+// Accepts either this app's own export format ({ id, label, author, roles, layout })
+// or the standard BotC script-tool array format ([_meta, {id: 'roleid'}, ...]).
+function normalizeBundledEntry(raw, fallbackId) {
+  if (Array.isArray(raw)) {
+    const meta = raw.find(e => e && typeof e === 'object' && e.id === '_meta');
+    const label = meta?.name || meta?.label || fallbackId;
+    const roles = [];
+    raw.forEach(e => {
+      const rawId = typeof e === 'string' ? e : (e && typeof e === 'object' && e.id !== '_meta' ? e.id : null);
+      if (!rawId) return;
+      const role = ROLE_BY_ID.get(String(rawId).toLowerCase());
+      if (role) roles.push(role.name);
+    });
+    return { id: slugifyScriptId(fallbackId) || slugifyScriptId(label), label, author: meta?.author || '', roles, layout: null };
+  }
+  if (raw && typeof raw === 'object') {
+    const roles = Array.isArray(raw.roles) ? raw.roles.filter(Boolean) : [];
+    return {
+      id: slugifyScriptId(raw.id || fallbackId || raw.label),
+      label: String(raw.label || fallbackId || 'Custom Script'),
+      author: String(raw.author || ''),
+      roles,
+      layout: raw.layout || null,
+    };
+  }
+  return null;
+}
+
+// Loads built-in scripts bundled with the app from assets/scripts/.
+// Add a script for every user by dropping a JSON file in that folder and
+// listing its filename in assets/scripts/index.json.
+export async function loadBundledScripts(baseUrl = 'assets/scripts/') {
+  try {
+    const idxRes = await fetch(`${baseUrl}index.json`, { cache: 'no-cache' });
+    if (!idxRes.ok) return;
+    const files = await idxRes.json();
+    if (!Array.isArray(files) || !files.length) return;
+
+    const entries = await Promise.all(files.map(async file => {
+      try {
+        const res = await fetch(`${baseUrl}${file}`, { cache: 'no-cache' });
+        if (!res.ok) return null;
+        const raw = await res.json();
+        const entry = normalizeBundledEntry(raw, slugifyScriptId(String(file).replace(/\.json$/i, '')));
+        return entry && entry.id && entry.label && entry.roles.length ? entry : null;
+      } catch {
+        return null;
+      }
+    }));
+
+    const seen = new Set();
+    BUNDLED_SCRIPTS = entries
+      .filter(Boolean)
+      .filter(s => !seen.has(s.id) && (seen.add(s.id), true))
+      .map(s => ({ ...s, layout: normalizeLayout(s.layout, s.roles) }));
+  } catch {
+    // Offline or fetch blocked — app still works with tb/bmr/snv + any local custom scripts.
+  }
 }
 
 export function getScriptMeta(script) {
@@ -123,208 +167,72 @@ export function normalizeScript(script) {
   return getScriptOptions().some(s => s.id === script) ? script : 'tb';
 }
 
-// ── Trouble Brewing role data ──────────────────────────
-export const ROLES = [
-  { name:'Washerwoman',   cat:'townsfolk', align:'good', ability:'You start knowing that 1 of 2 players is a particular Townsfolk.' },
-  { name:'Librarian',     cat:'townsfolk', align:'good', ability:'You start knowing that 1 of 2 players is a particular Outsider. (Or that 0 are in play.)' },
-  { name:'Investigator',  cat:'townsfolk', align:'good', ability:'You start knowing that 1 of 2 players is a particular Minion.' },
-  { name:'Chef',          cat:'townsfolk', align:'good', ability:'You start knowing how many pairs of evil players there are.' },
-  { name:'Empath',        cat:'townsfolk', align:'good', ability:'Each night, you learn how many of your 2 alive neighbours are evil.' },
-  { name:'Fortune Teller',cat:'townsfolk', align:'good', ability:'Each night, choose 2 players: you learn if either is the Demon. There is a good player that registers as the Demon to you.' },
-  { name:'Undertaker',    cat:'townsfolk', align:'good', ability:'Each night*, you learn which character died by execution today.' },
-  { name:'Monk',          cat:'townsfolk', align:'good', ability:'Each night*, choose a player (not yourself): they are safe from the Demon tonight.' },
-  { name:'Ravenkeeper',   cat:'townsfolk', align:'good', ability:'If you die at night, you are woken to choose a player: you learn their character.' },
-  { name:'Virgin',        cat:'townsfolk', align:'good', ability:'The 1st time you are nominated, if the nominator is a Townsfolk, they are immediately executed.' },
-  { name:'Slayer',        cat:'townsfolk', align:'good', ability:'Once per game, during the day, publicly choose a player: if they are the Demon, they die.' },
-  { name:'Soldier',       cat:'townsfolk', align:'good', ability:'You are safe from the Demon.' },
-  { name:'Mayor',         cat:'townsfolk', align:'good', ability:'If only 3 players live & no execution occurs, your team wins. If you die at night, another player might die instead.' },
-  { name:'Butler',        cat:'outsider',  align:'good', ability:'Each night, choose a player (not yourself): tomorrow, you may only vote if they are voting too.' },
-  { name:'Recluse',        cat:'outsider',  align:'good', ability:'You might register as evil & as a Minion or Demon, even if dead.' },
-  { name:'Drunk',          cat:'outsider',  align:'good', ability:'You do not know you are the Drunk. You think you are a Townsfolk character, but your ability malfunctions.' },
-  { name:'Saint',         cat:'outsider',  align:'good', ability:'If you die by execution, your team loses.' },
-  { name:'Poisoner',      cat:'minion',    align:'evil', ability:'Each night, choose a player: they are poisoned tonight and tomorrow day. Their ability malfunctions.' },
-  { name:'Baron',         cat:'minion',    align:'evil', ability:'There are extra 2 Outsiders in play. [+2 Outsiders]' },
-  { name:'Spy',           cat:'minion',    align:'evil', ability:'Each night, you see the Grimoire. You might register as good & as a Townsfolk or Outsider, even if dead.' },
-  { name:'Scarlet Woman', cat:'minion',    align:'evil', ability:'If there are 5 or more players alive & the Demon dies, you become the Demon. (Travellers don\'t count.)' },
-  { name:'Imp',           cat:'demon',     align:'evil', ability:'Each night*, choose a player: they die. If you kill yourself this way, a Minion becomes the Imp.' },
-  { name:'Apprentice',    cat:'traveler',  align:'good', ability:'On your 1st night, you gain a Townsfolk or Minion ability.' },
-  { name:'Barista',       cat:'traveler',  align:'good', ability:'Each night, choose a player (not yourself): either their ability works twice tonight, or they are sober/healthy/etc.' },
-  { name:'Beggar',        cat:'traveler',  align:'good', ability:'You must use a vote token to vote. Dead players may give you their vote token. If you lose yours, you lose your ability.' },
-  { name:'Bone Collector',cat:'traveler',  align:'good', ability:'Once per game, at night, choose a dead player: they regain their ability until dusk.' },
-  { name:'Bureaucrat',    cat:'traveler',  align:'good', ability:'Each night, choose a player (not yourself): they have 3 votes on every nomination tomorrow and their vote can\'t be changed.' },
-  { name:'Butcher',       cat:'traveler',  align:'good', ability:'Each day, you may nominate an extra player.' },
-  { name:'Deviant',       cat:'traveler',  align:'good', ability:'If you were funny today, 1 player cannot vote tomorrow.' },
-  { name:'Gangster',      cat:'traveler',  align:'good', ability:'Once per game, during the day, you may choose to kill an alive neighbor: if they are the same alignment as you, you die instead.' },
-  { name:'Gunslinger',    cat:'traveler',  align:'good', ability:'Each day, after the first vote has been tallied, you may shoot 1 player that voted: they die.' },
-  { name:'Harlot',        cat:'traveler',  align:'good', ability:'Each night*, choose a living player: if they agree, you learn their character, but you both might die.' },
-  { name:'Judge',         cat:'traveler',  align:'good', ability:'Once per game, if another player nominated, you may choose to force either a successful or failed execution.' },
-  { name:'Matron',        cat:'traveler',  align:'good', ability:'Each day, choose up to 3 players to swap seats. Players may not leave their seats to talk privately.' },
-  { name:'Scapegoat',     cat:'traveler',  align:'good', ability:'If a player of your alignment is executed, you might be executed instead.' },
-  { name:'Thief',         cat:'traveler',  align:'good', ability:'Each night, choose a player: their vote counts as −1 vote tomorrow.' },
-];
+// ── Role catalog (assets/roles.json) ───────────────────
+// Every character the app knows about (id, name, cat, align, ability, and an
+// optional experimental flag) lives in assets/roles.json. Scripts in
+// assets/scripts/*.json only ever reference these roles by id.
+let ROLE_BY_ID = new Map();
+let ROLE_BY_NAME = new Map();
+let EXPERIMENTAL_ROLE_NAMES = new Set();
 
-const TB_ROLES = ROLES.filter(r => r.cat !== 'traveler');
-const TRAVELER_ROLES = ROLES.filter(r => r.cat === 'traveler');
-
-const BMR_CORE_ROLES = [
-  { name:'Grandmother',      cat:'townsfolk', align:'good', ability:'You start knowing a good player & their character. If the Demon kills them, you die too.' },
-  { name:'Sailor',           cat:'townsfolk', align:'good', ability:'Each night, choose an alive player: either you or they are drunk until dusk. You can\'t die.' },
-  { name:'Chambermaid',      cat:'townsfolk', align:'good', ability:'Each night, choose 2 alive players (not yourself): you learn how many woke tonight due to their ability.' },
-  { name:'Exorcist',         cat:'townsfolk', align:'good', ability:'Each night*, choose a player (different to last night): the Demon, if chosen, learns who you are then doesn\'t wake tonight.' },
-  { name:'Innkeeper',        cat:'townsfolk', align:'good', ability:'Each night*, choose 2 players: they can\'t die tonight, but 1 is drunk until dusk.' },
-  { name:'Gambler',          cat:'townsfolk', align:'good', ability:'Each night*, choose a player & guess their character: if you guess wrong, you die.' },
-  { name:'Gossip',           cat:'townsfolk', align:'good', ability:'Each day, you may make a public statement. Tonight, if it was true, a player dies.' },
-  { name:'Courtier',         cat:'townsfolk', align:'good', ability:'Once per game, at night, choose a character: they are drunk for 3 nights & 3 days.' },
-  { name:'Professor',        cat:'townsfolk', align:'good', ability:'Once per game, at night*, choose a dead player: if they are a Townsfolk, they are resurrected.' },
-  { name:'Minstrel',         cat:'townsfolk', align:'good', ability:'When a Minion dies by execution, all other players (except Travellers) are drunk until dusk tomorrow.' },
-  { name:'Tea Lady',         cat:'townsfolk', align:'good', ability:'If both your alive neighbors are good, they can\'t die.' },
-  { name:'Pacifist',         cat:'townsfolk', align:'good', ability:'Executed good players might not die.' },
-  { name:'Fool',             cat:'townsfolk', align:'good', ability:'The 1st time you die, you don\'t.' },
-  { name:'Tinker',           cat:'outsider',  align:'good', ability:'You might die at any time.' },
-  { name:'Moonchild',        cat:'outsider',  align:'good', ability:'When you learn that you died, publicly choose 1 alive player. Tonight, if it was a good player, they die.' },
-  { name:'Goon',             cat:'outsider',  align:'good', ability:'Each night, the 1st player to choose you with their ability is drunk until dusk. You become their alignment.' },
-  { name:'Lunatic',          cat:'outsider',  align:'good', ability:'You think you are a Demon, but you are not. The Demon knows who you are & who you choose at night.' },
-  { name:'Godfather',        cat:'minion',    align:'evil', ability:'You start knowing which Outsiders are in play. If 1 died today, choose a player tonight: they die. [-1 or +1 Outsider]' },
-  { name:'Devil\'s Advocate',cat:'minion',    align:'evil', ability:'Each night, choose a living player (different to last night): if executed tomorrow, they don\'t die.' },
-  { name:'Assassin',         cat:'minion',    align:'evil', ability:'Once per game, at night*, choose a player: they die, even if for some reason they could not.' },
-  { name:'Mastermind',       cat:'minion',    align:'evil', ability:'If the Demon dies by execution (ending the game), play for 1 more day. If a player is then executed, their team loses.' },
-  { name:'Zombuul',          cat:'demon',     align:'evil', ability:'Each night*, if no-one died today, choose a player: they die. The 1st time you die, you live but register as dead.' },
-  { name:'Pukka',            cat:'demon',     align:'evil', ability:'Each night, choose a player: they are poisoned. The previously poisoned player dies then becomes healthy.' },
-  { name:'Shabaloth',        cat:'demon',     align:'evil', ability:'Each night*, choose 2 players: they die. A dead player you chose last night might be regurgitated.' },
-  { name:'Po',               cat:'demon',     align:'evil', ability:'Each night*, you may choose a player: they die. If your last choice was no-one, choose 3 players tonight.' },
-];
-
-const SNV_CORE_ROLES = [
-  { name:'Clockmaker',    cat:'townsfolk', align:'good', ability:'You start knowing how many steps from the Demon to its nearest Minion.' },
-  { name:'Dreamer',       cat:'townsfolk', align:'good', ability:'Each night, choose a player (not yourself or Travellers): you learn 1 good & 1 evil character, 1 of which is correct.' },
-  { name:'Snake Charmer', cat:'townsfolk', align:'good', ability:'Each night, choose an alive player: a chosen Demon swaps characters & alignments with you & is then poisoned.' },
-  { name:'Mathematician', cat:'townsfolk', align:'good', ability:'Each night, you learn how many players\' abilities worked abnormally (since dawn) due to another character\'s ability.' },
-  { name:'Flowergirl',    cat:'townsfolk', align:'good', ability:'Each night*, you learn if a Demon voted today.' },
-  { name:'Town Crier',    cat:'townsfolk', align:'good', ability:'Each night*, you learn if a Minion nominated today.' },
-  { name:'Oracle',        cat:'townsfolk', align:'good', ability:'Each night*, you learn how many dead players are evil.' },
-  { name:'Savant',        cat:'townsfolk', align:'good', ability:'Each day, you may visit the Storyteller to learn 2 things in private: 1 is true & 1 is false.' },
-  { name:'Seamstress',    cat:'townsfolk', align:'good', ability:'Once per game, at night, choose 2 players (not yourself): you learn if they are the same alignment.' },
-  { name:'Philosopher',   cat:'townsfolk', align:'good', ability:'Once per game, at night, choose a good character: gain that ability. If this character is in play, they are drunk.' },
-  { name:'Artist',        cat:'townsfolk', align:'good', ability:'Once per game, during the day, privately ask the Storyteller any yes/no question.' },
-  { name:'Juggler',       cat:'townsfolk', align:'good', ability:'On your 1st day, publicly guess up to 5 players\' characters. That night, you learn how many you got correct.' },
-  { name:'Sage',          cat:'townsfolk', align:'good', ability:'If the Demon kills you, you learn that it is 1 of 2 players.' },
-  { name:'Mutant',        cat:'outsider',  align:'good', ability:'If you are "mad" about being an Outsider, you might be executed.' },
-  { name:'Sweetheart',    cat:'outsider',  align:'good', ability:'When you die, 1 player is drunk from now on.' },
-  { name:'Barber',        cat:'outsider',  align:'good', ability:'If you died today or tonight, the Demon may choose 2 players (not another Demon) to swap characters.' },
-  { name:'Klutz',         cat:'outsider',  align:'good', ability:'When you learn that you died, publicly choose 1 alive player: if they are evil, your team loses.' },
-  { name:'Evil Twin',     cat:'minion',    align:'evil', ability:'You & an opposing player know each other. If the good player is executed, evil wins. Good can\'t win if you both live.' },
-  { name:'Witch',         cat:'minion',    align:'evil', ability:'Each night, choose a player: if they nominate tomorrow, they die. If just 3 players live, you lose this ability.' },
-  { name:'Cerenovus',     cat:'minion',    align:'evil', ability:'Each night, choose a player & a good character: they are "mad" they are this character tomorrow, or might be executed.' },
-  { name:'Pit-Hag',       cat:'minion',    align:'evil', ability:'Each night*, choose a player & a character they become (if not in play). If a Demon is made, deaths tonight are arbitrary.' },
-  { name:'Fang Gu',       cat:'demon',     align:'evil', ability:'Each night*, choose a player: they die. The 1st Outsider this kills becomes an evil Fang Gu & you die instead. [+1 Outsider]' },
-  { name:'Vigormortis',   cat:'demon',     align:'evil', ability:'Each night*, choose a player: they die. Minions you kill keep their ability & poison 1 Townsfolk neighbor. [-1 Outsider]' },
-  { name:'No Dashii',     cat:'demon',     align:'evil', ability:'Each night*, choose a player: they die. Your 2 Townsfolk neighbors are poisoned.' },
-  { name:'Vortox',        cat:'demon',     align:'evil', ability:'Each night*, choose a player: they die. Townsfolk abilities yield false info. Each day, if no-one is executed, evil wins.' },
-];
-
-const EXPERIMENTAL_ROLES = [
-  { name:'Acrobat', cat:'townsfolk', align:'good', ability:'Each night*, choose a player: if they are or become drunk or poisoned tonight, you die.' },
-  { name:'Al-Hadikhia', cat:'demon', align:'evil', ability:'Each night*, choose 3 players (all players learn who): each silently chooses to live or die, but if all live, all die.' },
-  { name:'Alchemist', cat:'townsfolk', align:'good', ability:'You have a Minion ability. When using this, the Storyteller may prompt you to choose differently.' },
-  { name:'Alsaahir', cat:'townsfolk', align:'good', ability:'Each day, if you publicly guess which players are Minion(s) and which are Demon(s), good wins' },
-  { name:'Amnesiac', cat:'townsfolk', align:'good', ability:'You do not know what your ability is. Each day, privately guess what it is: you learn how accurate you are.' },
-  { name:'Atheist', cat:'townsfolk', align:'good', ability:'The Storyteller can break the game rules & if executed, good wins, even if you are dead. [No evil characters]' },
-  { name:'Balloonist', cat:'townsfolk', align:'good', ability:'Each night, you learn a player of a different character type than last night. [+0 or +1 Outsider]' },
-  { name:'Banshee', cat:'townsfolk', align:'good', ability:'If the Demon kills you, all players learn this. From now on, you may nominate twice per day and vote twice per nomination.' },
-  { name:'Big Wig', cat:'loric', align:'good', ability:'Each nominee chooses a player: until voting, only they may speak & they are mad the nominee is good or they might die.' },
-  { name:'Boffin', cat:'minion', align:'evil', ability:`The Demon (even if drunk or poisoned) has a not-in-play good character's ability. You both know which.` },
-  { name:'Boomdandy', cat:'minion', align:'evil', ability:'If you are executed, all but 3 players die. After a 10 to 1 countdown, the player with the most players pointing at them, dies.' },
-  { name:'Bootlegger', cat:'loric', align:'good', ability:'This script has homebrew characters or rules.' },
-  { name:'Bounty Hunter', cat:'townsfolk', align:'good', ability:'You start knowing 1 evil player. If the player you know dies, you learn another evil player tonight. [1 Townsfolk is evil]' },
-  { name:'Cacklejack', cat:'traveler', align:'good', ability:'Each day, choose a player: a different player changes character tonight.' },
-  { name:'Cannibal', cat:'townsfolk', align:'good', ability:'You have the ability of the recently killed executee. If they are evil, you are poisoned until a good player dies by execution.' },
-  { name:'Choirboy', cat:'townsfolk', align:'good', ability:'If the Demon kills the King, you learn which player is the Demon. [+the King]' },
-  { name:'Cult Leader', cat:'townsfolk', align:'good', ability:'Each night, you become the alignment of an alive neighbour. If all good players choose to join your cult, your team wins.' },
-  { name:'Damsel', cat:'outsider', align:'good', ability:'All Minions know a Damsel is in play. If a Minion publicly guesses you (once), your team loses.' },
-  { name:'Deus ex Fiasco', cat:'fabled', align:'good', ability:'At least once per game, the Storyteller will make a mistake, correct it, and publicly admit to it.' },
-  { name:'Engineer', cat:'townsfolk', align:'good', ability:'Once per game, at night, choose which Minions or which Demon is in play.' },
-  { name:'Farmer', cat:'townsfolk', align:'good', ability:'When you die at night, an alive good player becomes a Farmer.' },
-  { name:'Fearmonger', cat:'minion', align:'evil', ability:'Each night, choose a player: if you nominate & execute them, their team loses. All players know if you choose a new player.' },
-  { name:'Ferryman', cat:'fabled', align:'good', ability:'On the final day, all dead players regain their vote token.' },
-  { name:'Fisherman', cat:'townsfolk', align:'good', ability:'Once per game, during the day, visit the Storyteller for some advice to help your team win.' },
-  { name:'Gangster', cat:'traveler', align:'good', ability:'Once per day, you may choose to kill an alive neighbour, if your other alive neighbour agrees.' },
-  { name:'Gardener', cat:'loric', align:'good', ability:`The Storyteller assigns all players' characters.` },
-  { name:'General', cat:'townsfolk', align:'good', ability:'Each night, you learn which alignment the Storyteller believes is winning: good, evil, or neither.' },
-  { name:'Gnome', cat:'traveler', align:'good', ability:'All players start knowing a player of your alignment. You may choose to kill anyone who nominates them.' },
-  { name:'Goblin', cat:'minion', align:'evil', ability:'If you publicly claim to be the Goblin when nominated & are executed that day, your team wins.' },
-  { name:'God of Ug', cat:'loric', align:'good', ability:'One Ug hat. When wear Ug hat, must speak one sound at a time but vote twice. If fail, pass Ug hat.' },
-  { name:'God of Ug (Ug Mode)', cat:'loric', align:'good', ability:'One Ug hat. When wear Ug hat, must speak one sound at a time but vote twice. If fail, pass Ug hat.' },
-  { name:'Golem', cat:'outsider', align:'good', ability:'You may only nominate once per game. When you do, if the nominee is not the Demon, they die.' },
-  { name:'Harpy', cat:'minion', align:'evil', ability:'Each night, choose 2 players: tomorrow, the 1st player is mad that the 2nd is evil, or one or both might die.' },
-  { name:'Hatter', cat:'outsider', align:'good', ability:'If you died today or tonight, the Minion & Demon players may choose new Minion & Demon characters to be.' },
-  { name:'Heretic', cat:'outsider', align:'good', ability:'Whoever wins, loses & whoever loses, wins, even if you are dead.' },
-  { name:'Hermit', cat:'outsider', align:'good', ability:'You have all Outsider abilities. [-0 or -1 Outsider]' },
-  { name:'High Priestess', cat:'townsfolk', align:'good', ability:'Each night, learn which player the Storyteller believes you should talk to most.' },
-  { name:'Hindu', cat:'loric', align:'good', ability:'The first 4 players to die are immediately reincarnated as Travellers of the same alignment.' },
-  { name:'Huntsman', cat:'townsfolk', align:'good', ability:'Once per game, at night, choose a living player: the Damsel, if chosen, becomes a not-in-play Townsfolk. [+the Damsel]' },
-  { name:'Kazali', cat:'demon', align:'evil', ability:'Each night*, choose a player: they die. [You choose which players are which Minions. -? to +? Outsiders]' },
-  { name:'King', cat:'townsfolk', align:'good', ability:'Each night, if the dead equal or outnumber the living, you learn 1 alive character. The Demon knows you are the King.' },
-  { name:'Knaves', cat:'loric', align:'good', ability:'There are 2 Storytellers: one lies & one tells the truth. Once per game, at dusk, they might switch.' },
-  { name:'Knight', cat:'townsfolk', align:'good', ability:'You start knowing 2 players that are not the Demon.' },
-  { name:'Legion', cat:'demon', align:'evil', ability:'Each night*, a player might die. Executions fail if only evil voted. You register as a Minion too. [Most players are Legion]' },
-  { name:'Leviathan', cat:'demon', align:'evil', ability:'If more than 1 good player is executed, evil wins. All players know you are in play. After day 5, evil wins.' },
-  { name:'Lil\' Monsta', cat:'demon', align:'evil', ability:`Each night, Minions choose who babysits Lil' Monsta & "is the Demon". Each night*, a player might die. [+1 Minion]` },
-  { name:'Lleech', cat:'demon', align:'evil', ability:'Each night*, choose a player: they die. You start by choosing a player: they are poisoned. You die if & only if they are dead.' },
-  { name:'Lord of Typhon', cat:'demon', align:'evil', ability:'Each night*, choose a player: they die. [Evil characters are in a line. You are in the middle. +1 Minion. -? to +? Outsiders]' },
-  { name:'Lycanthrope', cat:'townsfolk', align:'good', ability:'Each night*, choose an alive player. If good, they die & the Demon doesn’t kill tonight. One good player registers as evil.' },
-  { name:'Magician', cat:'townsfolk', align:'good', ability:'The Demon thinks you are a Minion. Minions think you are a Demon.' },
-  { name:'Marionette', cat:'minion', align:'evil', ability:'You think you are a good character, but you are not. The Demon knows who you are. [You neighbor the Demon]' },
-  { name:'Mezepheles', cat:'minion', align:'evil', ability:'You start knowing a secret word. The 1st good player to say this word becomes evil that night.' },
-  { name:'Nightwatchman', cat:'townsfolk', align:'good', ability:'Once per game, at night, choose a player: they learn you are the Nightwatchman.' },
-  { name:'Noble', cat:'townsfolk', align:'good', ability:'You start knowing 3 players, 1 and only 1 of which is evil.' },
-  { name:'Ogre', cat:'outsider', align:'good', ability:`On your 1st night, choose a player (not yourself): you become their alignment (you don't know which) even if drunk or poisoned.` },
-  { name:'Ojo', cat:'demon', align:'evil', ability:'Each night*, choose a character: they die. If they are not in play, the Storyteller chooses who dies.' },
-  { name:'Organ Grinder', cat:'minion', align:'evil', ability:'All players keep their eyes closed when voting and the vote tally is secret. Each night, choose if you are drunk until dusk.' },
-  { name:'Pixie', cat:'townsfolk', align:'good', ability:'You start knowing 1 in-play Townsfolk. If you were mad that you were this character, you gain their ability when they die.' },
-  { name:'Plague Doctor', cat:'outsider', align:'good', ability:'When you die, the Storyteller gains a Minion ability.' },
-  { name:'Politician', cat:'outsider', align:'good', ability:'If you were the player most responsible for your team losing, you change alignment & win, even if dead.' },
-  { name:'Pope', cat:'loric', align:'good', ability:'There are duplicate good characters in play. They might also be bluffs.' },
-  { name:'Poppy Grower', cat:'townsfolk', align:'good', ability:'Minions & Demons do not know each other. If you die, they learn who each other are that night.' },
-  { name:'Preacher', cat:'townsfolk', align:'good', ability:'Each night, choose a player: a Minion, if chosen, learns this. All chosen Minions have no ability.' },
-  { name:'Princess', cat:'townsfolk', align:'good', ability:'On your 1st day, if you nominated & executed a player, the Demon doesn’t kill tonight.' },
-  { name:'Psychopath', cat:'minion', align:'evil', ability:'Each day, before nominations, you may publicly choose a player: they die. If executed, you only die if you lose roshambo.' },
-  { name:'Puzzlemaster', cat:'outsider', align:'good', ability:'1 player is drunk, even if you die. If you guess (once) who it is, learn the Demon player, but guess wrong & get false info.' },
-  { name:'Riot', cat:'demon', align:'evil', ability:'On day 3, Minions become Riot & nominees die but nominate an alive player immediately. This must happen.' },
-  { name:'Shugenja', cat:'townsfolk', align:'good', ability:'You start knowing if your closest evil player is clockwise or anti-clockwise. If equidistant, this info is arbitrary.' },
-  { name:'Snitch', cat:'outsider', align:'good', ability:'Each Minion gets 3 bluffs.' },
-  { name:'Steward', cat:'townsfolk', align:'good', ability:'You start knowing 1 good player.' },
-  { name:'Storm Catcher', cat:'loric', align:'good', ability:'Name a good character. If in play, they can only die by execution, but evil players learn which player it is.' },
-  { name:'Summoner', cat:'minion', align:'evil', ability:'You get 3 bluffs. On the 3rd night, choose a player: they become an evil Demon of your choice. [No Demon]' },
-  { name:'Tor', cat:'loric', align:'good', ability:`Players don't know their character or alignment. They learn them when they die.` },
-  { name:'Ventriloquist', cat:'loric', align:'good', ability:'If a player is mad as a fresh character during their nomination, they might not die if executed today.' },
-  { name:'Village Idiot', cat:'townsfolk', align:'good', ability:'Each night, choose a player: you learn their alignment. [+0 to +2 Village Idiots. 1 of the extras is drunk]' },
-  { name:'Vizier', cat:'minion', align:'evil', ability:'All players know you are the Vizier. You cannot die during the day. If good voted, you may choose to execute immediately.' },
-  { name:'Widow', cat:'minion', align:'evil', ability:'On your 1st night, look at the Grimoire and choose a player: they are poisoned. 1 good player knows a Widow is in play.' },
-  { name:'Wizard', cat:'minion', align:'evil', ability:'Once per game, choose to make a wish. If granted, it might have a price & leave a clue as to its nature.' },
-  { name:'Wraith', cat:'minion', align:'evil', ability:'You may choose to open your eyes at night. You wake when other evil players do.' },
-  { name:'Xaan', cat:'minion', align:'evil', ability:'On night X, all Townsfolk are poisoned until dusk. [X Outsiders]' },
-  { name:'Yaggababble', cat:'demon', align:'evil', ability:'You start knowing a secret phrase. For each time you said it publicly today, a player might die.' },
-  { name:'Zealot', cat:'outsider', align:'good', ability:'If there are 5 or more players alive, you must vote for every nomination.' },
-  { name:'Zenomancer', cat:'loric', align:'good', ability:'One or more players each have a goal. When achieved, that player learns a piece of true info.' },
-];
-
-const ALL_KNOWN_ROLES = [
-  ...ROLES,
-  ...BMR_CORE_ROLES,
-  ...SNV_CORE_ROLES,
-  ...TRAVELER_ROLES,
-  ...EXPERIMENTAL_ROLES,
-];
-
-const EXPERIMENTAL_ROLE_NAMES = new Set(EXPERIMENTAL_ROLES.map(r => r.name));
-
-const ROLE_BY_NAME = (() => {
-  const map = new Map();
-  ALL_KNOWN_ROLES.forEach(role => {
-    if (!map.has(role.name)) map.set(role.name, role);
+function indexRoleCatalog(roles) {
+  const byId = new Map();
+  const byName = new Map();
+  const experimental = new Set();
+  (roles || []).forEach(role => {
+    if (!role || !role.id || !role.name) return;
+    byId.set(role.id, role);
+    if (!byName.has(role.name)) byName.set(role.name, role);
+    if (role.experimental) experimental.add(role.name);
   });
-  return map;
-})();
+  ROLE_BY_ID = byId;
+  ROLE_BY_NAME = byName;
+  EXPERIMENTAL_ROLE_NAMES = experimental;
+}
+
+// ── Core script role data ──────────────────────────────
+// Trouble Brewing, Bad Moon Rising & Sects and Violets are loaded at startup
+// from assets/scripts/*.json via loadCoreScripts() — see below.
+let ROLES = [];
+let BMR_CORE_ROLES = [];
+let SNV_CORE_ROLES = [];
+
+function tbRoles() { return ROLES.filter(r => r.cat !== 'traveler'); }
+function travelerRoles() { return ROLES.filter(r => r.cat === 'traveler'); }
+
+// Maps a standard script-tool array ([{id:'_meta',...}, {id:'roleid'}, ...])
+// to ordered role objects via the role catalog.
+function scriptRolesFromEntries(raw) {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter(e => e && typeof e === 'object' && e.id !== '_meta')
+    .map(e => ROLE_BY_ID.get(e.id))
+    .filter(Boolean);
+}
+
+// Loads the role catalog (assets/roles.json) and the 3 base scripts (Trouble
+// Brewing, Bad Moon Rising, Sects and Violets) from assets/scripts/*.json.
+// Must complete before any role lookups are made — see src/app.js.
+export async function loadCoreScripts(rolesUrl = 'assets/roles.json', baseUrl = 'assets/scripts/') {
+  const files = { tb: 'trouble-brewing.json', bmr: 'bad-moon-rising.json', snv: 'sects-and-violets.json' };
+  try {
+    const rolesRes = await fetch(rolesUrl, { cache: 'no-cache' });
+    if (!rolesRes.ok) throw new Error('Failed to load roles.json');
+    indexRoleCatalog(await rolesRes.json());
+
+    const [tb, bmr, snv] = await Promise.all(Object.values(files).map(async file => {
+      const res = await fetch(`${baseUrl}${file}`, { cache: 'no-cache' });
+      if (!res.ok) throw new Error(`Failed to load ${file}`);
+      return res.json();
+    }));
+    ROLES = scriptRolesFromEntries(tb);
+    BMR_CORE_ROLES = scriptRolesFromEntries(bmr);
+    SNV_CORE_ROLES = scriptRolesFromEntries(snv);
+  } catch {
+    // Leaves the role catalog / ROLES / BMR_CORE_ROLES / SNV_CORE_ROLES empty —
+    // app will show no roles for base scripts.
+  }
+}
 
 function getCustomScript(script) {
   return BUNDLED_SCRIPTS.find(s => s.id === script)
@@ -350,9 +258,9 @@ export function isExperimentalRole(name) {
 
 export function getRoles(script = 'tb') {
   const id = normalizeScript(script);
-  if (id === 'tb') return TB_ROLES;
-  if (id === 'bmr') return [...BMR_CORE_ROLES, ...TRAVELER_ROLES];
-  if (id === 'snv') return [...SNV_CORE_ROLES, ...TRAVELER_ROLES];
+  if (id === 'tb') return tbRoles();
+  if (id === 'bmr') return BMR_CORE_ROLES;
+  if (id === 'snv') return SNV_CORE_ROLES;
   const custom = getCustomScript(id);
   if (custom) {
     const layout = normalizeLayout(custom.layout, custom.roles);
@@ -365,7 +273,7 @@ export function getRoles(script = 'tb') {
     });
     return orderedNames.map(name => ROLE_BY_NAME.get(name)).filter(Boolean);
   }
-  return TRAVELER_ROLES;
+  return travelerRoles();
 }
 
 const EXPERIMENTAL_ICON_DEFAULTS = {
