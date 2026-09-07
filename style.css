@@ -746,7 +746,8 @@ body.hide-role .pli-role        { display: none; }
 .rc-icon { width: 36px; height: 36px; object-fit: contain; flex-shrink: 0; filter: drop-shadow(0 1px 3px rgba(0,0,0,0.7)); margin-top: 1px; }
 .rc-icon--fallback { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; font-size: 18px; color: var(--text-secondary); }
 .rc-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
-.rc-name { font-size: 15px; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rc-name-row { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.rc-name { font-size: 15px; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .rc-cat-townsfolk .rc-name { color: #8fca4b; }
 .rc-cat-outsider  .rc-name { color: #7ab8f5; }
 .rc-cat-minion    .rc-name { color: #e06060; }
@@ -754,6 +755,21 @@ body.hide-role .pli-role        { display: none; }
 .rc-cat-traveler  .rc-name { color: #e6b85a; }
 .rc-cat-loric     .rc-name { color: #f2d75c; }
 .rc-cat-fabled    .rc-name { color: #e8a020; }
+.rc-role-exp {
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #f5d389;
+  border: 0.5px solid rgba(245,211,137,0.55);
+  background: rgba(245,211,137,0.16);
+  flex-shrink: 0;
+}
 .rc-ability { font-size: 13px; color: var(--text-secondary); line-height: 1.45; }
 
 /* ── Character count ──────────────────────────────────── */

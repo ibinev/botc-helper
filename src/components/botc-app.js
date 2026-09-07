@@ -225,7 +225,9 @@ export class BotcApp extends LitElement {
     this._applyHideDeadPlayers();
     this._applyBgImage();
     this._applyBgFog();
-    this._saveScript();
+    // Don't _saveScript() here: bundled scripts may not be loaded yet, which would
+    // normalize an unrecognized (but valid) stored script id down to 'tb' and
+    // clobber it in localStorage before the async re-apply below can run.
     requestAnimationFrame(() => requestAnimationFrame(() => this.requestUpdate()));
   }
 
@@ -584,6 +586,8 @@ export class BotcApp extends LitElement {
         phase: this.phase,
         seats: this.seats,
         seatPositions: this.seatPositions,
+        gameEnded: this.gameEnded,
+        gameEndInfo: this.gameEndInfo,
         nominations: this.nominations,
         poisonSnapshots: this.poisonSnapshots,
         gameNotes: this.gameNotes,
@@ -749,6 +753,13 @@ export class BotcApp extends LitElement {
       { length: count },
       (_, i) => app.seatPositions?.[i] ? app.seatPositions[i] : null
     );
+
+    this.gameEnded = !!app.gameEnded;
+    this.gameEndInfo = app.gameEndInfo || null;
+    // Backfill endedStep for backups made before forward-navigation-to-end-day was supported
+    if (this.gameEnded && this.gameEndInfo && this.gameEndInfo.endedStep == null) {
+      this.gameEndInfo = { ...this.gameEndInfo, endedStep: phaseRoundToStep(this.phase, this.round) };
+    }
 
     this.nominations = app.nominations && typeof app.nominations === 'object' ? app.nominations : {};
     this.poisonSnapshots = app.poisonSnapshots && typeof app.poisonSnapshots === 'object' ? app.poisonSnapshots : {};

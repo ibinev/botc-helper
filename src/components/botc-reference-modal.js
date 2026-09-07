@@ -1,5 +1,5 @@
 import { LitElement, html, nothing } from 'lit';
-import { getRoles, getAllRoles, getNightOrder, getCharacterCount, ROLE_ICONS, getScriptRoleLayout, getScriptMeta } from '../data.js';
+import { getRoles, getAllRoles, getNightOrder, getCharacterCount, ROLE_ICONS, getScriptRoleLayout, getScriptMeta, isExperimentalRole } from '../data.js';
 import { CHARCOUNT_COLS } from '../utils.js';
 
 const BMR_ROLE_ORDER = {
@@ -108,7 +108,10 @@ export class BotcReferenceModal extends LitElement {
           ? html`<img class="rc-icon" src="${icon}" alt="${role.name}">`
           : html`<span class="rc-icon rc-icon--fallback">?</span>`}
         <div class="rc-body">
-          <span class="rc-name">${role.name}</span>
+          <div class="rc-name-row">
+            <span class="rc-name">${role.name}</span>
+            ${isExperimentalRole(role.name) ? html`<span class="rc-role-exp" title="Experimental role" aria-label="Experimental role">E</span>` : nothing}
+          </div>
           <span class="rc-ability">${role.ability || ''}</span>
         </div>
       </div>
