@@ -114,6 +114,10 @@ export class BotcCircle extends LitElement {
   _seatClass(s, i) {
     const voteList = (this.nomMode === 'votes' && this.nomVoteKey && this.nomVoteIdx !== null)
       ? ((this.nominations[this.nomVoteKey]?.[this.nomVoteIdx]?.votes) || []) : [];
+    const key = 'day-' + this.round;
+    const todaysNoms = this.nominations[key] || [];
+    const hasNominatedToday = todaysNoms.some(n => n.from === i);
+    const wasNominatedToday = todaysNoms.some(n => n.to === i);
     return 'seat'
       + (s.dead                                        ? ' dead'       : '')
       + (s.alignment === 'suspicious'                  ? ' suspicious' : '')
@@ -122,7 +126,9 @@ export class BotcCircle extends LitElement {
       + (this.selected === i                           ? ' selected'   : '')
       + (this.nomMode === 'to' && this.nomFrom === i   ? ' nom-from'   : '')
       + (this.nomMode === 'votes' && voteList.includes(i) ? ' nom-voted' : '')
-      + (this.nomMode === 'votes' && this.nomVoteCursor === i ? ' nom-current' : '');
+      + (this.nomMode === 'votes' && this.nomVoteCursor === i ? ' nom-current' : '')
+      + (this.nomMode === 'from' && hasNominatedToday  ? ' nom-unavailable' : '')
+      + (this.nomMode === 'to'   && wasNominatedToday  ? ' nom-unavailable' : '');
   }
 
   _onClick(i) {
