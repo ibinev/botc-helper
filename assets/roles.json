@@ -755,6 +755,13 @@
     "experimental": true
   },
   {
+    "id": "djinn",
+    "name": "Djinn",
+    "cat": "fabled",
+    "align": "good",
+    "ability": "Use the Djinn's special rule. All players know what it is."
+  },
+  {
     "id": "engineer",
     "name": "Engineer",
     "cat": "townsfolk",

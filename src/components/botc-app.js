@@ -32,6 +32,7 @@ export class BotcApp extends LitElement {
     nomFrom:           { type: Number  },
     nomVoteKey:        { type: String  },
     nomVoteIdx:        { type: Number  },
+    nomVoteCursor:     { type: Number  },
     nominations:       { type: Object  },
     poisonSnapshots:   { type: Object  },
     gameNotes:         { type: Object  },
@@ -89,6 +90,7 @@ export class BotcApp extends LitElement {
     this.nomFrom           = null;
     this.nomVoteKey        = null;
     this.nomVoteIdx        = null;
+    this.nomVoteCursor     = null;
     this.nominations       = {};
     this.poisonSnapshots   = {};
     this.gameNotes         = {};
@@ -784,6 +786,7 @@ export class BotcApp extends LitElement {
     this.nomFrom = null;
     this.nomVoteKey = null;
     this.nomVoteIdx = null;
+    this.nomVoteCursor = null;
     this._editOpen = false;
     this._listOpen = false;
     this._nomsOpen = false;
@@ -928,6 +931,7 @@ export class BotcApp extends LitElement {
       this.nomFrom = null;
       this.nomVoteKey = null;
       this.nomVoteIdx = null;
+      this.nomVoteCursor = null;
     }
     this._nomsOpen = false;
 
@@ -1017,6 +1021,29 @@ export class BotcApp extends LitElement {
     this.requestUpdate();
   }
 
+  // A dead player who's already spent their one-time ghost vote is still
+  // walked through in the vote round (so nobody is skipped/hard to track),
+  // but their vote can never count as a Yes.
+  _canCountYesVote(idx) {
+    const seat = this.seats[idx];
+    return !(seat?.dead && seat?.usedVote);
+  }
+
+  // Set (or clear) the current nomination's vote for a seat, applying the
+  // ghost-vote-used rule above.
+  _recordVote(idx, voted) {
+    const entry = this.nominations[this.nomVoteKey]?.[this.nomVoteIdx];
+    if (!entry) return;
+    const effectiveVote = voted && this._canCountYesVote(idx);
+    const votes = new Set(entry.votes || []);
+    if (effectiveVote) votes.add(idx); else votes.delete(idx);
+    const noms = { ...this.nominations };
+    noms[this.nomVoteKey] = [...noms[this.nomVoteKey]];
+    noms[this.nomVoteKey][this.nomVoteIdx] = { ...entry, votes: [...votes] };
+    this.nominations = noms;
+    this._saveNominations();
+  }
+
   _handleNomClick(idx) {
     if (this.nomMode === 'from') {
       const seat = this.seats[idx];
@@ -1051,18 +1078,11 @@ export class BotcApp extends LitElement {
     } else if (this.nomMode === 'votes') {
       const entry = this.nominations[this.nomVoteKey]?.[this.nomVoteIdx];
       if (!entry) return;
-      const seat = this.seats[idx];
-      // Dead players who already used their ghost vote cannot vote again
-      if (seat?.dead && seat?.usedVote) return;
-      const votes = [...(entry.votes || [])];
-      const pos = votes.indexOf(idx);
-      if (pos === -1) votes.push(idx);
-      else votes.splice(pos, 1);
-      const noms = { ...this.nominations };
-      noms[this.nomVoteKey] = [...noms[this.nomVoteKey]];
-      noms[this.nomVoteKey][this.nomVoteIdx] = { ...entry, votes };
-      this.nominations = noms;
-      this._saveNominations();
+      const votedYes = (entry.votes || []).includes(idx);
+      this._recordVote(idx, !votedYes);
+      // Tapping a seat directly also moves the auto-advance cursor there,
+      // so the Yes/No buttons continue the round from that point.
+      this.nomVoteCursor = idx;
       this.requestUpdate();
     }
   }
@@ -1078,7 +1098,37 @@ export class BotcApp extends LitElement {
     noms[key] = [...noms[key]];
     noms[key][idx] = { ...noms[key][idx] };
     this.nominations = noms;
+    // Voting starts with the seat clockwise-next to the nominee, so the
+    // nominee ends up voting last (the round stops there, it doesn't loop).
+    this.nomVoteCursor = (noms[key][idx].to + 1) % this.seatCount;
     this._saveNominations();
+    this.requestUpdate();
+  }
+
+  // Record a Yes/No vote for the seat under the cursor, then auto-advance.
+  // Stops (cursor -> null) right after the nominee's own vote instead of
+  // wrapping around the table again.
+  _castVote(voted) {
+    if (this.nomMode !== 'votes' || this.nomVoteCursor == null) return;
+    const entry = this.nominations[this.nomVoteKey]?.[this.nomVoteIdx];
+    if (!entry) return;
+    const idx = this.nomVoteCursor;
+    this._recordVote(idx, voted);
+    this.nomVoteCursor = idx === entry.to ? null : (idx + 1) % this.seatCount;
+    this.requestUpdate();
+  }
+
+  // Step the cursor back one seat (e.g. to correct a mis-tap); does not
+  // change any recorded vote. From the finished state (cursor null, right
+  // after the nominee voted) it resumes at the nominee.
+  _voteCursorBack() {
+    if (this.nomMode !== 'votes') return;
+    const entry = this.nominations[this.nomVoteKey]?.[this.nomVoteIdx];
+    if (!entry) return;
+    const n = this.seatCount;
+    this.nomVoteCursor = this.nomVoteCursor == null
+      ? entry.to
+      : (this.nomVoteCursor - 1 + n) % n;
     this.requestUpdate();
   }
 
@@ -1114,6 +1164,7 @@ export class BotcApp extends LitElement {
     this.nomMode    = false;
     this.nomVoteKey = null;
     this.nomVoteIdx = null;
+    this.nomVoteCursor = null;
     this._nomsOpen  = true;
     this.requestUpdate();
   }
@@ -1277,7 +1328,8 @@ export class BotcApp extends LitElement {
       const needed = Math.ceil(alive / 2);
       const voteCount = (entry?.votes || []).length;
       const reached = voteCount >= needed;
-      return (reached ? '✓ Threshold reached! ' : '🗳 Voters for ') + this._seatLabel(entry?.to) + ' (' + voteCount + '/' + needed + ' needed)';
+      const turn = this.nomVoteCursor != null ? ' — ' + this._seatLabel(this.nomVoteCursor) + "'s turn" : '';
+      return (reached ? '✓ Threshold reached! ' : '🗳 Voters for ') + this._seatLabel(entry?.to) + ' (' + voteCount + '/' + needed + ' needed)' + turn;
     }
     return '';
   }
@@ -1372,6 +1424,7 @@ export class BotcApp extends LitElement {
           .nominations="${this.nominations}"
           .nomVoteKey="${this.nomVoteKey}"
           .nomVoteIdx="${this.nomVoteIdx}"
+          .nomVoteCursor="${this.nomVoteCursor}"
           .round="${this.round}"
           .phase="${this.phase}"
           .showGameEnd="${this.gameEnded && this.gameEndInfo?.endedStep === phaseRoundToStep(this.phase, this.round)}"
@@ -1384,6 +1437,15 @@ export class BotcApp extends LitElement {
 
         <!-- Nomination step bar -->
         <div id="nom-step-bar" class="${nomBarText ? 'visible' : ''} ${thresholdReached ? 'threshold-reached' : ''}">${nomBarText}</div>
+
+        <!-- Vote casting controls: tap in rhythm as the ST goes around the table -->
+        ${this.nomMode === 'votes' ? html`
+          <div id="nom-vote-actions">
+            <button class="nom-vote-action-btn nom-vote-yes" ?disabled="${this.nomVoteCursor == null}" @click="${() => this._castVote(true)}">✓ Yes</button>
+            <button class="nom-vote-action-btn nom-vote-no" ?disabled="${this.nomVoteCursor == null}" @click="${() => this._castVote(false)}">✕ No</button>
+            <button class="nom-vote-action-btn nom-vote-back" title="Back one seat" @click="${() => this._voteCursorBack()}">↩ Back</button>
+          </div>
+        ` : nothing}
 
         <!-- Nominate / cancel button -->
         ${this.phase !== 'night' ? html`

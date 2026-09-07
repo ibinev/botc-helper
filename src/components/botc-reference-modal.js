@@ -1,5 +1,5 @@
 import { LitElement, html, nothing } from 'lit';
-import { getRoles, getAllRoles, getNightOrder, getCharacterCount, ROLE_ICONS, getScriptRoleLayout, getScriptMeta, isExperimentalRole } from '../data.js';
+import { getRoles, getAllRoles, getNightOrder, getCharacterCount, ROLE_ICONS, getScriptRoleLayout, getScriptMeta, isExperimentalRole, getScriptJinxes, getRoleById } from '../data.js';
 import { CHARCOUNT_COLS } from '../utils.js';
 
 const BMR_ROLE_ORDER = {
@@ -190,6 +190,10 @@ export class BotcReferenceModal extends LitElement {
     const travelers = roles.filter(r => r.cat === 'traveler');
     const lorics    = roles.filter(r => r.cat === 'loric');
     const fabls     = roles.filter(r => r.cat === 'fabled');
+    const jinxes    = getScriptJinxes(this.script);
+    const djinn     = jinxes.length ? getRoleById('djinn') : null;
+    const showDjinn = djinn && !fabls.some(r => r.id === 'djinn');
+    const fablsWithDjinn = showDjinn ? [djinn, ...fabls] : fabls;
     const hasCustomLayout = !!customLayout;
     const knownTownsfolk = new Set([...townsfolkLeft, ...townsfolkRight].map(r => r.name));
     const extraTownsfolk = roles.filter(r => r.cat === 'townsfolk' && !knownTownsfolk.has(r.name));
@@ -201,7 +205,7 @@ export class BotcReferenceModal extends LitElement {
     const hasDemons    = demons.some(r => !r.__spacer);
     const hasTravelers = travelers.length > 0;
     const hasLorics    = lorics.length > 0;
-    const hasFabls     = fabls.length > 0;
+    const hasFabls     = fablsWithDjinn.length > 0;
     const countTownsfolk = customLayout?.townsfolk
       ? leftTownsfolk.length + rightTownsfolk.length
       : townsfolk.filter(r => !r.__spacer).length;
@@ -210,7 +214,7 @@ export class BotcReferenceModal extends LitElement {
     const countDemons    = demons.filter(r => !r.__spacer).length;
     const countTravelers = travelers.filter(r => !r.__spacer).length;
     const countLorics    = lorics.length;
-    const countFabls     = fabls.length;
+    const countFabls     = fablsWithDjinn.length;
     return html`
       <div class="ref-body">
         ${hasTownsfolk ? html`
@@ -252,7 +256,23 @@ export class BotcReferenceModal extends LitElement {
 
         ${hasFabls ? html`
           <div class="rc-section-header rc-section-header--fabled"><span class="rc-section-dot"></span>Fabled <span class="rc-section-count">(${countFabls})</span></div>
-          <div class="rc-grid rc-grid--2">${fabls.map(r => this._roleCard(r, inPlay))}</div>
+          <div class="rc-grid rc-grid--2">${fablsWithDjinn.map(r => this._roleCard(r, inPlay))}</div>
+          ${jinxes.length ? html`
+            <div class="rc-jinx-list">
+              <div class="rc-jinx-title">Djinn special rules for this script</div>
+              ${jinxes.map(j => html`
+                <div class="rc-jinx-row">
+                  <span class="rc-jinx-pair">
+                    ${ROLE_ICONS[j.a.name] ? html`<img class="rc-jinx-icon" src="${ROLE_ICONS[j.a.name]}" alt="">` : nothing}
+                    ${j.a.name} ↔
+                    ${ROLE_ICONS[j.b.name] ? html`<img class="rc-jinx-icon" src="${ROLE_ICONS[j.b.name]}" alt="">` : nothing}
+                    ${j.b.name}
+                  </span>
+                  <span class="rc-jinx-rule">${j.rule}</span>
+                </div>
+              `)}
+            </div>
+          ` : nothing}
         ` : nothing}
       </div>
     `;

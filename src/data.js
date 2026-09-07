@@ -174,6 +174,7 @@ export function normalizeScript(script) {
 let ROLE_BY_ID = new Map();
 let ROLE_BY_NAME = new Map();
 let EXPERIMENTAL_ROLE_NAMES = new Set();
+let JINXES = [];
 
 function indexRoleCatalog(roles) {
   const byId = new Map();
@@ -232,6 +233,16 @@ export async function loadCoreScripts(rolesUrl = 'assets/roles.json', baseUrl = 
     // Leaves the role catalog / ROLES / BMR_CORE_ROLES / SNV_CORE_ROLES empty —
     // app will show no roles for base scripts.
   }
+
+  // Jinx pairs (assets/jinxes.json) are optional — the Djinn feature simply
+  // stays inactive if this fails to load.
+  try {
+    const jinxUrl = rolesUrl.replace(/roles\.json$/, 'jinxes.json');
+    const jinxRes = await fetch(jinxUrl, { cache: 'no-cache' });
+    if (jinxRes.ok) JINXES = await jinxRes.json();
+  } catch {
+    JINXES = [];
+  }
 }
 
 function getCustomScript(script) {
@@ -254,6 +265,21 @@ export function getAllRoles() {
 
 export function isExperimentalRole(name) {
   return EXPERIMENTAL_ROLE_NAMES.has(name);
+}
+
+export function getRoleById(id) {
+  return ROLE_BY_ID.get(id) || null;
+}
+
+// Returns the Djinn special-rule entries that apply to a script: every known
+// jinx pair where BOTH characters appear on the script sheet (whether or not
+// they end up in play this game — matching the official Djinn rule).
+export function getScriptJinxes(script = 'tb') {
+  const ids = new Set(getRoles(script).map(r => r.id));
+  return JINXES
+    .filter(j => ids.has(j.a) && ids.has(j.b))
+    .map(j => ({ a: ROLE_BY_ID.get(j.a), b: ROLE_BY_ID.get(j.b), rule: j.rule }))
+    .filter(j => j.a && j.b);
 }
 
 export function getRoles(script = 'tb') {
@@ -296,6 +322,7 @@ const EXPERIMENTAL_ICON_DEFAULTS = {
   'Cult Leader': 'assets/roles/experimental/Icon_cultleader.png',
   'Damsel': 'assets/roles/experimental/Icon_damsel.png',
   'Deus ex Fiasco': 'assets/roles/experimental/Icon_deusexfiasco.png',
+  'Djinn': 'assets/roles/experimental/Icon_djinn.png',
   'Engineer': 'assets/roles/experimental/Icon_engineer.png',
   'Farmer': 'assets/roles/experimental/Icon_farmer.png',
   'Fearmonger': 'assets/roles/experimental/Icon_fearmonger.png',

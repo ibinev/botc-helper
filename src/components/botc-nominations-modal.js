@@ -127,6 +127,24 @@ export class BotcNominationsModal extends LitElement {
       .filter(({ s, i }) => !s.dead && !voted.has(i));
   }
 
+  // Every alive seat plus any dead seat that ghost-voted on this nomination,
+  // each flagged voted/not-voted so both states can be shown side by side.
+  // Voted seats are listed first, then not-voted; within each group the order
+  // follows the clockwise voting order (starting right after the nominee).
+  _nomVoteRows(entry) {
+    const votedSet = new Set(entry.votes || []);
+    const idxs = new Set();
+    this.seats.forEach((s, i) => { if (!s.dead) idxs.add(i); });
+    votedSet.forEach(i => idxs.add(i));
+    const n = this.seats.length;
+    const start = ((entry.to ?? 0) + 1) % n;
+    const clockwiseDist = i => (i - start + n) % n;
+    return [...idxs]
+      .sort((a, b) => clockwiseDist(a) - clockwiseDist(b))
+      .map(i => ({ i, voted: votedSet.has(i) }))
+      .sort((a, b) => (a.voted === b.voted) ? 0 : a.voted ? -1 : 1);
+  }
+
   render() {
     const allKeys = Object.keys(this.nominations)
       .filter(k => this.nominations[k].length > 0)
@@ -212,11 +230,21 @@ export class BotcNominationsModal extends LitElement {
                             @click="${() => this._onDelete(key, origIdx)}">✕</button>
                         </div>
                         <div class="nom-voters">
-                          ${votes.length ? votes.map(vi => html`
-                            <span class="nom-voter-chip ${this._alignClass(vi)}">${this._seatLabel(vi)}${(e.ghostVoters || []).includes(vi) ? html` <span class="nom-ghost-icon">👻</span>` : nothing}</span>
-                          `) : html`
-                            <span class="nom-no-votes">No votes recorded</span>
-                          `}
+                          ${(() => {
+                            const rows = this._nomVoteRows(e);
+                            if (!rows.length) return html`<span class="nom-no-votes">No votes recorded</span>`;
+                            const chip = ({ i, voted }) => html`
+                              <span class="nom-voter-chip ${voted ? 'nom-vote-yes' : 'nom-vote-no'} ${this._alignClass(i)}">
+                                <span class="nom-vote-mark">${voted ? '✓' : '✗'}</span>${this._seatLabel(i)}${voted && (e.ghostVoters || []).includes(i) ? html` <span class="nom-ghost-icon">👻</span>` : nothing}
+                              </span>
+                            `;
+                            const votedRows = rows.filter(r => r.voted);
+                            const notVotedRows = rows.filter(r => !r.voted);
+                            return html`
+                              ${votedRows.length ? html`<div class="nom-voters-row">${votedRows.map(chip)}</div>` : nothing}
+                              ${notVotedRows.length ? html`<div class="nom-voters-row">${notVotedRows.map(chip)}</div>` : nothing}
+                            `;
+                          })()}
                         </div>
                       </div>
                     `;

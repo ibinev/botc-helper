@@ -40,6 +40,7 @@ export class BotcCircle extends LitElement {
     nominations:   { type: Object  },
     nomVoteKey:    { type: String  },
     nomVoteIdx:    { type: Number  },
+    nomVoteCursor: { type: Number  },
     round:         { type: Number  },
     phase:         { type: String  },
     storyView:     { type: Boolean },
@@ -64,6 +65,7 @@ export class BotcCircle extends LitElement {
     this.nominations   = {};
     this.nomVoteKey    = null;
     this.nomVoteIdx    = null;
+    this.nomVoteCursor = null;
     this.round         = 1;
     this.phase         = 'day';
     this.storyView     = false;
@@ -119,7 +121,8 @@ export class BotcCircle extends LitElement {
       + (s.alignment === 'evil'                        ? ' align-evil' : '')
       + (this.selected === i                           ? ' selected'   : '')
       + (this.nomMode === 'to' && this.nomFrom === i   ? ' nom-from'   : '')
-      + (this.nomMode === 'votes' && voteList.includes(i) ? ' nom-voted' : '');
+      + (this.nomMode === 'votes' && voteList.includes(i) ? ' nom-voted' : '')
+      + (this.nomMode === 'votes' && this.nomVoteCursor === i ? ' nom-current' : '');
   }
 
   _onClick(i) {
