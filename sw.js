@@ -1,4 +1,4 @@
-const VERSION = 'v7';
+const VERSION = 'v8';
 const CACHE = 'botc-' + VERSION;
 // Derive base path so this works at root (localhost) or a subpath (GitHub Pages)
 const BASE = self.location.pathname.replace(/\/sw\.js$/, '') || '';
@@ -96,9 +96,11 @@ self.addEventListener('fetch', e => {
     return;
   }
 
-  // Local assets: network-first so updates are picked up immediately
+  // Local assets: network-first so updates are picked up immediately.
+  // cache: 'no-store' bypasses the browser's own HTTP cache so a changed
+  // file is never silently served stale even though this handler ran.
   e.respondWith(
-    fetch(e.request)
+    fetch(e.request, { cache: 'no-store' })
       .then(res => {
         if (res.ok) {
           const resClone = res.clone();
