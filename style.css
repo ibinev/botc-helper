@@ -404,13 +404,13 @@ body.hide-role .pli-role        { display: none; }
 
 #nom-vote-actions {
   position: absolute; top: 58px; left: 50%;
-  transform: translateX(-50%); z-index: 30; display: flex; flex-direction: column; gap: 20px; align-items: stretch;
+  transform: translateX(-50%); z-index: 30; display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; align-items: stretch;
 }
 .nom-vote-action-btn {
-  border: 0.5px solid var(--border-strong); border-radius: 999px; padding: 12px 19px;
+  border: 0.5px solid var(--border-strong); border-radius: 999px; padding: 13px 19px;
   font-family: var(--font-sans); font-size: 16px; font-weight: 700; cursor: pointer;
   box-shadow: 0 4px 20px rgba(0,0,0,0.5); -webkit-tap-highlight-color: transparent;
-  transition: transform 0.1s; width: 132px;
+  transition: transform 0.1s; width: 112px;
 }
 .nom-vote-action-btn:active { transform: scale(0.94); }
 .nom-vote-action-btn:disabled { opacity: 0.35; cursor: default; pointer-events: none; }
@@ -419,7 +419,7 @@ body.hide-role .pli-role        { display: none; }
 .nom-vote-yes  { background: rgba(90,158,47,0.18); color: #8fca4b; border-color: rgba(90,158,47,0.45); }
 .nom-vote-done { background: rgba(255,215,106,0.18); color: #ffd76a; border-color: rgba(255,215,106,0.45); }
 @media (max-width: 479px) {
-  .nom-vote-action-btn { padding: 11px 14px; font-size: 14px; width: 116px; }
+  .nom-vote-action-btn { padding: 12px 14px; font-size: 14px; width: 100px; }
 }
 
 /* ── Modals ─────────────────────────────────────────── */
