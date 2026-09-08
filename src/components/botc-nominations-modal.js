@@ -57,7 +57,11 @@ export class BotcNominationsModal extends LitElement {
     dragbar.addEventListener('click', () => this._onClose());
 
     overlay.addEventListener('touchstart', e => {
-      startedNearTop = dragbar.contains(e.target) || (inner && inner.scrollTop <= 4);
+      // Don't arm the drag-to-dismiss gesture for taps starting on a control —
+      // otherwise tiny incidental finger movement during a tap gets treated
+      // as a drag and suppresses the button's click event.
+      const onControl = e.target.closest('button, a, input, select, textarea');
+      startedNearTop = !onControl && (dragbar.contains(e.target) || (inner && inner.scrollTop <= 4));
       ty0 = e.touches[0].clientY;
       dragging = false;
     }, { passive: true });

@@ -151,16 +151,6 @@ export class BotcApp extends LitElement {
       if (document.visibilityState === 'hidden') this._flushPersistence();
     });
     window.addEventListener('pagehide', this._onPageHide = () => this._flushPersistence());
-    // Best-effort: some browsers/platforms expose hardware volume keys as
-    // keydown 'AudioVolumeUp'/'AudioVolumeDown' — use them as Yes/No during
-    // vote casting. Many mobile browsers reserve these for system volume and
-    // never deliver the event to the page, so this silently does nothing there.
-    document.addEventListener('keydown', this._onVolumeKey = e => {
-      if (e.code !== 'AudioVolumeUp' && e.code !== 'AudioVolumeDown') return;
-      if (this.nomMode !== 'votes' || this.nomVoteCursor == null) return;
-      e.preventDefault();
-      this._castVote(e.code === 'AudioVolumeUp');
-    });
   }
 
   disconnectedCallback() {
@@ -168,7 +158,6 @@ export class BotcApp extends LitElement {
     window.removeEventListener('resize', this._onResize);
     document.removeEventListener('visibilitychange', this._onVisibilityChange);
     window.removeEventListener('pagehide', this._onPageHide);
-    document.removeEventListener('keydown', this._onVolumeKey);
     this._unbindVisualViewport();
   }
 
@@ -1455,6 +1444,7 @@ export class BotcApp extends LitElement {
             <button class="nom-vote-action-btn nom-vote-yes" ?disabled="${this.nomVoteCursor == null}" @click="${() => this._castVote(true)}">✓ Yes</button>
             <button class="nom-vote-action-btn nom-vote-no" ?disabled="${this.nomVoteCursor == null}" @click="${() => this._castVote(false)}">✕ No</button>
             <button class="nom-vote-action-btn nom-vote-back" title="Back one seat" @click="${() => this._voteCursorBack()}">↩ Back</button>
+            <button class="nom-vote-action-btn nom-vote-done" @click="${() => this._cancelNomMode()}">✓ Done</button>
           </div>
         ` : nothing}
 
