@@ -593,7 +593,9 @@ export class BotcApp extends LitElement {
         nominations: this.nominations,
         poisonSnapshots: this.poisonSnapshots,
         gameNotes: this.gameNotes,
-        customScripts: this.customScripts,
+        // Only the script actually in use, not the whole local custom-script
+        // library — importing a backup shouldn't hand over unrelated scripts.
+        customScripts: this.customScripts.filter(s => s.id === this.script),
         script: this.script,
         playerPool: this.playerPool,
         deathsCollapsed: this.deathsCollapsed,
@@ -766,7 +768,12 @@ export class BotcApp extends LitElement {
     this.nominations = app.nominations && typeof app.nominations === 'object' ? app.nominations : {};
     this.poisonSnapshots = app.poisonSnapshots && typeof app.poisonSnapshots === 'object' ? app.poisonSnapshots : {};
     this.gameNotes = app.gameNotes && typeof app.gameNotes === 'object' ? app.gameNotes : {};
-    this.customScripts = Array.isArray(app.customScripts) ? app.customScripts : [];
+    // Merge only: add any custom script the backup used that we don't already
+    // have locally. Never drop/replace scripts already saved on this device.
+    const importedScripts = Array.isArray(app.customScripts) ? app.customScripts : [];
+    const existingIds = new Set(this.customScripts.map(s => s.id));
+    const newScripts = importedScripts.filter(s => s && s.id && !existingIds.has(s.id));
+    if (newScripts.length) this.customScripts = [...this.customScripts, ...newScripts];
     setCustomScripts(this.customScripts);
     this.script = normalizeScript(app.script || 'tb');
     this.playerPool = Array.isArray(app.playerPool) ? app.playerPool : [];
