@@ -19,8 +19,8 @@ Use this when running a live game and you need a fast reminder.
 
 3. ☀️ During day
 - Use ⚖️ Nominate
-- Tap nominator, then nominee
-- In vote mode, tap voters and press Done
+- Tap nominator, then nominee (already-nominated/already-nominated-against seats are dimmed and can't be tapped again that day)
+- In vote mode, tap voters directly on the circle or use the Yes / No / Back / Done buttons — the current seat pulses gold and voting auto-advances around the table
 
 4. 🌙 During night
 - Use 📜 Notes for night log
@@ -144,7 +144,7 @@ Editable fields:
 
 Behavior details:
 - Drunk and Poisoned are mutually exclusive in toggle logic.
-- Dead state stores death timing (phase + round).
+- Dead state stores death timing (phase + round). Marking a seat Dead opens an optional "Killed by which role?" popup — if set, a small role icon appears next to that player's name in the Nominations history when they died the same day as a nomination.
 - Poisoned state stores poisoning timing (phase + round).
 - Travelers have no ghost vote — marking a Traveler Dead auto-marks their ghost vote as used/unavailable and it can't be toggled.
 - Clear seat resets that seat to empty.
@@ -181,20 +181,23 @@ Nomination constraints:
 - Travelers don't count toward the alive total used to compute votes needed
 
 ### Voting mode
-After creating nomination, app enters vote mode:
-- Tap seats to add/remove votes
+After creating a nomination, app enters vote mode:
+- Tap seats directly on the circle to add/remove votes, or use the Yes ✓ / No ✕ buttons to cast a vote for whoever the round is currently on
+- The current seat is highlighted with a pulsing gold ring; casting a vote auto-advances to the next seat clockwise, ending with the nominee
+- Back ↩ steps the cursor back one seat (e.g. to fix a mis-tap) without changing any recorded vote
 - Dead players with used ghost vote cannot vote again
 - Travelers have no ghost vote at all — once dead they can never vote again
 - Voting for a nominated Traveler doesn't spend a dead player's ghost vote — they can still vote again on a later (non-Traveler) nomination
 
 ### Finish vote mode
-- Press Done on nominate button
+- Press Done (bottom-right of the vote buttons) or the Nominate/Done button in the top area
 - App stamps ghost voters for that nomination entry
 
 ### Nomination history sheet
 From top bar nominations icon:
 - Review nominations by day (newest first)
-- See vote counts and voter chips
+- See vote counts and voter chips (voted seats first, then not-voted, colored by alignment)
+- A "Not voted" chip row appears per day for any alive seat that hasn't voted on any nomination that day yet
 - Resume voting on existing nomination
 - Delete nomination entries
 - Start a new nomination (day only)
@@ -245,6 +248,7 @@ Top bar Reference opens a 3-tab reference module:
 - Script role cards with ability text
 - In-play roles highlighted based on seat data
 - Role count shown per group in section header (e.g. Townsfolk (13))
+- If the script contains any official Djinn jinx pairs, a Djinn card is added to Fabled automatically, followed by a "Djinn special rules for this script" list of the specific rule for each pair on the sheet
 
 2. Night Order
 - First Night and Other Nights tabs
@@ -265,6 +269,8 @@ Top bar Reference opens a 3-tab reference module:
   - Trouble Brewing (tb)
   - Bad Moon Rising (bmr)
   - Sects and Violets (snv)
+  - Bundled scripts shipped with the app (e.g. Pavel's Brewing, Blood in Timescape, Vlado's Chaos) — available on every device without importing anything
+  - Any custom scripts you've added on this device
 - Open custom script menu (⋯) to:
   - Add custom script
   - Copy currently selected script into a custom draft
@@ -296,8 +302,8 @@ Custom script builder:
 - Reset everything: full reset including seat positions
 
 ### Export / Import
-- Export game: saves all seats, roles, votes, notes and setup as an XML file
-- Import game: loads a previously exported XML game backup
+- Export game: saves all seats, roles, votes, notes and setup as an XML file. If a custom script is in use, only that one script is bundled into the file — not your whole local script library
+- Import game: loads a previously exported XML game backup. Any custom script it references is added only if you don't already have a script with that id — your existing custom scripts are never removed or overwritten
 
 ### Player pool
 - Open: opens the player pool management sheet directly from Settings
@@ -379,4 +385,4 @@ If running locally fails:
 
 ---
 
-Version in app source at time of writing: v7.5.4
+Version in app source at time of writing: v9.1.4
