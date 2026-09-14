@@ -1448,13 +1448,19 @@ export class BotcApp extends LitElement {
         <!-- Nomination step bar -->
         <div id="nom-step-bar" class="${nomBarText ? 'visible' : ''} ${thresholdReached ? 'threshold-reached' : ''}">${nomBarText}</div>
 
-        <!-- Vote casting controls: tap in rhythm as the ST goes around the table -->
+        <!-- Vote casting controls: tap in rhythm as the ST goes around the table.
+             Yes/No sit above the center phase icon, Back/Done below it, each
+             stacked vertically with room between them to avoid mis-taps. -->
         ${this.nomMode === 'votes' ? html`
           <div id="nom-vote-actions">
-            <button class="nom-vote-action-btn nom-vote-yes" ?disabled="${this.nomVoteCursor == null}" @click="${() => this._castVote(true)}">✓ Yes</button>
-            <button class="nom-vote-action-btn nom-vote-no" ?disabled="${this.nomVoteCursor == null}" @click="${() => this._castVote(false)}">✕ No</button>
-            <button class="nom-vote-action-btn nom-vote-back" title="Back one seat" @click="${() => this._voteCursorBack()}">↩ Back</button>
-            <button class="nom-vote-action-btn nom-vote-done" @click="${() => this._cancelNomMode()}">✓ Done</button>
+            <div class="nom-vote-group nom-vote-group-top">
+              <button class="nom-vote-action-btn nom-vote-yes" ?disabled="${this.nomVoteCursor == null}" @click="${() => this._castVote(true)}">✓ Yes</button>
+              <button class="nom-vote-action-btn nom-vote-no" ?disabled="${this.nomVoteCursor == null}" @click="${() => this._castVote(false)}">✕ No</button>
+            </div>
+            <div class="nom-vote-group nom-vote-group-bottom">
+              <button class="nom-vote-action-btn nom-vote-back" title="Back one seat" @click="${() => this._voteCursorBack()}">↩ Back</button>
+              <button class="nom-vote-action-btn nom-vote-done" @click="${() => this._cancelNomMode()}">✓ Done</button>
+            </div>
           </div>
         ` : nothing}
 
