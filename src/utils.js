@@ -1,6 +1,6 @@
 export const MIN = 5;
 export const MAX = 20;
-export const MAX_STEP = 33; // Night 17 = index 33
+export const MAX_STEP = 33; // Day 17 = index 33
 export const CHARCOUNT_COLS = [5,6,7,8,9,10,11,12,13,14,'15+'];
 
 /** HTML-escape a string (prevents XSS in innerHTML). */
@@ -78,12 +78,54 @@ export function defaultPos(i, n, W, H) {
   return { x: leftX, y: bottomY - p * sideLen };
 }
 
-/** Convert a 0-based cycle step to { phase, round }. */
+/** Convert a 0-based cycle step to { phase, round }. Cycle order: Night 1, Day 1, Night 2, Day 2, … */
 export function stepToPhaseRound(step) {
-  return { phase: step % 2 === 0 ? 'day' : 'night', round: Math.floor(step / 2) + 1 };
+  return { phase: step % 2 === 0 ? 'night' : 'day', round: Math.floor(step / 2) + 1 };
 }
 
 /** Convert { phase, round } to a 0-based cycle step. */
 export function phaseRoundToStep(p, r) {
-  return (r - 1) * 2 + (p === 'night' ? 1 : 0);
+  return (r - 1) * 2 + (p === 'day' ? 1 : 0);
+}
+
+// ── Vote sound effects (synthesized, no audio assets needed) ───────────
+let _audioCtx = null;
+function _getAudioCtx() {
+  const Ctx = window.AudioContext || window.webkitAudioContext;
+  if (!Ctx) return null;
+  if (!_audioCtx) _audioCtx = new Ctx();
+  if (_audioCtx.state === 'suspended') _audioCtx.resume();
+  return _audioCtx;
+}
+
+function _tone(ctx, freq, start, duration, type, peakGain) {
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = type;
+  osc.frequency.setValueAtTime(freq, start);
+  gain.gain.setValueAtTime(0, start);
+  gain.gain.linearRampToValueAtTime(peakGain, start + 0.01);
+  gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start(start);
+  osc.stop(start + duration);
+}
+
+/** Bell "ding" played when a Yes vote is recorded. */
+export function playVoteYesSound() {
+  const ctx = _getAudioCtx();
+  if (!ctx) return;
+  const now = ctx.currentTime;
+  _tone(ctx, 1318.5, now, 0.35, 'sine', 0.22);
+  _tone(ctx, 1975.5, now + 0.03, 0.3, 'sine', 0.12);
+}
+
+/** Low double-buzz "x" played when a No vote is recorded. */
+export function playVoteNoSound() {
+  const ctx = _getAudioCtx();
+  if (!ctx) return;
+  const now = ctx.currentTime;
+  _tone(ctx, 220, now, 0.18, 'square', 0.12);
+  _tone(ctx, 175, now + 0.11, 0.18, 'square', 0.12);
 }

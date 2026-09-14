@@ -1,6 +1,6 @@
 import { LitElement, html, nothing } from 'lit';
 import { ROLES_IMG_URL, normalizeScript, setCustomScripts, getScriptOptions, getAllRoles, getRoles, getScriptRoleLayout, loadBundledScripts } from '../data.js';
-import { blankSeat, MIN, MAX, MAX_STEP, phaseRoundToStep, stepToPhaseRound } from '../utils.js';
+import { blankSeat, MIN, MAX, MAX_STEP, phaseRoundToStep, stepToPhaseRound, playVoteYesSound, playVoteNoSound } from '../utils.js';
 import './botc-circle.js';
 import './botc-edit-modal.js';
 import './botc-list-modal.js';
@@ -80,7 +80,7 @@ export class BotcApp extends LitElement {
     super();
     this.seatCount         = 12;
     this.round             = 1;
-    this.phase             = 'day';
+    this.phase             = 'night';
     this.seats             = [];
     this.seatPositions     = [];
     this.selected          = null;
@@ -1049,6 +1049,7 @@ export class BotcApp extends LitElement {
     noms[this.nomVoteKey][this.nomVoteIdx] = { ...entry, votes: [...votes] };
     this.nominations = noms;
     this._saveNominations();
+    if (effectiveVote) playVoteYesSound(); else playVoteNoSound();
   }
 
   _handleNomClick(idx) {
@@ -1266,7 +1267,7 @@ export class BotcApp extends LitElement {
     this.nomMode       = false;
     this.nomFrom       = null;
     this.round         = 1;
-    this.phase         = 'day';
+    this.phase         = 'night';
     this.gameEnded     = false;
     this.gameEndInfo   = null;
 
@@ -1275,6 +1276,7 @@ export class BotcApp extends LitElement {
     this._listOpen    = false;
     this._nomsOpen    = false;
 
+    this._applyPhaseCycle();
     this.requestUpdate();
   }
 
@@ -1297,7 +1299,7 @@ export class BotcApp extends LitElement {
     this.selected   = null;
     this.removeMode = false;
     this.round      = 1;
-    this.phase      = 'day';
+    this.phase      = 'night';
     this.gameEnded   = false;
     this.gameEndInfo = null;
 
@@ -1305,6 +1307,7 @@ export class BotcApp extends LitElement {
     this._editOpen        = false;
     this._nomsOpen        = false;
 
+    this._applyPhaseCycle();
     this._saveState();
     this.requestUpdate();
   }
