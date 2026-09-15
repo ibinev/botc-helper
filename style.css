@@ -424,6 +424,18 @@ body.hide-role .pli-role        { display: none; }
 .nom-vote-no   { background: rgba(192,57,43,0.18); color: #ff8080; border-color: rgba(192,57,43,0.45); }
 .nom-vote-yes  { background: rgba(90,158,47,0.18); color: #8fca4b; border-color: rgba(90,158,47,0.45); }
 .nom-vote-done { background: rgba(255,215,106,0.18); color: #ffd76a; border-color: rgba(255,215,106,0.45); }
+/* Desktop/tablet (>767px): Yes/No side-by-side above, Back/Done side-by-side
+   below, buttons a bit larger. Mobile (<=767px) keeps its own rules below. */
+@media (min-width: 768px) {
+  .nom-vote-group-top,
+  .nom-vote-group-bottom {
+    flex-direction: row;
+    gap: 22px;
+  }
+  .nom-vote-action-btn {
+    padding: 23px 30px; font-size: 21px; width: 156px;
+  }
+}
 @media (max-width: 479px) {
   .nom-vote-action-btn { padding: 17px 20px; font-size: 17px; width: 122px; }
   .nom-vote-group { gap: 20px; }
