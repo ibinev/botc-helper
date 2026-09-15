@@ -941,6 +941,14 @@ body.hide-role .pli-role        { display: none; }
   border-bottom: 0.5px solid var(--border-strong);
 }
 .readme-title { font-family: var(--font-serif); font-size: 16px; color: var(--gold-light); letter-spacing: 0.02em; }
+.readme-lang-tabs { display: flex; gap: 4px; }
+.readme-lang-tab {
+  padding: 5px 12px; border-radius: 999px; border: 0.5px solid var(--border);
+  background: transparent; color: var(--text-secondary); font-size: 12px; font-weight: 700;
+  letter-spacing: 0.04em; cursor: pointer; -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.readme-lang-tab.active { background: rgba(201,151,58,0.18); color: var(--gold-light); border-color: rgba(201,151,58,0.5); }
 .readme-body {
   flex: 1;
   overflow-y: auto;

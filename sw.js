@@ -1,4 +1,4 @@
-const VERSION = 'v10';
+const VERSION = 'v11';
 const CACHE = 'botc-' + VERSION;
 // Derive base path so this works at root (localhost) or a subpath (GitHub Pages)
 const BASE = self.location.pathname.replace(/\/sw\.js$/, '') || '';
@@ -8,6 +8,7 @@ const LOCAL_ASSETS = [
   BASE + '/style.css',
   BASE + '/manifest.json',
   BASE + '/README.md',
+  BASE + '/README.bg.md',
   BASE + '/icons/icon.svg',
   BASE + '/assets/background.png',
   BASE + '/assets/roles_en.png',

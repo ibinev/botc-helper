@@ -93,6 +93,7 @@ The UI has three primary areas:
 - ◀ Left arrow: move one step backward in cycle timeline
 - ▶ Right arrow: move one step forward
 - Label shows current phase and round (for example Day 2, Night 2)
+- A new game always starts on Night 1 (matching real table order: Night 1 -> Day 1 -> Night 2 -> Day 2 -> …)
 
 ### End game
 - 🏁 Opens a popup to record the winning alignment (Good/Evil) and a reason
@@ -184,10 +185,12 @@ Nomination constraints:
 After creating a nomination, app enters vote mode:
 - Tap seats directly on the circle to add/remove votes, or use the Yes ✓ / No ✕ buttons to cast a vote for whoever the round is currently on
 - The current seat is highlighted with a pulsing gold ring; casting a vote auto-advances to the next seat clockwise, ending with the nominee
+- Yes / No casts a short confirmation sound so the storyteller gets audible feedback without looking at the screen
 - Back ↩ steps the cursor back one seat (e.g. to fix a mis-tap) without changing any recorded vote
 - Dead players with used ghost vote cannot vote again
 - Travelers have no ghost vote at all — once dead they can never vote again
 - Voting for a nominated Traveler doesn't spend a dead player's ghost vote — they can still vote again on a later (non-Traveler) nomination
+- On phones, Yes/No sit as one full-width bar pinned above the top menu (whole left/right half tappable) and Back/Done sit stacked just below it; on larger screens all four buttons stay centered above/below the circle
 
 ### Finish vote mode
 - Press Done (bottom-right of the vote buttons) or the Nominate/Done button in the top area
@@ -385,4 +388,4 @@ If running locally fails:
 
 ---
 
-Version in app source at time of writing: v9.1.4
+Version in app source at time of writing: v9.3.8

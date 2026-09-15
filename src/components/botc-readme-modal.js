@@ -12,12 +12,15 @@ import { marked } from 'https://esm.sh/marked@13';
  * Fires:
  *   modal-close – (no detail)
  */
+const README_FILES = { en: 'README.md', bg: 'README.bg.md' };
+
 export class BotcReadmeModal extends LitElement {
   static properties = {
     open:      { type: Boolean },
     _html:     { state: true   },
     _loading:  { state: true   },
     _error:    { state: true   },
+    _lang:     { state: true   },
   };
 
   createRenderRoot() { return this; }
@@ -28,6 +31,8 @@ export class BotcReadmeModal extends LitElement {
     this._html = '';
     this._loading = false;
     this._error = '';
+    this._lang = 'en';
+    this._cache = {};
   }
 
   updated(changed) {
@@ -45,22 +50,34 @@ export class BotcReadmeModal extends LitElement {
     });
   }
 
-  async _loadReadme() {
+  async _loadReadme(lang = this._lang, force = false) {
+    if (!force && this._cache[lang]) { this._html = this._cache[lang]; return; }
     this._loading = true;
     this._error = '';
+    const file = README_FILES[lang] || README_FILES.en;
     try {
-      const res = await fetch('README.md', { cache: 'no-cache' });
-      if (!res.ok) throw new Error('Failed to load README.md (' + res.status + ')');
+      const res = await fetch(file, { cache: 'no-cache' });
+      if (!res.ok) throw new Error('Failed to load ' + file + ' (' + res.status + ')');
       const text = await res.text();
-      this._html = marked.parse(text, {
+      const html = marked.parse(text, {
         gfm: true,
         breaks: false,
       });
+      this._cache[lang] = html;
+      if (lang === this._lang) this._html = html;
     } catch (err) {
       this._error = err?.message || 'Failed to load guide.';
     } finally {
       this._loading = false;
     }
+  }
+
+  _switchLang(lang) {
+    if (lang === this._lang) return;
+    this._lang = lang;
+    this._html = this._cache[lang] || '';
+    this._error = '';
+    if (!this._cache[lang]) this._loadReadme(lang);
   }
 
   _onClose() {
@@ -73,7 +90,11 @@ export class BotcReadmeModal extends LitElement {
         <div id="readme-sheet">
           <div id="readme-toolbar">
             <div class="readme-title">🧭 Guide</div>
-            <button class="btn btn-toolbar-close" title="Reload guide" @click="${() => this._loadReadme()}">↻ Reload</button>
+            <div class="readme-lang-tabs">
+              <button class="readme-lang-tab ${this._lang === 'en' ? 'active' : ''}" @click="${() => this._switchLang('en')}">EN</button>
+              <button class="readme-lang-tab ${this._lang === 'bg' ? 'active' : ''}" @click="${() => this._switchLang('bg')}">BG</button>
+            </div>
+            <button class="btn btn-toolbar-close" title="Reload guide" @click="${() => this._loadReadme(this._lang, true)}">↻ Reload</button>
             <button class="btn btn-toolbar-close" @click="${this._onClose}">✕</button>
           </div>
 
