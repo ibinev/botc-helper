@@ -436,10 +436,14 @@ body.hide-role .pli-role        { display: none; }
    can wrap onto two rows on narrow phones. */
 @media (max-width: 767px) {
   .nom-vote-group-top {
-    position: fixed; top: 0; left: 0; right: 0; bottom: auto; transform: none;
+    position: fixed; top: 0; left: 0; right: 0; bottom: auto; transform: translateZ(0);
     flex-direction: row; gap: 0; width: 100%;
     height: var(--topbar-h, 52px);
     z-index: 40;
+    /* Own compositing layer: iOS Safari can otherwise mis-order a plain
+       position:fixed sibling against #topbar's backdrop-filter layer. */
+    will-change: transform;
+    isolation: isolate;
   }
   .nom-vote-group-top .nom-vote-action-btn {
     flex: 1 1 50%; width: auto; height: 100%;
@@ -451,11 +455,17 @@ body.hide-role .pli-role        { display: none; }
   .nom-vote-group-top .nom-vote-no  { background: rgba(192,57,43,0.75); border-color: rgba(192,57,43,0.95); }
   .nom-vote-group-top .nom-vote-yes { border-right: 0.5px solid var(--border-strong); }
   /* Belt-and-braces: the topbar sits fully behind the Yes/No bar, but block
-     clicks on it directly too in case coverage is ever imperfect on a device. */
-  #topbar.topbar-locked { pointer-events: none; }
+     clicks on it directly too in case coverage is ever imperfect on a device.
+     Also drop its backdrop-filter: iOS Safari has known bugs stacking a plain
+     position:fixed element above a sibling that uses backdrop-filter. */
+  #topbar.topbar-locked {
+    pointer-events: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
   .nom-vote-group-bottom {
-    /* Cleared below #nom-step-bar (which sits ~12-48px under the topbar) so the two don't overlap. */
-    position: fixed; top: calc(var(--topbar-h, 52px) + 50px); bottom: auto;
+    /* Cleared well below #nom-step-bar (which sits ~12-48px under the topbar) so there's breathing room between the label and these buttons. */
+    position: fixed; top: calc(var(--topbar-h, 52px) + 85px); bottom: auto;
     left: 50%; transform: translateX(-50%);
     z-index: 40;
   }
