@@ -112,8 +112,11 @@ body.no-bg-fog.night-cycle botc-app::before, body.no-bg-fog.night-cycle #app::be
     radial-gradient(ellipse 110% 88% at 50% 50%, rgba(0,0,0,0.52) 0%, rgba(0,0,0,0.78) 100%),
     linear-gradient(to bottom, rgba(0,0,0,0.58) 0%, rgba(0,0,0,0.34) 40%, rgba(0,0,0,0.68) 100%);
 }
-#topbar, #circle-wrap, .modal-overlay { position: relative; z-index: 1; }
+#topbar, .modal-overlay { position: relative; z-index: 1; }
 #topbar { z-index: 10; }
+/* No z-index here: #circle-wrap must NOT form its own stacking context, or its
+   fixed-position mobile vote-action bar would get trapped behind #topbar. */
+#circle-wrap { position: relative; }
 
 /* ── Topbar ─────────────────────────────────────────── */
 #topbar {
@@ -426,6 +429,36 @@ body.hide-role .pli-role        { display: none; }
   .nom-vote-group { gap: 20px; }
   .nom-vote-group-top    { bottom: calc(50% + 56px); }
   .nom-vote-group-bottom { top: calc(50% + 56px); }
+}
+/* Mobile: Yes/No pinned full-width above the topbar (whole area tappable),
+   Back/Done pinned stacked just below it, unchanged in size.
+   --topbar-h is measured live in JS (botc-app.js updated()) since the topbar
+   can wrap onto two rows on narrow phones. */
+@media (max-width: 767px) {
+  .nom-vote-group-top {
+    position: fixed; top: 0; left: 0; right: 0; bottom: auto; transform: none;
+    flex-direction: row; gap: 0; width: 100%;
+    height: var(--topbar-h, 52px);
+    z-index: 40;
+  }
+  .nom-vote-group-top .nom-vote-action-btn {
+    flex: 1 1 50%; width: auto; height: 100%;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 0; border-top: none; box-shadow: none;
+  }
+  /* Bolder fills so Yes/No read clearly against the busy topbar behind them. */
+  .nom-vote-group-top .nom-vote-yes { background: rgba(90,158,47,0.75); border-color: rgba(90,158,47,0.95); }
+  .nom-vote-group-top .nom-vote-no  { background: rgba(192,57,43,0.75); border-color: rgba(192,57,43,0.95); }
+  .nom-vote-group-top .nom-vote-yes { border-right: 0.5px solid var(--border-strong); }
+  /* Belt-and-braces: the topbar sits fully behind the Yes/No bar, but block
+     clicks on it directly too in case coverage is ever imperfect on a device. */
+  #topbar.topbar-locked { pointer-events: none; }
+  .nom-vote-group-bottom {
+    /* Cleared below #nom-step-bar (which sits ~12-48px under the topbar) so the two don't overlap. */
+    position: fixed; top: calc(var(--topbar-h, 52px) + 50px); bottom: auto;
+    left: 50%; transform: translateX(-50%);
+    z-index: 40;
+  }
 }
 
 /* ── Modals ─────────────────────────────────────────── */

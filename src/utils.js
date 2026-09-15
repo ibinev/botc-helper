@@ -93,9 +93,18 @@ let _audioCtx = null;
 function _getAudioCtx() {
   const Ctx = window.AudioContext || window.webkitAudioContext;
   if (!Ctx) return null;
-  if (!_audioCtx) _audioCtx = new Ctx();
-  if (_audioCtx.state === 'suspended') _audioCtx.resume();
+  // Recreate if a previous context was closed/died (e.g. after the app was
+  // backgrounded/put to sleep) instead of reusing a dead instance forever.
+  if (!_audioCtx || _audioCtx.state === 'closed') _audioCtx = new Ctx();
   return _audioCtx;
+}
+
+// Backgrounding/sleeping the tab suspends the AudioContext; resume() is async,
+// so callers must await it before scheduling anything or the sound is silently dropped.
+async function _ensureRunning(ctx) {
+  if (ctx.state !== 'running') {
+    try { await ctx.resume(); } catch { /* ignore */ }
+  }
 }
 
 function _tone(ctx, freq, start, duration, type, peakGain) {
@@ -113,18 +122,20 @@ function _tone(ctx, freq, start, duration, type, peakGain) {
 }
 
 /** Bell "ding" played when a Yes vote is recorded. */
-export function playVoteYesSound() {
+export async function playVoteYesSound() {
   const ctx = _getAudioCtx();
   if (!ctx) return;
+  await _ensureRunning(ctx);
   const now = ctx.currentTime;
   _tone(ctx, 1318.5, now, 0.35, 'sine', 0.22);
   _tone(ctx, 1975.5, now + 0.03, 0.3, 'sine', 0.12);
 }
 
 /** Low double-buzz "x" played when a No vote is recorded. */
-export function playVoteNoSound() {
+export async function playVoteNoSound() {
   const ctx = _getAudioCtx();
   if (!ctx) return;
+  await _ensureRunning(ctx);
   const now = ctx.currentTime;
   _tone(ctx, 220, now, 0.18, 'square', 0.12);
   _tone(ctx, 175, now + 0.11, 0.18, 'square', 0.12);

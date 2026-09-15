@@ -153,6 +153,18 @@ export class BotcApp extends LitElement {
     window.addEventListener('pagehide', this._onPageHide = () => this._flushPersistence());
   }
 
+  // Topbar height can vary (icon row wraps on narrow phones) — track it in a
+  // CSS var so the fixed mobile vote-action bars can align to it exactly.
+  updated(changed) {
+    super.updated?.(changed);
+    const bar = this.querySelector('#topbar');
+    const h = bar?.offsetHeight;
+    if (h && h !== this._topbarH) {
+      this._topbarH = h;
+      this.style.setProperty('--topbar-h', h + 'px');
+    }
+  }
+
   disconnectedCallback() {
     super.disconnectedCallback();
     window.removeEventListener('resize', this._onResize);
@@ -1380,7 +1392,7 @@ export class BotcApp extends LitElement {
 
     return html`
       <!-- Top bar -->
-      <div id="topbar">
+      <div id="topbar" class="${this.nomMode === 'votes' ? 'topbar-locked' : ''}">
         <span class="bar-title">Town Square</span>
 
         <div class="cycle-controls">
