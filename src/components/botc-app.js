@@ -38,6 +38,7 @@ export class BotcApp extends LitElement {
     gameNotes:         { type: Object  },
     storyView:         { type: Boolean },
     compactMode:       { type: Boolean },
+    fastVoting:        { type: Boolean },
     hideRole:          { type: Boolean },
     hideDeadPlayers:   { type: Boolean },
     hasBgImage:        { type: Boolean },
@@ -96,6 +97,7 @@ export class BotcApp extends LitElement {
     this.gameNotes         = {};
     this.storyView         = false;
     this.compactMode       = false;
+    this.fastVoting        = false;
     this.hideRole          = false;
     this.hideDeadPlayers   = false;
     this.hasBgImage        = false;
@@ -151,18 +153,6 @@ export class BotcApp extends LitElement {
       if (document.visibilityState === 'hidden') this._flushPersistence();
     });
     window.addEventListener('pagehide', this._onPageHide = () => this._flushPersistence());
-  }
-
-  // Topbar height can vary (icon row wraps on narrow phones) — track it in a
-  // CSS var so the fixed mobile vote-action bars can align to it exactly.
-  updated(changed) {
-    super.updated?.(changed);
-    const bar = this.querySelector('#topbar');
-    const h = bar?.offsetHeight;
-    if (h && h !== this._topbarH) {
-      this._topbarH = h;
-      this.style.setProperty('--topbar-h', h + 'px');
-    }
   }
 
   disconnectedCallback() {
@@ -221,6 +211,7 @@ export class BotcApp extends LitElement {
     this._loadCollapsePrefs();
     this._loadStoryView();
     this._loadCompactMode();
+    this._loadFastVoting();
     this._loadHideRole();
     this._loadHideDeadPlayers();
     this._loadBgImage();
@@ -372,6 +363,11 @@ export class BotcApp extends LitElement {
 
   _loadCompactMode() {
     this.compactMode = localStorage.getItem('botc_compact_mode') === 'on';
+  }
+
+  _loadFastVoting() {
+    const stored = localStorage.getItem('botc_fast_voting');
+    this.fastVoting = stored === null ? false : stored === 'on';
   }
 
   _loadHideRole() {
@@ -1049,8 +1045,8 @@ export class BotcApp extends LitElement {
   }
 
   // Set (or clear) the current nomination's vote for a seat, applying the
-  // ghost-vote-used rule above.
-  _recordVote(idx, voted) {
+  // ghost-vote-used rule above. Sound only plays for fast-vote overlay taps.
+  _recordVote(idx, voted, playSound = false) {
     const entry = this.nominations[this.nomVoteKey]?.[this.nomVoteIdx];
     if (!entry) return;
     const effectiveVote = voted && this._canCountYesVote(idx);
@@ -1061,7 +1057,7 @@ export class BotcApp extends LitElement {
     noms[this.nomVoteKey][this.nomVoteIdx] = { ...entry, votes: [...votes] };
     this.nominations = noms;
     this._saveNominations();
-    if (effectiveVote) playVoteYesSound(); else playVoteNoSound();
+    if (playSound) { if (effectiveVote) playVoteYesSound(); else playVoteNoSound(); }
   }
 
   _handleNomClick(idx) {
@@ -1100,9 +1096,9 @@ export class BotcApp extends LitElement {
       if (!entry) return;
       const votedYes = (entry.votes || []).includes(idx);
       this._recordVote(idx, !votedYes);
-      // Tapping a seat directly also moves the auto-advance cursor there,
-      // so the Yes/No buttons continue the round from that point.
-      this.nomVoteCursor = idx;
+      // Do NOT touch nomVoteCursor here — once it's null (fast-voting pass
+      // finished, or was never active) it must stay null forever, or the
+      // fullscreen Yes/No overlay would wrongly reappear on every seat tap.
       this.requestUpdate();
     }
   }
@@ -1116,11 +1112,17 @@ export class BotcApp extends LitElement {
     this.nomVoteIdx = idx;
     const noms = { ...this.nominations };
     noms[key] = [...noms[key]];
-    noms[key][idx] = { ...noms[key][idx] };
+    const entry = { ...noms[key][idx] };
+    // Fast voting only auto-advances through the whole table the first time a
+    // nomination is opened for voting; resuming later (or with the Fast voting
+    // setting off) always goes straight to plain tap-to-toggle editing.
+    const firstTime = this.fastVoting && !entry.votingStarted;
+    entry.votingStarted = true;
+    noms[key][idx] = entry;
     this.nominations = noms;
     // Voting starts with the seat clockwise-next to the nominee, so the
     // nominee ends up voting last (the round stops there, it doesn't loop).
-    this.nomVoteCursor = (noms[key][idx].to + 1) % this.seatCount;
+    this.nomVoteCursor = firstTime ? (entry.to + 1) % this.seatCount : null;
     this._saveNominations();
     this.requestUpdate();
   }
@@ -1133,22 +1135,8 @@ export class BotcApp extends LitElement {
     const entry = this.nominations[this.nomVoteKey]?.[this.nomVoteIdx];
     if (!entry) return;
     const idx = this.nomVoteCursor;
-    this._recordVote(idx, voted);
+    this._recordVote(idx, voted, true);
     this.nomVoteCursor = idx === entry.to ? null : (idx + 1) % this.seatCount;
-    this.requestUpdate();
-  }
-
-  // Step the cursor back one seat (e.g. to correct a mis-tap); does not
-  // change any recorded vote. From the finished state (cursor null, right
-  // after the nominee voted) it resumes at the nominee.
-  _voteCursorBack() {
-    if (this.nomMode !== 'votes') return;
-    const entry = this.nominations[this.nomVoteKey]?.[this.nomVoteIdx];
-    if (!entry) return;
-    const n = this.seatCount;
-    this.nomVoteCursor = this.nomVoteCursor == null
-      ? entry.to
-      : (this.nomVoteCursor - 1 + n) % n;
     this.requestUpdate();
   }
 
@@ -1460,18 +1448,18 @@ export class BotcApp extends LitElement {
         <!-- Nomination step bar -->
         <div id="nom-step-bar" class="${nomBarText ? 'visible' : ''} ${thresholdReached ? 'threshold-reached' : ''}">${nomBarText}</div>
 
-        <!-- Vote casting controls: tap in rhythm as the ST goes around the table.
-             Yes/No sit above the center phase icon, Back/Done below it, each
-             stacked vertically with room between them to avoid mis-taps. -->
-        ${this.nomMode === 'votes' ? html`
-          <div id="nom-vote-actions">
-            <div class="nom-vote-group nom-vote-group-top">
-              <button class="nom-vote-action-btn nom-vote-yes" ?disabled="${this.nomVoteCursor == null}" @click="${() => this._castVote(true)}">✓ Yes</button>
-              <button class="nom-vote-action-btn nom-vote-no" ?disabled="${this.nomVoteCursor == null}" @click="${() => this._castVote(false)}">✕ No</button>
+        <!-- Fast-voting: whole-screen Yes/No tap zones so the round can be cast
+             without hunting for small buttons. Only shown while the auto-advance
+             cursor is running (first time through, with Fast voting enabled) —
+             once it reaches the nominee it disappears and seats become directly
+             tap-to-toggle, same as with Fast voting off. -->
+        ${this.nomMode === 'votes' && this.nomVoteCursor != null ? html`
+          <div id="nom-fastvote-overlay">
+            <div class="fastvote-half fastvote-yes" @click="${() => this._castVote(true)}">
+              <span class="fastvote-icon">✓</span><span class="fastvote-label">YES</span>
             </div>
-            <div class="nom-vote-group nom-vote-group-bottom">
-              <button class="nom-vote-action-btn nom-vote-back" title="Back one seat" @click="${() => this._voteCursorBack()}">↩ Back</button>
-              <button class="nom-vote-action-btn nom-vote-done" @click="${() => this._cancelNomMode()}">✓ Done</button>
+            <div class="fastvote-half fastvote-no" @click="${() => this._castVote(false)}">
+              <span class="fastvote-icon">✕</span><span class="fastvote-label">NO</span>
             </div>
           </div>
         ` : nothing}
@@ -1637,6 +1625,7 @@ export class BotcApp extends LitElement {
         .selectedCustomScript="${this.customScripts.find(s => s.id === this.script) || null}"
         .storyView="${this.storyView}"
         .compactMode="${this.compactMode}"
+        .fastVoting="${this.fastVoting}"
         .hasBgImage="${this.hasBgImage}"
         .bgFog="${this.bgFog}"
         @count-change="${e => {
@@ -1675,6 +1664,11 @@ export class BotcApp extends LitElement {
         @compact-mode-toggle="${() => {
           this.compactMode = !this.compactMode;
           this._applyCompactMode();
+          this.requestUpdate();
+        }}"
+        @fast-voting-toggle="${() => {
+          this.fastVoting = !this.fastVoting;
+          try { localStorage.setItem('botc_fast_voting', this.fastVoting ? 'on' : 'off'); } catch(e) {}
           this.requestUpdate();
         }}"
         @move-mode="${() => {

@@ -405,82 +405,29 @@ body.hide-role .pli-role        { display: none; }
   50%      { box-shadow: 0 0 0 8px rgba(255,215,106,0.35), 0 4px 34px rgba(255,215,106,0.9); }
 }
 
-#nom-vote-actions { position: absolute; inset: 0; z-index: 30; pointer-events: none; }
-.nom-vote-group {
-  position: absolute; left: 50%; transform: translateX(-50%);
-  display: flex; flex-direction: column; gap: 26px; align-items: center;
+/* Fast-voting: whole-screen transparent Yes/No tap zones. Left half = Yes,
+   right half = No. Translucent so seats (and the pulsing current-seat ring)
+   stay visible underneath while casting votes; no transitions/animations on
+   the zones themselves so rapid taps register with no perceptible delay. */
+#nom-fastvote-overlay { position: fixed; inset: 0; z-index: 20; display: flex; }
+.fastvote-half {
+  flex: 1 1 50%; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 8px; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none; user-select: none; font-family: var(--font-sans);
 }
-.nom-vote-group-top    { bottom: calc(50% + 70px); }
-.nom-vote-group-bottom { top: calc(50% + 70px); }
-.nom-vote-action-btn {
-  border: 0.5px solid var(--border-strong); border-radius: 999px; padding: 20px 26px;
-  font-family: var(--font-sans); font-size: 19px; font-weight: 700; cursor: pointer;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.5); -webkit-tap-highlight-color: transparent;
-  transition: transform 0.1s; width: 140px; pointer-events: auto;
-}
-.nom-vote-action-btn:active { transform: scale(0.94); }
-.nom-vote-action-btn:disabled { opacity: 0.35; cursor: default; pointer-events: none; }
-.nom-vote-back { background: var(--bg-surface); color: var(--text-secondary); }
-.nom-vote-no   { background: rgba(192,57,43,0.18); color: #ff8080; border-color: rgba(192,57,43,0.45); }
-.nom-vote-yes  { background: rgba(90,158,47,0.18); color: #8fca4b; border-color: rgba(90,158,47,0.45); }
-.nom-vote-done { background: rgba(255,215,106,0.18); color: #ffd76a; border-color: rgba(255,215,106,0.45); }
-/* Desktop/tablet (>767px): Yes/No side-by-side above, Back/Done side-by-side
-   below, buttons a bit larger. Mobile (<=767px) keeps its own rules below. */
-@media (min-width: 768px) {
-  .nom-vote-group-top,
-  .nom-vote-group-bottom {
-    flex-direction: row;
-    gap: 22px;
-  }
-  .nom-vote-action-btn {
-    padding: 23px 30px; font-size: 21px; width: 156px;
-  }
-}
-@media (max-width: 479px) {
-  .nom-vote-action-btn { padding: 17px 20px; font-size: 17px; width: 122px; }
-  .nom-vote-group { gap: 20px; }
-  .nom-vote-group-top    { bottom: calc(50% + 56px); }
-  .nom-vote-group-bottom { top: calc(50% + 56px); }
-}
-/* Mobile: Yes/No pinned full-width above the topbar (whole area tappable),
-   Back/Done pinned stacked just below it, unchanged in size.
-   --topbar-h is measured live in JS (botc-app.js updated()) since the topbar
-   can wrap onto two rows on narrow phones. */
-@media (max-width: 767px) {
-  .nom-vote-group-top {
-    position: fixed; top: 0; left: 0; right: 0; bottom: auto; transform: translateZ(0);
-    flex-direction: row; gap: 0; width: 100%;
-    height: var(--topbar-h, 52px);
-    z-index: 40;
-    /* Own compositing layer: iOS Safari can otherwise mis-order a plain
-       position:fixed sibling against #topbar's backdrop-filter layer. */
-    will-change: transform;
-    isolation: isolate;
-  }
-  .nom-vote-group-top .nom-vote-action-btn {
-    flex: 1 1 50%; width: auto; height: 100%;
-    display: flex; align-items: center; justify-content: center;
-    border-radius: 0; border-top: none; box-shadow: none;
-  }
-  /* Bolder fills so Yes/No read clearly against the busy topbar behind them. */
-  .nom-vote-group-top .nom-vote-yes { background: rgba(90,158,47,0.75); border-color: rgba(90,158,47,0.95); }
-  .nom-vote-group-top .nom-vote-no  { background: rgba(192,57,43,0.75); border-color: rgba(192,57,43,0.95); }
-  .nom-vote-group-top .nom-vote-yes { border-right: 0.5px solid var(--border-strong); }
-  /* Belt-and-braces: the topbar sits fully behind the Yes/No bar, but block
-     clicks on it directly too in case coverage is ever imperfect on a device.
-     Also drop its backdrop-filter: iOS Safari has known bugs stacking a plain
-     position:fixed element above a sibling that uses backdrop-filter. */
-  #topbar.topbar-locked {
-    pointer-events: none;
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-  }
-  .nom-vote-group-bottom {
-    /* Cleared well below #nom-step-bar (which sits ~12-48px under the topbar) so there's breathing room between the label and these buttons. */
-    position: fixed; top: calc(var(--topbar-h, 52px) + 85px); bottom: auto;
-    left: 50%; transform: translateX(-50%);
-    z-index: 40;
-  }
+.fastvote-yes { background: rgba(90,158,47,0.22); }
+.fastvote-no  { background: rgba(192,57,43,0.22); }
+.fastvote-icon  { font-size: clamp(56px, 16vw, 170px); font-weight: 700; line-height: 1; }
+.fastvote-label { font-size: clamp(14px, 3vw, 26px); font-weight: 700; letter-spacing: 0.12em; }
+.fastvote-yes .fastvote-icon, .fastvote-yes .fastvote-label { color: #8fca4b; }
+.fastvote-no  .fastvote-icon, .fastvote-no  .fastvote-label { color: #ff8080; }
+/* Belt-and-braces: block topbar clicks while the fullscreen overlay is up,
+   and drop its backdrop-filter — iOS Safari has known bugs stacking a plain
+   fixed-position sibling above a backdrop-filter element. */
+#topbar.topbar-locked {
+  pointer-events: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 /* ── Modals ─────────────────────────────────────────── */
@@ -647,6 +594,17 @@ body.hide-role .pli-role        { display: none; }
 .death-killedby { display: inline-flex; align-items: center; gap: 4px; margin-left: auto; flex-shrink: 0; background: rgba(192,57,43,0.22); border: 0.5px solid rgba(192,57,43,0.45); border-radius: 999px; padding: 1px 7px 1px 3px; }
 .death-killedby-icon { width: 18px; height: 18px; object-fit: contain; border-radius: 3px; flex-shrink: 0; }
 .death-killedby-name { font-size: 11px; color: var(--text-primary); font-weight: 500; white-space: nowrap; }
+
+/* Subtle "who killed this player" chip in the edit modal — replaces the old
+   auto-opening popup so the ST can set it only when they choose to. */
+.killedby-chip {
+  display: inline-flex; align-items: center; gap: 5px; align-self: flex-start;
+  margin-top: 8px; padding: 3px 10px 3px 4px; border-radius: 999px; cursor: pointer;
+  background: transparent; border: 0.5px dashed var(--border); -webkit-tap-highlight-color: transparent;
+}
+.killedby-chip-icon { width: 18px; height: 18px; object-fit: contain; border-radius: 3px; flex-shrink: 0; }
+.killedby-chip span { font-size: 11px; color: var(--text-primary); font-weight: 500; white-space: nowrap; }
+.killedby-chip-empty { font-size: 11px; color: var(--text-secondary); font-weight: 500; padding-left: 4px; }
 
 /* End-game popup */
 .endgame-card { width: min(420px, 100%); }

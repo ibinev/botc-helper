@@ -55,6 +55,7 @@ export class BotcSettingsModal extends LitElement {
     selectedCustomScript: { type: Object },
     storyView:  { type: Boolean },
     compactMode:{ type: Boolean },
+    fastVoting: { type: Boolean },
     hasBgImage: { type: Boolean },
     bgFog:      { type: Boolean },
     _customOpen:{ state: true },
@@ -85,6 +86,7 @@ export class BotcSettingsModal extends LitElement {
     this.selectedCustomScript = null;
     this.storyView  = false;
     this.compactMode= false;
+    this.fastVoting = false;
     this.hasBgImage = false;
     this.bgFog      = true;
     this._customOpen = false;
@@ -598,6 +600,18 @@ export class BotcSettingsModal extends LitElement {
 
             <div class="settings-group">
             <div class="settings-group-title">Appearance</div>
+            <div class="settings-row">
+              <div>
+                <div class="settings-label">Fast voting</div>
+                <div class="settings-sub">Tap left (Yes) / right (No) half of the whole screen with no delay, then review/edit votes on the circle</div>
+              </div>
+              <div class="settings-control">
+                <button class="btn btn-sm btn-hints ${this.fastVoting ? 'active' : ''}"
+                  @click="${() => this._fire('fast-voting-toggle', {})}"
+                >${this.fastVoting ? 'On' : 'Off'}</button>
+              </div>
+            </div>
+
             <div class="settings-row">
               <div>
                 <div class="settings-label">Compact mode</div>

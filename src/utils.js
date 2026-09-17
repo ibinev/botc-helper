@@ -96,7 +96,47 @@ function _getAudioCtx() {
   // Recreate if a previous context was closed/died (e.g. after the app was
   // backgrounded/put to sleep) instead of reusing a dead instance forever.
   if (!_audioCtx || _audioCtx.state === 'closed') _audioCtx = new Ctx();
+  _unlockMediaPlayback();
   return _audioCtx;
+}
+
+// iOS Safari plays plain Web Audio API sounds in the "ambient" audio session
+// category, which is silenced by the ringer/mute switch. Looping a real (silent)
+// HTMLMediaElement switches the page's session to "playback" category, which
+// uses the media volume instead and ignores the mute switch — after that, our
+// Web Audio tones inherit the same category and are no longer muted by it.
+let _silentAudioEl = null;
+function _unlockMediaPlayback() {
+  if (_silentAudioEl) {
+    if (_silentAudioEl.paused) _silentAudioEl.play().catch(() => {});
+    return;
+  }
+  const sampleRate = 8000;
+  const numSamples = 400; // 50ms of true silence, looped
+  const dataSize = numSamples * 2;
+  const buf = new ArrayBuffer(44 + dataSize);
+  const view = new DataView(buf);
+  const writeStr = (offset, str) => { for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i)); };
+  writeStr(0, 'RIFF');
+  view.setUint32(4, 36 + dataSize, true);
+  writeStr(8, 'WAVE');
+  writeStr(12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, 1, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * 2, true);
+  view.setUint16(32, 2, true);
+  view.setUint16(34, 16, true);
+  writeStr(36, 'data');
+  view.setUint32(40, dataSize, true);
+  let binary = '';
+  const bytes = new Uint8Array(buf);
+  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+  const el = new Audio('data:audio/wav;base64,' + btoa(binary));
+  el.loop = true;
+  el.play().catch(() => {});
+  _silentAudioEl = el;
 }
 
 // Backgrounding/sleeping the tab suspends the AudioContext; resume() is async,
@@ -105,6 +145,7 @@ async function _ensureRunning(ctx) {
   if (ctx.state !== 'running') {
     try { await ctx.resume(); } catch { /* ignore */ }
   }
+  _unlockMediaPlayback();
 }
 
 function _tone(ctx, freq, start, duration, type, peakGain) {

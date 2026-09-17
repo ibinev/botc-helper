@@ -139,7 +139,6 @@ export class BotcEditModal extends LitElement {
       case 'tog-dead':
         this._deadActive = !this._deadActive;
         if (this._deadActive) {
-          this._killedByPopupOpen = true;
           // Travelers never get a ghost vote — mark it used immediately on death
           if (this._isTravelerSeat) this._voteActive = true;
         } else {
@@ -460,6 +459,15 @@ export class BotcEditModal extends LitElement {
                     alt="Poisoned" class="tog-icon">Poisoned
                 </button>
               </div>
+              ${this._deadActive ? html`
+                <button class="killedby-chip" title="Set who/what killed this player"
+                  @click="${() => { this._killedByPopupOpen = true; }}">
+                  ${this._killedByValue ? html`
+                    <img class="killedby-chip-icon" src="${ROLE_ICONS[this._killedByValue] || ''}" alt="">
+                    <span>${this._killedByValue}</span>
+                  ` : html`<span class="killedby-chip-empty">☠ Killed by…</span>`}
+                </button>
+              ` : nothing}
             </div>
 
             <div class="btn-row">
