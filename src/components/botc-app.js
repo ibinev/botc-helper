@@ -10,7 +10,6 @@ import './botc-settings-modal.js';
 import './botc-charcount-modal.js';
 import './botc-pdf-modal.js';
 import './botc-nightorder-modal.js';
-import './botc-roles-modal.js';
 import './botc-reference-modal.js';
 import './botc-readme-modal.js';
 import './botc-killedby-popup.js';
@@ -33,6 +32,7 @@ export class BotcApp extends LitElement {
     nomVoteKey:        { type: String  },
     nomVoteIdx:        { type: Number  },
     nomVoteCursor:     { type: Number  },
+    nomVoteConfirm:    { type: Boolean },
     nominations:       { type: Object  },
     poisonSnapshots:   { type: Object  },
     gameNotes:         { type: Object  },
@@ -60,7 +60,6 @@ export class BotcApp extends LitElement {
     _charcountOpen:    { state: true },
     _pdfOpen:          { state: true },
     _nightorderOpen:   { state: true },
-    _rolesOpen:        { state: true },
     _referenceOpen:    { state: true },
     _referenceTab:     { state: true },
     _readmeOpen:       { state: true },
@@ -92,7 +91,7 @@ export class BotcApp extends LitElement {
     this.nomVoteKey        = null;
     this.nomVoteIdx        = null;
     this.nomVoteCursor     = null;
-    this._voteEditGuardUntil = 0;
+    this.nomVoteConfirm    = false;
     this.nominations       = {};
     this.poisonSnapshots   = {};
     this.gameNotes         = {};
@@ -119,7 +118,6 @@ export class BotcApp extends LitElement {
     this._charcountOpen    = false;
     this._pdfOpen          = false;
     this._nightorderOpen   = false;
-    this._rolesOpen        = false;
     this._referenceOpen    = false;
     this._referenceTab     = 'roles';
     this._readmeOpen       = false;
@@ -154,6 +152,18 @@ export class BotcApp extends LitElement {
       if (document.visibilityState === 'hidden') this._flushPersistence();
     });
     window.addEventListener('pagehide', this._onPageHide = () => this._flushPersistence());
+  }
+
+  // Topbar height can vary (icon row wraps on narrow phones) — track it in a
+  // CSS var so the fast-vote overlay/confirm bar can align to it exactly.
+  updated(changed) {
+    super.updated?.(changed);
+    const bar = this.querySelector('#topbar');
+    const h = bar?.offsetHeight;
+    if (h && h !== this._topbarH) {
+      this._topbarH = h;
+      this.style.setProperty('--topbar-h', h + 'px');
+    }
   }
 
   disconnectedCallback() {
@@ -803,6 +813,7 @@ export class BotcApp extends LitElement {
     this.nomVoteKey = null;
     this.nomVoteIdx = null;
     this.nomVoteCursor = null;
+    this.nomVoteConfirm = false;
     this._editOpen = false;
     this._listOpen = false;
     this._nomsOpen = false;
@@ -948,6 +959,7 @@ export class BotcApp extends LitElement {
       this.nomVoteKey = null;
       this.nomVoteIdx = null;
       this.nomVoteCursor = null;
+      this.nomVoteConfirm = false;
     }
     this._nomsOpen = false;
 
@@ -1093,10 +1105,9 @@ export class BotcApp extends LitElement {
       this.nomFrom = null;
       this._startVoteMode(key, newIdx);
     } else if (this.nomMode === 'votes') {
-      // Briefly ignore seat taps right as the fast-vote overlay disappears, so
-      // a stray extra tap (momentum from rapid-firing Yes/No) doesn't land on
-      // a seat underneath and accidentally flip its vote.
-      if (Date.now() < this._voteEditGuardUntil) return;
+      // Seats are blocked from editing while the OK/Cancel confirm bar is up
+      // (a blocker overlay already prevents the click from reaching here too).
+      if (this.nomVoteConfirm) return;
       const entry = this.nominations[this.nomVoteKey]?.[this.nomVoteIdx];
       if (!entry) return;
       const votedYes = (entry.votes || []).includes(idx);
@@ -1128,13 +1139,15 @@ export class BotcApp extends LitElement {
     // Voting starts with the seat clockwise-next to the nominee, so the
     // nominee ends up voting last (the round stops there, it doesn't loop).
     this.nomVoteCursor = firstTime ? (entry.to + 1) % this.seatCount : null;
+    this.nomVoteConfirm = false;
     this._saveNominations();
     this.requestUpdate();
   }
 
   // Record a Yes/No vote for the seat under the cursor, then auto-advance.
   // Stops (cursor -> null) right after the nominee's own vote instead of
-  // wrapping around the table again.
+  // wrapping around the table again, and asks for OK/Cancel confirmation
+  // before the seats become clickable again.
   _castVote(voted) {
     if (this.nomMode !== 'votes' || this.nomVoteCursor == null) return;
     const entry = this.nominations[this.nomVoteKey]?.[this.nomVoteIdx];
@@ -1143,7 +1156,28 @@ export class BotcApp extends LitElement {
     this._recordVote(idx, voted, true);
     const finished = idx === entry.to;
     this.nomVoteCursor = finished ? null : (idx + 1) % this.seatCount;
-    if (finished) this._voteEditGuardUntil = Date.now() + 450;
+    if (finished) this.nomVoteConfirm = true;
+    this.requestUpdate();
+  }
+
+  // Done: same as the small top Done button — finalizes the votes (stamps
+  // ghost voters) and exits vote mode entirely, straight to the nominations list.
+  _confirmVotesDone() {
+    this._finishVoteMode();
+  }
+
+  // Cancel: wipe every vote cast during the fast pass and drop into plain
+  // tap-to-toggle editing with a clean slate.
+  _confirmVotesCancel() {
+    const noms = { ...this.nominations };
+    const entry = noms[this.nomVoteKey]?.[this.nomVoteIdx];
+    if (entry) {
+      noms[this.nomVoteKey] = [...noms[this.nomVoteKey]];
+      noms[this.nomVoteKey][this.nomVoteIdx] = { ...entry, votes: [] };
+      this.nominations = noms;
+      this._saveNominations();
+    }
+    this.nomVoteConfirm = false;
     this.requestUpdate();
   }
 
@@ -1180,6 +1214,7 @@ export class BotcApp extends LitElement {
     this.nomVoteKey = null;
     this.nomVoteIdx = null;
     this.nomVoteCursor = null;
+    this.nomVoteConfirm = false;
     this._nomsOpen  = true;
     this.requestUpdate();
   }
@@ -1455,11 +1490,10 @@ export class BotcApp extends LitElement {
         <!-- Nomination step bar -->
         <div id="nom-step-bar" class="${nomBarText ? 'visible' : ''} ${thresholdReached ? 'threshold-reached' : ''}">${nomBarText}</div>
 
-        <!-- Fast-voting: whole-screen Yes/No tap zones so the round can be cast
-             without hunting for small buttons. Only shown while the auto-advance
-             cursor is running (first time through, with Fast voting enabled) —
-             once it reaches the nominee it disappears and seats become directly
-             tap-to-toggle, same as with Fast voting off. -->
+        <!-- Fast-voting: tap zones spanning from below the topbar to the bottom
+             of the screen, so the round can be cast without hunting for small
+             buttons. Only shown while the auto-advance cursor is running
+             (first time through, with Fast voting enabled). -->
         ${this.nomMode === 'votes' && this.nomVoteCursor != null ? html`
           <div id="nom-fastvote-overlay">
             <div class="fastvote-half fastvote-yes" @click="${() => this._castVote(true)}">
@@ -1468,6 +1502,20 @@ export class BotcApp extends LitElement {
             <div class="fastvote-half fastvote-no" @click="${() => this._castVote(false)}">
               <span class="fastvote-icon">✕</span><span class="fastvote-label">NO</span>
             </div>
+          </div>
+        ` : nothing}
+
+        <!-- Once the fast-vote round finishes, ask for Done/Cancel up where the
+             topbar is (translucent, same width as it) before the seats become
+             clickable again — a transparent blocker below it keeps the whole
+             circle inert until the ST resolves the round one way or the other. -->
+        ${this.nomMode === 'votes' && this.nomVoteConfirm ? html`
+          <div id="nom-fastvote-confirm-wrap">
+            <div id="nom-fastvote-confirm">
+              <button class="fastvote-confirm-btn fastvote-confirm-done" @click="${() => this._confirmVotesDone()}">✓ Done</button>
+              <button class="fastvote-confirm-btn fastvote-confirm-cancel" @click="${() => this._confirmVotesCancel()}">✕ Cancel</button>
+            </div>
+            <div class="fastvote-confirm-blocker"></div>
           </div>
         ` : nothing}
 
@@ -1814,17 +1862,6 @@ export class BotcApp extends LitElement {
           this.requestUpdate();
         }}"
       ></botc-nightorder-modal>
-
-      <!-- Roles reference modal -->
-      <botc-roles-modal
-        .open="${this._rolesOpen}"
-        .script="${this.script}"
-        .seats="${this.seats}"
-        @modal-close="${() => {
-          this._rolesOpen = false;
-          this.requestUpdate();
-        }}"
-      ></botc-roles-modal>
 
       <!-- Confirm reset dialog -->
       ${this._confirmOpen ? html`

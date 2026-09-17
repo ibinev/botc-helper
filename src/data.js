@@ -69,14 +69,6 @@ export function setCustomScripts(customScripts = []) {
     .filter(s => s.id && s.label && !seen.has(s.id) && (seen.add(s.id), true));
 }
 
-export function getCustomScripts() {
-  return CUSTOM_SCRIPTS.map(s => ({
-    ...s,
-    roles: [...s.roles],
-    layout: normalizeLayout(s.layout, s.roles),
-  }));
-}
-
 export function getScriptRoleLayout(script) {
   const custom = getCustomScript(script);
   if (!custom) return null;
