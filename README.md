@@ -93,7 +93,7 @@ The UI has three primary areas:
 - ◀ Left arrow: move one step backward in cycle timeline
 - ▶ Right arrow: move one step forward
 - Label shows current phase and round (for example Day 2, Night 2)
-- A new game always starts on Night 1 (matching real table order: Night 1 -> Day 1 -> Night 2 -> Day 2 -> …)
+- A new game always starts on Day 1 (you can step back to Night 1 if needed; timeline order is Night 1 -> Day 1 -> Night 2 -> Day 2 -> …)
 
 ### End game
 - 🏁 Opens a popup to record the winning alignment (Good/Evil) and a reason

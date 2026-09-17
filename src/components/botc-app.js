@@ -81,7 +81,7 @@ export class BotcApp extends LitElement {
     super();
     this.seatCount         = 12;
     this.round             = 1;
-    this.phase             = 'night';
+    this.phase             = 'day';
     this.seats             = [];
     this.seatPositions     = [];
     this.selected          = null;
@@ -92,6 +92,7 @@ export class BotcApp extends LitElement {
     this.nomVoteKey        = null;
     this.nomVoteIdx        = null;
     this.nomVoteCursor     = null;
+    this._voteEditGuardUntil = 0;
     this.nominations       = {};
     this.poisonSnapshots   = {};
     this.gameNotes         = {};
@@ -1092,6 +1093,10 @@ export class BotcApp extends LitElement {
       this.nomFrom = null;
       this._startVoteMode(key, newIdx);
     } else if (this.nomMode === 'votes') {
+      // Briefly ignore seat taps right as the fast-vote overlay disappears, so
+      // a stray extra tap (momentum from rapid-firing Yes/No) doesn't land on
+      // a seat underneath and accidentally flip its vote.
+      if (Date.now() < this._voteEditGuardUntil) return;
       const entry = this.nominations[this.nomVoteKey]?.[this.nomVoteIdx];
       if (!entry) return;
       const votedYes = (entry.votes || []).includes(idx);
@@ -1136,7 +1141,9 @@ export class BotcApp extends LitElement {
     if (!entry) return;
     const idx = this.nomVoteCursor;
     this._recordVote(idx, voted, true);
-    this.nomVoteCursor = idx === entry.to ? null : (idx + 1) % this.seatCount;
+    const finished = idx === entry.to;
+    this.nomVoteCursor = finished ? null : (idx + 1) % this.seatCount;
+    if (finished) this._voteEditGuardUntil = Date.now() + 450;
     this.requestUpdate();
   }
 
@@ -1267,7 +1274,7 @@ export class BotcApp extends LitElement {
     this.nomMode       = false;
     this.nomFrom       = null;
     this.round         = 1;
-    this.phase         = 'night';
+    this.phase         = 'day';
     this.gameEnded     = false;
     this.gameEndInfo   = null;
 
@@ -1299,7 +1306,7 @@ export class BotcApp extends LitElement {
     this.selected   = null;
     this.removeMode = false;
     this.round      = 1;
-    this.phase      = 'night';
+    this.phase      = 'day';
     this.gameEnded   = false;
     this.gameEndInfo = null;
 
