@@ -494,17 +494,19 @@ body.hide-role .pli-role        { display: none; }
 }
 
 /* Fast-voting: transparent Yes/No tap zones spanning from below the topbar
-   to the bottom of the screen. Left half = Yes, right half = No. Translucent
-   so seats (and the pulsing current-seat ring) stay visible underneath while
-   casting votes; no transitions/animations on the zones themselves so rapid
-   taps register with no perceptible delay. */
+   to the bottom of the screen. Left half = Yes, right half = No. Bound to
+   pointerdown (not click) with touch-action:none so rapid alternating taps
+   register instantly — a plain "click" listener waits for the browser to
+   finish tap-vs-scroll gesture disambiguation first, and fast successive
+   taps (with a little finger jitter) can get misread as a scroll/pan and
+   silently dropped instead of firing a click at all. */
 #nom-fastvote-overlay {
   position: fixed; top: var(--topbar-h, 52px); left: 0; right: 0; bottom: 0;
   z-index: 20; display: flex;
 }
 .fastvote-half {
   flex: 1 1 50%; display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 8px; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+  gap: 8px; cursor: pointer; touch-action: none; -webkit-tap-highlight-color: transparent;
   -webkit-user-select: none; user-select: none; font-family: var(--font-sans);
 }
 .fastvote-yes { background: rgba(90,158,47,0.22); }

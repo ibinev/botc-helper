@@ -1514,10 +1514,10 @@ export class BotcApp extends LitElement {
              (first time through, with Fast voting enabled). -->
         ${this.nomMode === 'votes' && this.nomVoteCursor != null ? html`
           <div id="nom-fastvote-overlay">
-            <div class="fastvote-half fastvote-yes" @click="${() => this._castVote(true)}">
+            <div class="fastvote-half fastvote-yes" @pointerdown="${e => { e.preventDefault(); this._castVote(true); }}">
               <span class="fastvote-icon">✓</span><span class="fastvote-label">YES</span>
             </div>
-            <div class="fastvote-half fastvote-no" @click="${() => this._castVote(false)}">
+            <div class="fastvote-half fastvote-no" @pointerdown="${e => { e.preventDefault(); this._castVote(false); }}">
               <span class="fastvote-icon">✕</span><span class="fastvote-label">NO</span>
             </div>
           </div>
