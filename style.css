@@ -714,17 +714,6 @@ body.hide-role .pli-role        { display: none; }
 .death-killedby-icon { width: 18px; height: 18px; object-fit: contain; border-radius: 3px; flex-shrink: 0; }
 .death-killedby-name { font-size: 11px; color: var(--text-primary); font-weight: 500; white-space: nowrap; }
 
-/* Subtle "who killed this player" chip in the edit modal — replaces the old
-   auto-opening popup so the ST can set it only when they choose to. */
-.killedby-chip {
-  display: inline-flex; align-items: center; gap: 5px; align-self: flex-start;
-  margin-top: 8px; padding: 3px 10px 3px 4px; border-radius: 999px; cursor: pointer;
-  background: transparent; border: 0.5px dashed var(--border); -webkit-tap-highlight-color: transparent;
-}
-.killedby-chip-icon { width: 18px; height: 18px; object-fit: contain; border-radius: 3px; flex-shrink: 0; }
-.killedby-chip span { font-size: 11px; color: var(--text-primary); font-weight: 500; white-space: nowrap; }
-.killedby-chip-empty { font-size: 11px; color: var(--text-secondary); font-weight: 500; padding-left: 4px; }
-
 /* End-game popup */
 .endgame-card { width: min(420px, 100%); }
 .endgame-label { display: block; font-size: 12px; color: var(--text-secondary); margin: 8px 0 6px; }
@@ -1077,7 +1066,7 @@ body.hide-role .pli-role        { display: none; }
 /* ── Settings modal ───────────────────────────────────── */
 .modal-title--spaced  { margin-bottom: 16px; }
 .settings-count-num   { min-width: 24px; text-align: center; font-weight: 700; color: var(--gold-light); font-size: 15px; text-shadow: 0 0 8px rgba(201,151,58,0.5); }
-.btn-gold             { font-size: 13px; padding: 7px 14px; border-color: var(--gold); color: var(--gold-light); }
+.btn-gold             { font-size: 13px; padding: 7px 14px; border-width: 1px; border-color: var(--gold); color: var(--gold-light); }
 .settings-pool-btn {
   min-width: 84px;
   display: inline-flex;

@@ -1,7 +1,6 @@
 import { LitElement, html, nothing } from 'lit';
 import './botc-combo.js';
 import './botc-role-field.js';
-import './botc-killedby-popup.js';
 import { ROLE_ICONS, getAllRoles, CAT_LABELS } from '../data.js';
 
 /**
@@ -35,7 +34,6 @@ export class BotcEditModal extends LitElement {
     _alignmentValue:   { state: true   },
     _deadActive:       { state: true   },
     _killedByValue:    { state: true   },
-    _killedByPopupOpen:{ state: true   },
   };
 
   createRenderRoot() { return this; }
@@ -55,7 +53,6 @@ export class BotcEditModal extends LitElement {
     this._alignOpen         = false;
     this._alignmentValue    = 'unknown';
     this._killedByValue     = '';
-    this._killedByPopupOpen = false;
     this._poolLpTimer       = null;
     this._poolLpFired       = false;
     this._roleByName        = new Map(getAllRoles().map(r => [r.name, r]));
@@ -459,15 +456,6 @@ export class BotcEditModal extends LitElement {
                     alt="Poisoned" class="tog-icon">Poisoned
                 </button>
               </div>
-              ${this._deadActive ? html`
-                <button class="killedby-chip" title="Set who/what killed this player"
-                  @click="${() => { this._killedByPopupOpen = true; }}">
-                  ${this._killedByValue ? html`
-                    <img class="killedby-chip-icon" src="${ROLE_ICONS[this._killedByValue] || ''}" alt="">
-                    <span>${this._killedByValue}</span>
-                  ` : html`<span class="killedby-chip-empty">☠ Killed by…</span>`}
-                </button>
-              ` : nothing}
             </div>
 
             <div class="btn-row">
@@ -477,12 +465,6 @@ export class BotcEditModal extends LitElement {
 
           </div>
         </div>
-        <botc-killedby-popup
-          .open="${this._killedByPopupOpen}"
-          .value="${this._killedByValue}"
-          .script="${this.script}"
-          @killedby-save="${e => { this._killedByValue = e.detail.value; this._killedByPopupOpen = false; }}"
-        ></botc-killedby-popup>
       </div>
     `;
   }

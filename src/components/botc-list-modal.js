@@ -189,53 +189,54 @@ export class BotcListModal extends LitElement {
 
   render() {
     const named = this.seats.filter(s => s.name);
-    const listCount = named.length;
     const dead = this.seats.map((s, i) => ({ s, i })).filter(({ s }) => s.dead && s.diedAt);
     const poisoned = this.seats.map((s, i) => ({ s, i })).filter(({ s }) => s.poisonedAt);
+
+    const sections = [];
+    if (named.length) {
+      sections.push(html`
+        <div class="collapsible-header" @click="${() => this._toggleCollapse('allseats')}">
+          <div class="list-section-title list-section-title--flush">All seats</div>
+          <span class="collapsible-chevron ${this.allseatsCollapsed ? 'collapsible-chevron--collapsed' : ''}">▾</span>
+        </div>
+        <div class="collapsible-body ${this.allseatsCollapsed ? 'collapsed' : ''}">
+          <div class="player-list">
+            ${this.seats.map((s, i) => this._pliHtml(s, i))}
+          </div>
+        </div>
+      `);
+    }
+    if (dead.length) {
+      sections.push(html`
+        <div class="collapsible-header" @click="${() => this._toggleCollapse('deaths')}">
+          <div class="list-section-title list-section-title--flush">Deaths</div>
+          <span class="collapsible-chevron ${this.deathsCollapsed ? 'collapsible-chevron--collapsed' : ''}">▾</span>
+        </div>
+        <div class="collapsible-body ${this.deathsCollapsed ? 'collapsed' : ''}">
+          ${this._buildGroupedLog(dead, 'diedAt', '☠')}
+        </div>
+      `);
+    }
+    if (poisoned.length) {
+      sections.push(html`
+        <div class="collapsible-header" @click="${() => this._toggleCollapse('poisoned')}">
+          <div class="list-section-title list-section-title--flush">Poisoned</div>
+          <span class="collapsible-chevron ${this.poisonedCollapsed ? 'collapsible-chevron--collapsed' : ''}">▾</span>
+        </div>
+        <div class="collapsible-body ${this.poisonedCollapsed ? 'collapsed' : ''}">
+          ${this._buildGroupedLog(poisoned, 'poisonedAt', '🧪')}
+        </div>
+      `);
+    }
 
     return html`
       <div class="modal-overlay" id="modal-list" @click="${e => { if (e.target === this.querySelector('#modal-list')) this._onClose(); }}">
         <div class="modal-sheet">
           <div class="modal-drag-bar" id="modal-list-dragbar"><div class="pill"></div></div>
           <div class="modal-inner">
-
-            <!-- All seats -->
-            <div class="collapsible-header" @click="${() => this._toggleCollapse('allseats')}">
-              <div class="list-section-title list-section-title--flush">All seats</div>
-              <span class="collapsible-chevron ${this.allseatsCollapsed ? 'collapsible-chevron--collapsed' : ''}">▾</span>
-            </div>
-            <div class="collapsible-body ${this.allseatsCollapsed ? 'collapsed' : ''}">
-              <div class="player-list">
-                ${named.length === 0
-                  ? html`<div class="no-players">No players assigned yet. Click a seat to add one.</div>`
-                  : this.seats.map((s, i) => this._pliHtml(s, i))}
-              </div>
-            </div>
-
-            <!-- Deaths -->
-            <div class="divider"></div>
-            <div class="collapsible-header" @click="${() => this._toggleCollapse('deaths')}">
-              <div class="list-section-title list-section-title--flush">Deaths</div>
-              <span class="collapsible-chevron ${this.deathsCollapsed ? 'collapsible-chevron--collapsed' : ''}">▾</span>
-            </div>
-            <div class="collapsible-body ${this.deathsCollapsed ? 'collapsed' : ''}">
-              ${dead.length
-                ? this._buildGroupedLog(dead, 'diedAt', '☠')
-                : html`<div class="no-players">No deaths yet.</div>`}
-            </div>
-
-            <!-- Poisoned -->
-            <div class="divider"></div>
-            <div class="collapsible-header" @click="${() => this._toggleCollapse('poisoned')}">
-              <div class="list-section-title list-section-title--flush">Poisoned</div>
-              <span class="collapsible-chevron ${this.poisonedCollapsed ? 'collapsible-chevron--collapsed' : ''}">▾</span>
-            </div>
-            <div class="collapsible-body ${this.poisonedCollapsed ? 'collapsed' : ''}">
-              ${poisoned.length
-                ? this._buildGroupedLog(poisoned, 'poisonedAt', '🧪')
-                : html`<div class="no-players">No poisoned players.</div>`}
-            </div>
-
+            ${sections.length
+              ? sections.map((sec, i) => html`${i > 0 ? html`<div class="divider"></div>` : nothing}${sec}`)
+              : html`<div class="no-players">No players assigned yet. Click a seat to add one.</div>`}
           </div>
         </div>
       </div>
