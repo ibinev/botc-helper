@@ -308,8 +308,8 @@ export class BotcCircle extends LitElement {
               alt="${s.poisoned ? 'Poisoned' : 'Drunk'}"
               title="${s.poisoned ? 'Poisoned' : 'Drunk'}">`
           : nothing}
+        <span class="seat-num">${i + 1}</span>
         <div class="seat-inner">
-          <span class="seat-num">${i + 1}</span>
           ${s.name
             ? html`<span class="seat-name">${s.name}</span>`
             : html`<span class="seat-name empty">Empty</span>`}

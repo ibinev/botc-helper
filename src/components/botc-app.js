@@ -407,6 +407,9 @@ export class BotcApp extends LitElement {
     } else {
       el.style.backgroundImage = '';
     }
+    // Landscape-rotated background (style.css) only applies to the bundled default
+    // image — a custom uploaded photo should never be auto-rotated.
+    document.body.classList.toggle('custom-bg-image', !!this._bgImageDataUrl);
   }
 
   _loadBgFog() {
