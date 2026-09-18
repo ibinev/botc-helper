@@ -269,6 +269,10 @@ botc-circle { display: block; position: absolute; inset: 0; }
 @media (hover: hover) and (pointer: fine) { .seat.dead:hover .seat-inner { opacity: 0.85; } }
 
 body.hide-dead .seat.dead { display: none; }
+/* Dead players must still be reachable to cast a vote, so reveal them during
+   an active vote round even if "hide dead players" is on; they go back to
+   hidden as soon as vote mode ends. */
+body.hide-dead #circle-inner.nom-votes-mode .seat.dead { display: block; }
 
 .seat.suspicious .seat-inner { box-shadow: 0 0 0 3px #9b4dca, 0 2px 12px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08); }
 .seat.dead.suspicious .seat-inner { box-shadow: 0 0 0 3px #9b4dca, 0 2px 8px rgba(0,0,0,0.4); }
@@ -1632,6 +1636,8 @@ botc-combo .combo-text { border-radius: 0; border: 0; }
 .combo-text { width: 100%; min-width: 60px; height: 100%; background: none; border: none; -webkit-appearance: none; appearance: none; box-shadow: none; outline: none; color: var(--text-primary); font-family: var(--font-sans); font-size: 14px; padding: 8px 8px; }
 .combo-text::placeholder { color: var(--text-muted); }
 .combo-text:focus { border-radius: 0; box-shadow: none; }
+/* Non-writable combo: behaves like a plain <select>, no text caret/typing. */
+.combo-select-mode .combo-text { cursor: pointer; caret-color: transparent; }
 .combo-toggle { background: none; border: none; border-left: 0.5px solid var(--border); cursor: pointer; color: var(--text-muted); font-size: 16px; min-width: 40px; padding: 0 12px; line-height: 1; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: color 0.12s, background 0.12s; -webkit-tap-highlight-color: transparent; }
 @media (hover: hover) and (pointer: fine) { .combo-toggle:hover { color: var(--gold); } }
 .combo-info { background: none; border: none; border-left: 0.5px solid var(--border); cursor: pointer; color: var(--text-muted); min-width: 36px; padding: 0 9px; line-height: 1; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: color 0.12s, background 0.12s; -webkit-tap-highlight-color: transparent; }

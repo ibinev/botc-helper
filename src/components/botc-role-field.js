@@ -13,6 +13,7 @@ import './botc-combo.js';
  *   hint        {String}  – optional dim text shown after the label (e.g. "(optional)")
  *   script      {String}  – current script id passed to botc-combo
  *   placeholder {String}  – combo placeholder
+ *   writable    {Boolean} – forwarded to botc-combo (default: true)
  *
  * Public API:
  *   getValue()       → current role name string
@@ -27,6 +28,7 @@ export class BotcRoleField extends LitElement {
     hint:        { type: String },
     script:        { type: String },
     placeholder:   { type: String },
+    writable:      { type: Boolean },
     _infoOpen:     { state: true },
     _currentValue: { state: true },
   };
@@ -39,6 +41,7 @@ export class BotcRoleField extends LitElement {
     this.hint        = '';
     this.script      = 'tb';
     this.placeholder = 'Search…';
+    this.writable    = true;
     this._infoOpen   = false;
     this._currentValue = '';
     this._roleByName = new Map(getAllRoles().map(r => [r.name, r]));
@@ -97,6 +100,7 @@ export class BotcRoleField extends LitElement {
         <botc-combo
           .script="${this.script}"
           .infoButton="${!!this._currentValue}"
+          .writable="${this.writable}"
           placeholder="${this.placeholder}"
           @combo-change="${this._onComboChange}"
           @combo-info-click="${this._toggleInfo}"

@@ -68,6 +68,7 @@ export class BotcKilledByPopup extends LitElement {
             <botc-role-field
               id="killedby-role-field"
               .script="${this.script}"
+              .writable=${false}
               label=""
               hint="(optional)"
               placeholder="e.g. Virgin, Imp…"

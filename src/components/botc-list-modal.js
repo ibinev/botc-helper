@@ -176,7 +176,8 @@ export class BotcListModal extends LitElement {
     const sortedKeys = Object.keys(groups).sort((a, b) => {
       const ga = groups[a], gb = groups[b];
       if (ga.round !== gb.round) return ga.round - gb.round;
-      return ga.phase === 'day' ? -1 : 1;
+      // Same round: Night comes before Day (cycle order is Night N, Day N).
+      return ga.phase === 'night' ? -1 : 1;
     });
     return sortedKeys.map(label => html`
       <div class="death-group">

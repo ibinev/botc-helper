@@ -325,7 +325,7 @@ export class BotcCircle extends LitElement {
     const isNomMode = !!this.nomMode;
     return html`
       <div id="circle-stage">
-        <div id="circle-inner" class="${isNomMode ? 'nom-mode' : ''} ${this.moveMode ? 'move-mode' : ''} ${this.removeMode ? 'remove-mode' : ''} ${this.storyView ? 'story-view' : ''}">
+        <div id="circle-inner" class="${isNomMode ? 'nom-mode' : ''} ${this.nomMode === 'votes' ? 'nom-votes-mode' : ''} ${this.moveMode ? 'move-mode' : ''} ${this.removeMode ? 'remove-mode' : ''} ${this.storyView ? 'story-view' : ''}">
           ${this.showGameEnd ? html`
             <div class="game-end-banner-wrap">
               <div class="game-end-banner ${this.winningAlignment === 'evil' ? 'evil' : 'good'}">

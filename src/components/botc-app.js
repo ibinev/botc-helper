@@ -788,13 +788,28 @@ export class BotcApp extends LitElement {
     this.poisonSnapshots = app.poisonSnapshots && typeof app.poisonSnapshots === 'object' ? app.poisonSnapshots : {};
     this.gameNotes = app.gameNotes && typeof app.gameNotes === 'object' ? app.gameNotes : {};
     // Merge only: add any custom script the backup used that we don't already
-    // have locally. Never drop/replace scripts already saved on this device.
+    // have locally (matched by id OR by name — a script with the same name
+    // already saved here is treated as the same script, even if its id
+    // differs, so we never end up with visible duplicates). Never drop/
+    // replace scripts already saved on this device.
     const importedScripts = Array.isArray(app.customScripts) ? app.customScripts : [];
     const existingIds = new Set(this.customScripts.map(s => s.id));
-    const newScripts = importedScripts.filter(s => s && s.id && !existingIds.has(s.id));
+    const existingByName = new Map(this.customScripts.map(s => [String(s.label || '').trim().toLowerCase(), s]));
+    const newScripts = [];
+    let resolvedScriptId = app.script;
+    importedScripts.forEach(s => {
+      if (!s || !s.id || existingIds.has(s.id)) return;
+      const nameKey = String(s.label || '').trim().toLowerCase();
+      const existing = nameKey && existingByName.get(nameKey);
+      if (existing) {
+        if (app.script === s.id) resolvedScriptId = existing.id;
+        return;
+      }
+      newScripts.push(s);
+    });
     if (newScripts.length) this.customScripts = [...this.customScripts, ...newScripts];
     setCustomScripts(this.customScripts);
-    this.script = normalizeScript(app.script || 'tb');
+    this.script = normalizeScript(resolvedScriptId || 'tb');
     this.playerPool = Array.isArray(app.playerPool) ? app.playerPool : [];
 
     this.deathsCollapsed = !!app.deathsCollapsed;

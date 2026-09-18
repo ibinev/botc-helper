@@ -8,8 +8,10 @@ import { esc } from '../utils.js';
  * A combobox with role dropdown appended to <body> to escape modal overflow.
  *
  * Properties:
- *   value       {String} – current committed role name
- *   placeholder {String} – input placeholder text
+ *   value       {String}  – current committed role name
+ *   placeholder {String}  – input placeholder text
+ *   writable    {Boolean} – if false, acts like a plain <select>: no typing/filtering,
+ *                           click/focus just opens the full option list (default: true)
  *
  * Fires:
  *   combo-change – CustomEvent({ detail: { value } }) when a role is selected or cleared
@@ -20,6 +22,12 @@ export class BotcCombo extends LitElement {
     placeholder: { type: String },
     script:      { type: String },
     infoButton:  { type: Boolean, attribute: 'info-button' },
+    // Explicit converter so `writable="false"` disables it — the default Boolean
+    // converter would treat any present attribute value (incl. "false") as true.
+    writable:    { type: Boolean, converter: {
+      fromAttribute: v => v === null ? true : v !== 'false',
+      toAttribute:   v => v ? null : 'false',
+    } },
   };
 
   // Disable shadow DOM so global style.css applies
@@ -31,6 +39,7 @@ export class BotcCombo extends LitElement {
     this.placeholder = 'Search…';
     this.script      = 'tb';
     this.infoButton  = false;
+    this.writable    = true;
     this._dropdown   = null;
     this._currentVal = '';
     this._isOpen     = false;
@@ -288,6 +297,9 @@ export class BotcCombo extends LitElement {
     });
 
     input.addEventListener('input', () => {
+      // Non-writable combos are readonly, so this shouldn't normally fire, but
+      // guard anyway (e.g. mobile IMEs can sometimes still emit input events).
+      if (!this.writable) { input.value = this._currentVal; return; }
       this._currentVal = '';
       this._buildDropdown(input.value);
       if (!this._isOpen) {
@@ -325,9 +337,12 @@ export class BotcCombo extends LitElement {
           }
           break;
         case 'Escape':
-          this._currentVal = '';
-          input.value = '';
-          this._updateIcon();
+          // Select-like (non-writable) combos just close, like a native <select>.
+          if (this.writable) {
+            this._currentVal = '';
+            input.value = '';
+            this._updateIcon();
+          }
           this._close();
           break;
       }
@@ -375,7 +390,7 @@ export class BotcCombo extends LitElement {
 
   render() {
     return html`
-      <div class="combo-wrap">
+      <div class="combo-wrap ${this.writable ? '' : 'combo-select-mode'}">
         <div class="combo-input-row">
           <div class="combo-text-wrap">
             <img class="combo-selected-icon" src="" alt="" style="display:none">
@@ -383,6 +398,7 @@ export class BotcCombo extends LitElement {
               placeholder="${this.placeholder}"
               autocomplete="off"
               role="combobox"
+              ?readonly="${!this.writable}"
               aria-expanded="false"
               aria-haspopup="listbox">
           </div>
