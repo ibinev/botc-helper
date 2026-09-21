@@ -146,8 +146,7 @@ botc-app::before, #app::before {
   z-index: 0;
   pointer-events: none;
   background:
-    radial-gradient(ellipse 100% 80% at 50% 50%, rgba(0,0,0,0.12) 0%, rgba(0,0,0,0.24) 100%),
-    linear-gradient(to bottom, rgba(0,0,0,0.14) 0%, rgba(0,0,0,0.06) 40%, rgba(0,0,0,0.18) 100%);
+    radial-gradient(ellipse 100% 80% at 50% 50%, rgba(0,0,0,0.12) 0%, rgba(0,0,0,0.24) 100%);
 }
 body.night-cycle botc-app::before, body.night-cycle #app::before {
   background:
@@ -199,7 +198,7 @@ body.no-bg-fog.night-cycle botc-app::before, body.no-bg-fog.night-cycle #app::be
   gap: 8px;
   padding: 8px 12px;
   padding-top: calc(env(safe-area-inset-top) + 8px);
-  background: rgba(var(--bg-page-rgb), 0.92);
+  background: transparent;
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   border-bottom: 0.5px solid var(--border);

@@ -643,6 +643,13 @@
     "experimental": true
   },
   {
+    "id": "angel",
+    "name": "Angel",
+    "cat": "fabled",
+    "align": "good",
+    "ability": "Something bad might happen to whoever is most responsible for the death of a new player."
+  },
+  {
     "id": "atheist",
     "name": "Atheist",
     "cat": "townsfolk",
@@ -707,6 +714,13 @@
     "experimental": true
   },
   {
+    "id": "buddhist",
+    "name": "Buddhist",
+    "cat": "fabled",
+    "align": "good",
+    "ability": "For the first 2 minutes of each day, veteran players may not talk."
+  },
+  {
     "id": "cacklejack",
     "name": "Cacklejack",
     "cat": "traveler",
@@ -762,6 +776,20 @@
     "ability": "Use the Djinn's special rule. All players know what it is."
   },
   {
+    "id": "doomsayer",
+    "name": "Doomsayer",
+    "cat": "fabled",
+    "align": "good",
+    "ability": "If 4 or more players live, each living player may publicly choose (once per game) that a player of their own alignment dies."
+  },
+  {
+    "id": "duchess",
+    "name": "Duchess",
+    "cat": "fabled",
+    "align": "good",
+    "ability": "Each day, 3 players may choose to visit you. At night*, each visitor learns how many visitors are evil, but 1 gets false info."
+  },
+  {
     "id": "engineer",
     "name": "Engineer",
     "cat": "townsfolk",
@@ -792,6 +820,20 @@
     "align": "good",
     "ability": "On the final day, all dead players regain their vote token.",
     "experimental": true
+  },
+  {
+    "id": "fibbin",
+    "name": "Fibbin",
+    "cat": "fabled",
+    "align": "good",
+    "ability": "Once per game, 1 good player might get incorrect information."
+  },
+  {
+    "id": "fiddler",
+    "name": "Fiddler",
+    "cat": "fabled",
+    "align": "good",
+    "ability": "Once per game, the Demon secretly chooses an opposing player: all players choose which of these 2 players win."
   },
   {
     "id": "fisherman",
@@ -872,6 +914,13 @@
     "align": "good",
     "ability": "If you died today or tonight, the Minion & Demon players may choose new Minion & Demon characters to be.",
     "experimental": true
+  },
+  {
+    "id": "hellslibrarian",
+    "name": "Hell's Librarian",
+    "cat": "fabled",
+    "align": "good",
+    "ability": "Something bad might happen to whoever talks when the Storyteller has asked for silence."
   },
   {
     "id": "heretic",
@@ -1130,12 +1179,26 @@
     "experimental": true
   },
   {
+    "id": "revolutionary",
+    "name": "Revolutionary",
+    "cat": "fabled",
+    "align": "good",
+    "ability": "2 neighboring players are known to be the same alignment. Once per game, 1 of them registers falsely."
+  },
+  {
     "id": "riot",
     "name": "Riot",
     "cat": "demon",
     "align": "evil",
     "ability": "On day 3, Minions become Riot & nominees die but nominate an alive player immediately. This must happen.",
     "experimental": true
+  },
+  {
+    "id": "sentinel",
+    "name": "Sentinel",
+    "cat": "fabled",
+    "align": "good",
+    "ability": "There might be 1 extra or 1 fewer Outsider in play."
   },
   {
     "id": "shugenja",
@@ -1152,6 +1215,13 @@
     "align": "good",
     "ability": "Each Minion gets 3 bluffs.",
     "experimental": true
+  },
+  {
+    "id": "spiritofivory",
+    "name": "Spirit of Ivory",
+    "cat": "fabled",
+    "align": "good",
+    "ability": "There can't be more than 1 extra evil player."
   },
   {
     "id": "steward",
@@ -1184,6 +1254,13 @@
     "align": "good",
     "ability": "Players don't know their character or alignment. They learn them when they die.",
     "experimental": true
+  },
+  {
+    "id": "toymaker",
+    "name": "Toymaker",
+    "cat": "fabled",
+    "align": "good",
+    "ability": "The Demon may choose not to attack & must do this at least once per game. Evil players get normal starting info."
   },
   {
     "id": "ventriloquist",
