@@ -47,6 +47,9 @@ export class BotcCombo extends LitElement {
     // Bound handlers stored so they can be removed
     this._onDocClick  = this._onDocClick.bind(this);
     this._onOtherDropdownOpen = this._onOtherDropdownOpen.bind(this);
+    // Re-align the floated dropdown while the viewport shifts (e.g. iOS keyboard
+    // animating open/closed) so it doesn't end up pinned to a stale position.
+    this._onVVChange = () => { if (this._isOpen) this._positionDropdown(); };
   }
 
   connectedCallback() {
@@ -58,6 +61,8 @@ export class BotcCombo extends LitElement {
     document.body.appendChild(this._dropdown);
     document.addEventListener('click', this._onDocClick);
     window.addEventListener('botc-dropdown-open', this._onOtherDropdownOpen);
+    window.visualViewport?.addEventListener('resize', this._onVVChange);
+    window.visualViewport?.addEventListener('scroll', this._onVVChange);
   }
 
   disconnectedCallback() {
@@ -66,6 +71,8 @@ export class BotcCombo extends LitElement {
     this._dropdown = null;
     document.removeEventListener('click', this._onDocClick);
     window.removeEventListener('botc-dropdown-open', this._onOtherDropdownOpen);
+    window.visualViewport?.removeEventListener('resize', this._onVVChange);
+    window.visualViewport?.removeEventListener('scroll', this._onVVChange);
   }
 
   // Closes this combo when any other dropdown/popup in the app announces it just opened,

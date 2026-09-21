@@ -176,16 +176,30 @@ export class BotcApp extends LitElement {
 
   _bindVisualViewport() {
     this._vv = window.visualViewport || null;
-    this._onViewportChange = () => this._updateKeyboardInset();
     // Readonly/select-mode fields (e.g. the "Role claimed"/"True role" combo
-    // boxes) never actually raise the iOS keyboard, so ignore focus changes
-    // on them — otherwise the visualViewport reads a transient mid-animation
-    // size and leaves a small bogus --keyboard-inset stuck applied. For real
-    // inputs, defer the read a tick so the viewport has settled first.
-    this._onFocusChange = (e) => {
-      const t = e.target;
-      if (t && 'readOnly' in t && t.readOnly) return;
+    // boxes) never actually raise the iOS keyboard. Force the inset to 0 the
+    // instant one of them is focused (rather than merely skipping the update)
+    // and keep forcing it on every subsequent viewport resize/scroll tick —
+    // otherwise, while the real keyboard from a previously-focused field is
+    // still animating closed, each transient mid-animation viewport reading
+    // gets applied and leaves a small bogus --keyboard-inset stuck/flickering.
+    const readonlyActive = () => {
+      const t = document.activeElement;
+      return !!(t && 'readOnly' in t && t.readOnly);
+    };
+    this._onViewportChange = () => {
+      if (readonlyActive()) {
+        document.documentElement.style.setProperty('--keyboard-inset', '0px');
+        return;
+      }
+      this._updateKeyboardInset();
+    };
+    this._onFocusChange = () => {
       clearTimeout(this._focusInsetTimer);
+      if (readonlyActive()) {
+        document.documentElement.style.setProperty('--keyboard-inset', '0px');
+        return;
+      }
       this._focusInsetTimer = setTimeout(() => this._updateKeyboardInset(), 60);
     };
 
