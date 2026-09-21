@@ -86,6 +86,10 @@ export class BotcEditModal extends LitElement {
       document.removeEventListener('pointerdown', this._onDocClick);
       this._onDocClick = null;
     }
+    if (this._onGlobalDropdownOpen) {
+      window.removeEventListener('botc-dropdown-open', this._onGlobalDropdownOpen);
+      this._onGlobalDropdownOpen = null;
+    }
   }
 
   _populateForm(s) {
@@ -180,6 +184,7 @@ export class BotcEditModal extends LitElement {
     if (wasRelease && !this._poolLpFired) {
       this._poolManageOpen = false;
       this._poolOpen = !this._poolOpen;
+      if (this._poolOpen) this._announceDropdownOpen('pool');
     }
     this._poolLpFired = false;
   }
@@ -267,6 +272,12 @@ export class BotcEditModal extends LitElement {
     this._alignOpen = false;
   }
 
+  // Broadcast so any other open dropdown (combo, pool, alignment) closes itself —
+  // keeps only one select-style popup open across the whole modal at a time.
+  _announceDropdownOpen(source) {
+    window.dispatchEvent(new CustomEvent('botc-dropdown-open', { detail: { source } }));
+  }
+
   // Swipe-down to close
   firstUpdated() {
     const overlay = this.querySelector('#modal-edit');
@@ -281,20 +292,31 @@ export class BotcEditModal extends LitElement {
       const nameControl = this.querySelector('.player-name-control');
       const poolFloat = this.querySelector('.pool-float');
       const alignWrap = this.querySelector('.align-combo-wrap');
-      if (
-        (nameControl && nameControl.contains(e.target)) ||
-        (poolFloat && poolFloat.contains(e.target)) ||
-        (alignWrap && alignWrap.contains(e.target))
-      ) return;
-      if (this._poolOpen || this._poolManageOpen) {
+      const inPool  = (nameControl && nameControl.contains(e.target)) || (poolFloat && poolFloat.contains(e.target));
+      const inAlign = alignWrap && alignWrap.contains(e.target);
+      if ((this._poolOpen || this._poolManageOpen) && !inPool) {
         this._poolOpen = false;
         this._poolManageOpen = false;
         this._poolManageAdding = false;
         this._poolManageName = '';
       }
-      if (this._alignOpen) this._alignOpen = false;
+      if (this._alignOpen && !inAlign) this._alignOpen = false;
     };
     document.addEventListener('pointerdown', this._onDocClick);
+
+    // A combo (Role claimed / True role) opened elsewhere — close our own
+    // pool/alignment popups so only one select-style popup stays open.
+    this._onGlobalDropdownOpen = (e) => {
+      const source = e.detail?.source;
+      if (this._alignOpen && source !== 'align') this._alignOpen = false;
+      if ((this._poolOpen || this._poolManageOpen) && source !== 'pool') {
+        this._poolOpen = false;
+        this._poolManageOpen = false;
+        this._poolManageAdding = false;
+        this._poolManageName = '';
+      }
+    };
+    window.addEventListener('botc-dropdown-open', this._onGlobalDropdownOpen);
 
     let ty0 = 0, dragging = false, startedNearTop = false;
 
@@ -349,12 +371,12 @@ export class BotcEditModal extends LitElement {
             <div class="field-grid">
               <div class="field">
                 <label class="name-label">Player name</label>
-                ${this._poolOpen && this.playerPool?.length ? html`
+                ${this._poolOpen ? html`
                   <div class="pool-float">
-                    ${this.playerPool.map(n => html`
+                    ${this.playerPool?.length ? this.playerPool.map(n => html`
                       <button class="pool-float-item" type="button"
                         @click="${e => { e.stopPropagation(); this._pickPoolName(n); }}">${n}</button>
-                    `)}
+                    `) : html`<div class="pool-float-empty">All pool names are already assigned</div>`}
                   </div>
                 ` : nothing}
                 ${this._poolManageOpen ? html`
@@ -389,12 +411,10 @@ export class BotcEditModal extends LitElement {
                     @focus="${() => { this._poolOpen = false; this._poolManageOpen = false; }}">
                   ${this.fullPool?.length ? html`
                     <button class="pool-toggle-btn" type="button" aria-label="Open player names"
-                      @mousedown="${e => { e.preventDefault(); this._startLongPress(); }}"
-                      @touchstart="${e => { e.preventDefault(); this._startLongPress(); }}"
-                      @mouseup="${() => this._endLongPress(true)}"
-                      @touchend="${e => { e.stopPropagation(); this._endLongPress(true); }}"
-                      @mouseleave="${() => this._endLongPress(false)}"
-                      @touchcancel="${() => this._endLongPress(false)}">▾</button>
+                      @pointerdown="${e => { if (e.cancelable) e.preventDefault(); this._startLongPress(); }}"
+                      @pointerup="${e => { e.stopPropagation(); this._endLongPress(true); }}"
+                      @pointerleave="${() => this._endLongPress(false)}"
+                      @pointercancel="${() => this._endLongPress(false)}">▾</button>
                   ` : nothing}
                 </div>
               </div>
@@ -406,7 +426,11 @@ export class BotcEditModal extends LitElement {
                     class="align-combo-btn ${this._alignOpen ? 'open' : ''}"
                     aria-haspopup="listbox"
                     aria-expanded="${this._alignOpen ? 'true' : 'false'}"
-                    @click="${() => { this._alignOpen = !this._alignOpen; }}"
+                    @click="${() => {
+                      const opening = !this._alignOpen;
+                      this._alignOpen = opening;
+                      if (opening) this._announceDropdownOpen('align');
+                    }}"
                   >
                     <span class="align-combo-text">${this._alignmentLabel(this._alignmentValue)}</span>
                     <span class="align-combo-chevron" aria-hidden="true">▾</span>

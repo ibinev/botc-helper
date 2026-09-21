@@ -46,6 +46,7 @@ export class BotcCombo extends LitElement {
     this._activeIdx  = -1;
     // Bound handlers stored so they can be removed
     this._onDocClick  = this._onDocClick.bind(this);
+    this._onOtherDropdownOpen = this._onOtherDropdownOpen.bind(this);
   }
 
   connectedCallback() {
@@ -56,6 +57,7 @@ export class BotcCombo extends LitElement {
     this._dropdown.setAttribute('role', 'listbox');
     document.body.appendChild(this._dropdown);
     document.addEventListener('click', this._onDocClick);
+    window.addEventListener('botc-dropdown-open', this._onOtherDropdownOpen);
   }
 
   disconnectedCallback() {
@@ -63,6 +65,13 @@ export class BotcCombo extends LitElement {
     this._dropdown?.remove();
     this._dropdown = null;
     document.removeEventListener('click', this._onDocClick);
+    window.removeEventListener('botc-dropdown-open', this._onOtherDropdownOpen);
+  }
+
+  // Closes this combo when any other dropdown/popup in the app announces it just opened,
+  // so only one select-style popup is ever open at a time (combo, pool, alignment, etc.).
+  _onOtherDropdownOpen(e) {
+    if (this._isOpen && e.detail?.source !== this) this._close();
   }
 
   updated(changed) {
@@ -178,6 +187,11 @@ export class BotcCombo extends LitElement {
         let optTouchY = 0;
         opt.addEventListener('touchstart', e => { optTouchY = e.touches[0].clientY; }, { passive: true });
         opt.addEventListener('touchend', e => {
+          // Selecting closes the dropdown synchronously; without suppressing
+          // the touch's compatibility click, the browser dispatches it after
+          // the option is gone, hitting (and "clicking through" to) whatever
+          // is now underneath — e.g. re-opening another select below it.
+          if (e.cancelable) e.preventDefault();
           if (Math.abs(e.changedTouches[0].clientY - optTouchY) > 8) return;
           this._selectRole(role.name);
         });
@@ -223,6 +237,7 @@ export class BotcCombo extends LitElement {
     this._input()?.setAttribute('aria-expanded', 'true');
     this._isOpen = true;
     this._positionDropdown();
+    window.dispatchEvent(new CustomEvent('botc-dropdown-open', { detail: { source: this } }));
   }
 
   _close() {
@@ -278,16 +293,18 @@ export class BotcCombo extends LitElement {
     // ── Toggle button ────────────────────────────────────────────────
     if (toggleBtn) {
       let togTouchMoved = false;
+      // preventDefault stops the button from stealing/losing focus; the input is
+      // focused explicitly below (when opening) so the focus ring/keyboard nav still work.
       toggleBtn.addEventListener('mousedown', e => e.preventDefault());
       toggleBtn.addEventListener('click', () => {
-        if (this._isOpen) { this._close(); } else { this._open(''); }
+        if (this._isOpen) { this._close(); } else { this._open(''); input.focus(); }
       });
       toggleBtn.addEventListener('touchstart', () => { togTouchMoved = false; }, { passive: true });
       toggleBtn.addEventListener('touchmove',  () => { togTouchMoved = true;  }, { passive: true });
       toggleBtn.addEventListener('touchend', e => {
         if (togTouchMoved) return;
         e.preventDefault();
-        if (this._isOpen) { this._close(); } else { this._open(''); }
+        if (this._isOpen) { this._close(); } else { this._open(''); input.focus(); }
       });
     }
 
@@ -301,13 +318,12 @@ export class BotcCombo extends LitElement {
       // guard anyway (e.g. mobile IMEs can sometimes still emit input events).
       if (!this.writable) { input.value = this._currentVal; return; }
       this._currentVal = '';
-      this._buildDropdown(input.value);
       if (!this._isOpen) {
-        this._dropdown?.classList.add('open');
-        input.setAttribute('aria-expanded', 'true');
-        this._isOpen = true;
+        this._open(input.value);
+      } else {
+        this._buildDropdown(input.value);
+        this._positionDropdown();
       }
-      this._positionDropdown();
       this._updateClearBtn();
     });
 

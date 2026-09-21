@@ -146,7 +146,8 @@ botc-app::before, #app::before {
   z-index: 0;
   pointer-events: none;
   background:
-    radial-gradient(ellipse 100% 80% at 50% 50%, rgba(0,0,0,0.12) 0%, rgba(0,0,0,0.24) 100%);
+    radial-gradient(ellipse 100% 80% at 50% 50%, rgba(0,0,0,0.12) 0%, rgba(0,0,0,0.24) 100%),
+    linear-gradient(to bottom, rgba(0,0,0,0.14) 0%, rgba(0,0,0,0.06) 40%, rgba(0,0,0,0.18) 100%);
 }
 body.night-cycle botc-app::before, body.night-cycle #app::before {
   background:
@@ -198,9 +199,7 @@ body.no-bg-fog.night-cycle botc-app::before, body.no-bg-fog.night-cycle #app::be
   gap: 8px;
   padding: 8px 12px;
   padding-top: calc(env(safe-area-inset-top) + 8px);
-  background: transparent;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: var(--bg-page);
   border-bottom: 0.5px solid var(--border);
   flex-wrap: wrap;
   z-index: 10;
@@ -576,6 +575,11 @@ body.hide-role .pli-role        { display: none; }
 @media (max-width: 479px) {
   .modal-sheet { max-height: min(96dvh, calc(100dvh - var(--keyboard-inset) - 6px)); max-width: 100%; width: 100%; border-radius: 18px 18px 0 0; }
 }
+
+/* Seat edit modal always opens as a centered dialog, not a bottom sheet
+   (higher-specificity #id overrides the width-based bottom-sheet rules above). */
+#modal-edit { align-items: center; padding-left: 16px; padding-right: 16px; }
+#modal-edit .modal-sheet { border-radius: 20px; margin-bottom: 0; }
 
 /* ── Edit form ─────────────────────────────────────── */
 .field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
@@ -1492,7 +1496,7 @@ body.hide-role .pli-role        { display: none; }
 .settings-script-slot-role {
   width: 100%;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: flex-start;
   gap: 8px;
   border: 0.5px solid var(--border);
@@ -1509,6 +1513,27 @@ body.hide-role .pli-role        { display: none; }
   height: 30px;
   object-fit: contain;
   flex-shrink: 0;
+  margin-top: 1px;
+}
+.settings-script-slot-role-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.settings-script-slot-role-name-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.settings-script-slot-role-name {
+  font-weight: 600;
+}
+.settings-script-slot-role-ability {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.35;
 }
 .settings-script-slot-role.is-active {
   border-color: var(--gold);
@@ -1664,6 +1689,7 @@ body.hide-role .pli-role        { display: none; }
 .pool-float-item { display: block; width: 100%; padding: 9px 12px; background: none; border: none; border-bottom: 0.5px solid var(--border); text-align: left; font-family: var(--font-sans); font-size: 14px; color: var(--text-primary); cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .pool-float-item:last-child { border-bottom: none; }
 .pool-float-item:active { background: rgba(201,151,58,0.1); color: var(--gold-light); }
+.pool-float-empty { padding: 9px 12px; font-size: 13px; color: var(--text-muted); font-style: italic; }
 /* ── List modal pool ──────────────────────────────────── */
 .pool-list { padding: 4px 0 max(16px, env(safe-area-inset-bottom)); overflow-y: auto; flex: 1; }
 .pool-row { display: flex; align-items: center; gap: 8px; padding: 7px 16px; border-bottom: 0.5px solid var(--border); }
@@ -1720,11 +1746,13 @@ botc-combo { display: block; border-radius: var(--radius-sm); }
 .combo-text-wrap { flex: 1; min-width: 0; background: transparent; border-radius: var(--radius-sm) 0 0 var(--radius-sm); overflow: hidden; display: flex; align-items: center; }
 .combo-selected-icon { width: 22px; height: 22px; object-fit: contain; flex-shrink: 0; margin-left: 6px; }
 botc-combo .combo-text { border-radius: 0; border: 0; }
-.combo-text { width: 100%; min-width: 60px; height: 100%; background: none; border: none; -webkit-appearance: none; appearance: none; box-shadow: none; outline: none; color: var(--text-primary); font-family: var(--font-sans); font-size: 14px; padding: 8px 8px; }
+.combo-text { width: 100%; min-width: 60px; height: 100%; background: none; border: none; -webkit-appearance: none; appearance: none; box-shadow: none; outline: none; color: var(--text-primary); font-family: var(--font-sans); font-size: 14px; padding: 8px 8px; -webkit-tap-highlight-color: transparent; }
 .combo-text::placeholder { color: var(--text-muted); }
 .combo-text:focus { border-radius: 0; box-shadow: none; }
-/* Non-writable combo: behaves like a plain <select>, no text caret/typing. */
-.combo-select-mode .combo-text { cursor: pointer; caret-color: transparent; }
+/* Non-writable combo: behaves like a plain <select>, no text caret/typing.
+   user-select/touch-callout disabled so double-tapping it on iOS doesn't
+   trigger the text-selection callout (which offers an "AutoFill" option). */
+.combo-select-mode .combo-text { cursor: pointer; caret-color: transparent; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
 .combo-toggle { background: none; border: none; border-left: 0.5px solid var(--border); cursor: pointer; color: var(--text-muted); font-size: 16px; min-width: 40px; padding: 0 12px; line-height: 1; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: color var(--duration-fast) var(--ease-standard), background var(--duration-fast) var(--ease-standard); -webkit-tap-highlight-color: transparent; }
 @media (hover: hover) and (pointer: fine) { .combo-toggle:hover { color: var(--gold); } }
 .combo-info { background: none; border: none; border-left: 0.5px solid var(--border); cursor: pointer; color: var(--text-muted); min-width: 36px; padding: 0 9px; line-height: 1; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: color var(--duration-fast) var(--ease-standard), background var(--duration-fast) var(--ease-standard); -webkit-tap-highlight-color: transparent; }

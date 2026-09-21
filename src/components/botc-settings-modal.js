@@ -832,8 +832,13 @@ export class BotcSettingsModal extends LitElement {
                                     this._closeSlotPicker();
                                   }}">
                                   ${ROLE_ICONS[role.name] ? html`<img class="settings-script-slot-role-icon" src="${ROLE_ICONS[role.name]}" alt="" loading="lazy" decoding="async">` : nothing}
-                                  <span>${role.name}</span>
-                                  ${isExperimentalRole(role.name) ? html`<span class="settings-script-role-exp" title="Experimental role" aria-label="Experimental role">E</span>` : nothing}
+                                  <span class="settings-script-slot-role-info">
+                                    <span class="settings-script-slot-role-name-row">
+                                      <span class="settings-script-slot-role-name">${role.name}</span>
+                                      ${isExperimentalRole(role.name) ? html`<span class="settings-script-role-exp" title="Experimental role" aria-label="Experimental role">E</span>` : nothing}
+                                    </span>
+                                    ${role.ability ? html`<span class="settings-script-slot-role-ability">${role.ability}</span>` : nothing}
+                                  </span>
                                 </button>
                               `;
                             })}

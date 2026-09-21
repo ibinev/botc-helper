@@ -177,14 +177,25 @@ export class BotcApp extends LitElement {
   _bindVisualViewport() {
     this._vv = window.visualViewport || null;
     this._onViewportChange = () => this._updateKeyboardInset();
+    // Readonly/select-mode fields (e.g. the "Role claimed"/"True role" combo
+    // boxes) never actually raise the iOS keyboard, so ignore focus changes
+    // on them — otherwise the visualViewport reads a transient mid-animation
+    // size and leaves a small bogus --keyboard-inset stuck applied. For real
+    // inputs, defer the read a tick so the viewport has settled first.
+    this._onFocusChange = (e) => {
+      const t = e.target;
+      if (t && 'readOnly' in t && t.readOnly) return;
+      clearTimeout(this._focusInsetTimer);
+      this._focusInsetTimer = setTimeout(() => this._updateKeyboardInset(), 60);
+    };
 
     if (this._vv) {
       this._vv.addEventListener('resize', this._onViewportChange);
       this._vv.addEventListener('scroll', this._onViewportChange);
     }
 
-    window.addEventListener('focusin', this._onViewportChange);
-    window.addEventListener('focusout', this._onViewportChange);
+    window.addEventListener('focusin', this._onFocusChange);
+    window.addEventListener('focusout', this._onFocusChange);
     this._updateKeyboardInset();
   }
 
@@ -193,13 +204,15 @@ export class BotcApp extends LitElement {
       this._vv.removeEventListener('resize', this._onViewportChange);
       this._vv.removeEventListener('scroll', this._onViewportChange);
     }
-    if (this._onViewportChange) {
-      window.removeEventListener('focusin', this._onViewportChange);
-      window.removeEventListener('focusout', this._onViewportChange);
+    if (this._onFocusChange) {
+      window.removeEventListener('focusin', this._onFocusChange);
+      window.removeEventListener('focusout', this._onFocusChange);
     }
+    clearTimeout(this._focusInsetTimer);
     document.documentElement.style.setProperty('--keyboard-inset', '0px');
     this._vv = null;
     this._onViewportChange = null;
+    this._onFocusChange = null;
   }
 
   _updateKeyboardInset() {
@@ -521,6 +534,19 @@ export class BotcApp extends LitElement {
     try {
       localStorage.setItem('botc_player_pool', JSON.stringify(this.playerPool));
     } catch(e) {}
+  }
+
+  /** Shuffle a copy of the player pool and hand names out to seats in random order. */
+  _autoAssignPool() {
+    if (!this.playerPool.length) return;
+    const shuffled = [...this.playerPool];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    this.seats = this.seats.map((s, i) => i < shuffled.length ? { ...s, name: shuffled[i] } : s);
+    this._saveState();
+    this.requestUpdate();
   }
 
   async _exportScriptBackup(scriptData) {
@@ -1558,6 +1584,8 @@ export class BotcApp extends LitElement {
             <div class="pool-manage-header">
               <span class="pool-manage-title">👥 Player pool</span>
               <div class="pool-manage-actions">
+                <button class="btn-sm" ?disabled="${!this.playerPool.length}"
+                  @click="${() => { this._autoAssignPool(); this.requestUpdate(); }}">🎲 Randomize</button>
                 <button class="btn-sm" ?disabled="${!this.playerPool.length}"
                   @click="${() => {
                     const ok = window.confirm('Clear all saved player pool names? This cannot be undone.');
