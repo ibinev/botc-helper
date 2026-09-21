@@ -144,14 +144,27 @@ export class BotcApp extends LitElement {
     });
     this._loadAll();
     this._bindVisualViewport();
+    this._updateAppHeight();
+    // iOS standalone PWA quirk: window.innerHeight is sometimes measured stale/short
+    // right after launch and only self-corrects once the OS recomputes it (normally
+    // triggered by the user's first touch) — re-measure proactively a few times so
+    // the app shell settles at the right size without needing an interaction first.
+    [100, 300, 800].forEach(ms => setTimeout(() => this._updateAppHeight(), ms));
     window.addEventListener('resize', this._onResize = () => {
+      this._updateAppHeight();
       clearTimeout(this._resizeTimer);
       this._resizeTimer = setTimeout(() => this.requestUpdate(), 60);
     });
+    window.addEventListener('pageshow', this._onPageShow = () => this._updateAppHeight());
     document.addEventListener('visibilitychange', this._onVisibilityChange = () => {
       if (document.visibilityState === 'hidden') this._flushPersistence();
+      else this._updateAppHeight();
     });
     window.addEventListener('pagehide', this._onPageHide = () => this._flushPersistence());
+  }
+
+  _updateAppHeight() {
+    document.documentElement.style.setProperty('--app-vh', `${window.innerHeight}px`);
   }
 
   // Topbar height can vary (icon row wraps on narrow phones) — track it in a
@@ -169,6 +182,7 @@ export class BotcApp extends LitElement {
   disconnectedCallback() {
     super.disconnectedCallback();
     window.removeEventListener('resize', this._onResize);
+    window.removeEventListener('pageshow', this._onPageShow);
     document.removeEventListener('visibilitychange', this._onVisibilityChange);
     window.removeEventListener('pagehide', this._onPageHide);
     this._unbindVisualViewport();

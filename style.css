@@ -129,6 +129,11 @@ botc-app, #app {
   min-height: -webkit-fill-available;
   min-height: 100svh;
   min-height: 100dvh;
+  /* iOS standalone PWA quirk: dvh/inset:0 sizing can be measured stale/short right
+     after launch until the first touch, then jump ("sink") to the corrected size.
+     --app-vh is a JS-measured px value (see botc-app.js) that overrides this once
+     available, avoiding the mid-session jump; falls back to 100dvh before that. */
+  height: var(--app-vh, 100dvh);
   display: flex;
   flex-direction: column;
   background-image: url('assets/background.png');
