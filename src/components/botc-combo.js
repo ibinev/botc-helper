@@ -304,14 +304,14 @@ export class BotcCombo extends LitElement {
       // focused explicitly below (when opening) so the focus ring/keyboard nav still work.
       toggleBtn.addEventListener('mousedown', e => e.preventDefault());
       toggleBtn.addEventListener('click', () => {
-        if (this._isOpen) { this._close(); } else { this._open(''); input.focus(); }
+        if (this._isOpen) { this._close(); } else { this._open(''); input.focus({ preventScroll: true }); }
       });
       toggleBtn.addEventListener('touchstart', () => { togTouchMoved = false; }, { passive: true });
       toggleBtn.addEventListener('touchmove',  () => { togTouchMoved = true;  }, { passive: true });
       toggleBtn.addEventListener('touchend', e => {
         if (togTouchMoved) return;
         e.preventDefault();
-        if (this._isOpen) { this._close(); } else { this._open(''); input.focus(); }
+        if (this._isOpen) { this._close(); } else { this._open(''); input.focus({ preventScroll: true }); }
       });
     }
 
