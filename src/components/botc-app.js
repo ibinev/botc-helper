@@ -620,7 +620,7 @@ export class BotcApp extends LitElement {
 
       // Extract _meta entry
       const meta = arr.find(e => typeof e === 'object' && e !== null && e.id === '_meta');
-      const label = meta?.name || meta?.label || 'Imported Script';
+      const label = String(meta?.name || meta?.label || 'Imported Script').trim();
       const author = meta?.author || '';
 
       // Build id→name map
@@ -639,6 +639,22 @@ export class BotcApp extends LitElement {
       });
 
       if (!roles.length) throw new Error('No recognised roles found in script file.');
+
+      // Dedupe by exact name (trimmed, case-insensitive) against BOTH locally-saved
+      // custom scripts AND built-in/bundled scripts — an id-based check alone missed
+      // re-importing a script that already exists under a different id (e.g. a
+      // built-in script's JSON re-imported creates a "custom-" duplicate of it).
+      const norm = str => String(str || '').trim().toLowerCase();
+      const existingCustom   = this.customScripts.find(c => norm(c.label) === norm(label));
+      const existingBuiltIn  = getScriptOptions().find(o => norm(o.label) === norm(label));
+      const existing = existingCustom || existingBuiltIn;
+      if (existing) {
+        this.script = existing.id;
+        this._saveScript();
+        this.requestUpdate();
+        window.alert(`"${label}" already exists — switched to it instead of importing a duplicate.`);
+        return;
+      }
 
       const base = label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/, '') || 'custom-script';
       let id = 'custom-' + base;

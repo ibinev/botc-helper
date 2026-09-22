@@ -1,6 +1,6 @@
 import { LitElement, html, nothing } from 'lit';
 import { parseBackupXml, phaseRoundToStep, stepToPhaseRound } from '../utils.js';
-import { getScriptMeta, ROLE_ICONS, getAllRoles } from '../data.js';
+import { getScriptMeta, ROLE_ICONS, getAllRoles, loadBundledScripts } from '../data.js';
 
 const CACHE_KEY  = 'botc_stats_cache';
 const NAME_KEY   = 'botc_stats_myname';
@@ -116,7 +116,6 @@ export class BotcStatsModal extends LitElement {
     const endedStep = app.gameEndInfo?.endedStep ?? phaseRoundToStep(app.phase, app.round);
     const { round } = stepToPhaseRound(endedStep);
     const seats = Array.isArray(app.seats) ? app.seats : [];
-    const killers = seats.filter(s => s.dead && s.killedBy).map(s => String(s.killedBy).trim()).filter(Boolean);
     const { totalNoms, totalExecs } = this._countNomsAndExecs(app);
     const scriptId = app.script || 'tb';
     const customLabel = (app.customScripts || []).find(s => s.id === scriptId)?.label;
@@ -135,7 +134,6 @@ export class BotcStatsModal extends LitElement {
     return {
       winner:      app.gameEndInfo.alignment === 'evil' ? 'evil' : 'good',
       lengthDays:  round,
-      killers,
       demons,
       minions,
       bluffs,
@@ -146,7 +144,7 @@ export class BotcStatsModal extends LitElement {
     };
   }
 
-  _aggregate(games, skipped, totalFiles) {
+  _aggregate(games, skippedUnfinished, skippedInvalid, totalFiles) {
     const gamesCount = games.length;
     const goodWins = games.filter(g => g.winner === 'good').length;
     const evilWins = gamesCount - goodWins;
@@ -159,7 +157,6 @@ export class BotcStatsModal extends LitElement {
       games.forEach(g => getList(g).forEach(v => map.set(v, (map.get(v) || 0) + 1)));
       return [...map.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8);
     };
-    const topKillers = tally(g => g.killers);
     const topDemons  = tally(g => g.demons);
     const topMinions = tally(g => g.minions);
     const topBluffs  = tally(g => g.bluffs);
@@ -174,11 +171,11 @@ export class BotcStatsModal extends LitElement {
 
     return {
       computedAt: new Date().toISOString(),
-      gamesCount, skipped, totalFiles,
+      gamesCount, skippedUnfinished, skippedInvalid, totalFiles,
       goodWins, evilWins,
       avgLengthDays,
       totalNoms, totalExecs,
-      topKillers, topDemons, topMinions, topBluffs, topScripts,
+      topDemons, topMinions, topBluffs, topScripts,
       playerNames,
       games: games.map(g => ({ winner: g.winner, seatNames: g.seatNames })),
     };
@@ -186,11 +183,14 @@ export class BotcStatsModal extends LitElement {
 
   _myWinStats(s, name) {
     if (!name) return null;
-    const needle = name.trim().toLowerCase();
+    // Exact (trimmed, case-sensitive) match — two differently-cased spellings
+    // of a name are treated as different people, matching the playerNames list
+    // (which is also built from exact/untouched name strings).
+    const needle = name.trim();
     if (!needle) return null;
     let played = 0, wins = 0;
     (s.games || []).forEach(g => {
-      const seat = g.seatNames.find(x => x.name.toLowerCase() === needle && x.team);
+      const seat = g.seatNames.find(x => x.name === needle && x.team);
       if (!seat) return;
       played++;
       if (seat.team === g.winner) wins++;
@@ -210,17 +210,28 @@ export class BotcStatsModal extends LitElement {
     this._error = '';
     this.requestUpdate();
 
+    // Ensure bundled scripts (e.g. Pavel's Brewing) are loaded before resolving
+    // labels below — otherwise a game processed before the app's own async load
+    // finished would fall back to the raw script id, splitting one script into
+    // two different "Most Played Script" entries.
+    await loadBundledScripts();
+
     const games = [];
-    let skipped = 0;
+    let skippedUnfinished = 0, skippedInvalid = 0;
     for (const file of files) {
       try {
         const text = await file.text();
         const payload = parseBackupXml(text);
         const app = payload.app || {};
-        if (!app.gameEnded || !app.gameEndInfo?.alignment) { skipped++; continue; }
+        if (!app.gameEnded || !app.gameEndInfo?.alignment) {
+          skippedUnfinished++;
+          console.warn(`[Game Stats] Skipped "${file.name}": game not finished (no end result recorded).`);
+          continue;
+        }
         games.push(this._summarizeGame(app));
-      } catch {
-        skipped++;
+      } catch (e) {
+        skippedInvalid++;
+        console.warn(`[Game Stats] Skipped "${file.name}": ${e?.message || 'failed to parse.'}`);
       }
     }
 
@@ -232,7 +243,7 @@ export class BotcStatsModal extends LitElement {
       return;
     }
 
-    this._summary = this._aggregate(games, skipped, files.length);
+    this._summary = this._aggregate(games, skippedUnfinished, skippedInvalid, files.length);
     this._saveCache();
     this.requestUpdate();
   }
@@ -283,7 +294,7 @@ export class BotcStatsModal extends LitElement {
     const execRate = s.totalNoms ? Math.round((s.totalExecs / s.totalNoms) * 100) : 0;
 
     return html`
-      <p class="stats-meta">Based on ${s.gamesCount} finished game${s.gamesCount === 1 ? '' : 's'}${s.skipped ? ` (${s.skipped} unfinished/invalid file${s.skipped === 1 ? '' : 's'} skipped)` : ''}.</p>
+      <p class="stats-meta">Based on ${s.gamesCount} finished game${s.gamesCount === 1 ? '' : 's'} of ${s.totalFiles} file${s.totalFiles === 1 ? '' : 's'}${(s.skippedUnfinished || s.skippedInvalid) ? ` (${s.skippedUnfinished || 0} unfinished, ${s.skippedInvalid || 0} invalid/unreadable skipped — see console for details)` : ''}.</p>
 
       <div class="stats-card">
         <div class="stats-card-title">Win Rate</div>
@@ -314,7 +325,6 @@ export class BotcStatsModal extends LitElement {
 
       ${this._renderMyWins(s)}
 
-      ${this._renderRankCard('Most Common Killer', s.topKillers, { icons: true })}
       ${this._renderRankCard('Most Common Demon', s.topDemons, { icons: true })}
       ${this._renderRankCard('Most Common Minion', s.topMinions, { icons: true })}
       ${this._renderRankCard('Most Bluffed Roles', s.topBluffs, { icons: true })}
