@@ -128,7 +128,18 @@ export class BotcStatsModal extends LitElement {
     const minions = seats.filter(s => s.trueRole && this._catOf(s.trueRole.trim()) === 'minion').map(s => s.trueRole.trim());
 
     const seatNames = seats
-      .map(s => ({ name: String(s.name || '').trim(), team: s.trueRole ? this._teamOf(s.trueRole.trim()) : null }))
+      .map(s => {
+        // "True role" is usually only recorded when it differs from the claimed
+        // role (bluffs/drunk/evil) — a good, non-deceived player is very often
+        // left blank, so fall back to the claimed role to still resolve a team
+        // (otherwise these seats/games were silently excluded from win stats).
+        const roleForTeam = (s.trueRole && s.trueRole.trim()) || (s.role && s.role.trim()) || '';
+        return {
+          name: String(s.name || '').trim(),
+          team: roleForTeam ? this._teamOf(roleForTeam) : null,
+          role: roleForTeam || null,
+        };
+      })
       .filter(x => x.name);
 
     return {
@@ -162,8 +173,17 @@ export class BotcStatsModal extends LitElement {
     const topBluffs  = tally(g => g.bluffs);
 
     const scriptTally = new Map();
-    games.forEach(g => scriptTally.set(g.scriptLabel, (scriptTally.get(g.scriptLabel) || 0) + 1));
-    const topScripts = [...scriptTally.entries()].sort((a, b) => b[1] - a[1]);
+    // Normalize curly vs straight apostrophes (e.g. "Pavel’s Brewing" vs
+    // "Pavel's Brewing") so the same script imported/typed at different times
+    // doesn't split into two separate tally entries.
+    const normApostrophe = str => String(str || '').replace(/[\u2018\u2019\u02BC\u00B4]/g, "'").trim();
+    games.forEach(g => {
+      const key = normApostrophe(g.scriptLabel);
+      const entry = scriptTally.get(key);
+      if (entry) entry.count++;
+      else scriptTally.set(key, { label: key, count: 1 });
+    });
+    const topScripts = [...scriptTally.values()].sort((a, b) => b.count - a.count).map(v => [v.label, v.count]);
 
     const nameSet = new Set();
     games.forEach(g => g.seatNames.forEach(({ name }) => nameSet.add(name)));
@@ -181,21 +201,32 @@ export class BotcStatsModal extends LitElement {
     };
   }
 
-  _myWinStats(s, name) {
+  _myPersonStats(s, name) {
     if (!name) return null;
     // Exact (trimmed, case-sensitive) match — two differently-cased spellings
     // of a name are treated as different people, matching the playerNames list
     // (which is also built from exact/untouched name strings).
     const needle = name.trim();
     if (!needle) return null;
-    let played = 0, wins = 0;
+    let played = 0, wins = 0, goodCount = 0, evilCount = 0;
+    const roleCounts = new Map();
     (s.games || []).forEach(g => {
       const seat = g.seatNames.find(x => x.name === needle && x.team);
       if (!seat) return;
       played++;
       if (seat.team === g.winner) wins++;
+      if (seat.team === 'good') goodCount++;
+      else if (seat.team === 'evil') evilCount++;
+      if (seat.role) roleCounts.set(seat.role, (roleCounts.get(seat.role) || 0) + 1);
     });
-    return { played, wins, pct: played ? Math.round((wins / played) * 100) : 0 };
+    const roleRank = [...roleCounts.entries()].sort((a, b) => b[1] - a[1]);
+    return {
+      played, wins,
+      pct: played ? Math.round((wins / played) * 100) : 0,
+      goodCount, evilCount,
+      goodPct: played ? Math.round((goodCount / played) * 100) : 0,
+      roleRank,
+    };
   }
 
   async _processFiles(fileList) {
@@ -269,21 +300,39 @@ export class BotcStatsModal extends LitElement {
   _renderMyWins(s) {
     const names = s.playerNames || [];
     if (!names.length) return nothing;
-    const stats = this._myWinStats(s, this._myName);
+    const stats = this._myPersonStats(s, this._myName);
     return html`
       <div class="stats-card">
-        <div class="stats-card-title">My Wins</div>
+        <div class="stats-card-title">My Stats</div>
         <select class="stats-name-select"
           @change="${e => this._setMyName(e.target.value)}">
           <option value="" ?selected="${!this._myName}">Choose your name…</option>
           ${names.map(n => html`<option value="${n}" ?selected="${n === this._myName}">${n}</option>`)}
         </select>
-        ${stats ? (stats.played ? html`
+        ${!stats ? nothing : !stats.played ? html`<p class="stats-status">No games found for that name.</p>` : html`
           <div class="stats-mywins-result">
             <span class="stats-card-value">${stats.wins}/${stats.played}</span>
-            <span class="stats-card-label">games won (${stats.pct}%)</span>
+            <span class="stats-card-label">Result: games won (${stats.pct}%)</span>
           </div>
-        ` : html`<p class="stats-status">No games found for that name.</p>`) : nothing}
+          <div class="stats-mystats-row">
+            <span class="stats-mystats-label">Starting Type</span>
+            <span class="stats-legend-good">🟢 Good ${stats.goodCount}</span>
+            <span class="stats-legend-evil">🔴 Evil ${stats.evilCount}</span>
+            <span class="stats-card-label">(${stats.goodPct}% good)</span>
+          </div>
+          ${stats.roleRank.length ? html`
+            <div class="stats-mystats-label stats-mystats-subtitle">Starting Role</div>
+            <ol class="stats-rank-list">
+              ${stats.roleRank.map(([role, count]) => html`
+                <li>
+                  ${ROLE_ICONS[role] ? html`<img class="stats-rank-icon" src="${ROLE_ICONS[role]}" alt="">` : nothing}
+                  <span class="stats-rank-name">${role}</span>
+                  <span class="stats-rank-count">${count}</span>
+                </li>
+              `)}
+            </ol>
+          ` : nothing}
+        `}
       </div>
     `;
   }
