@@ -1,8 +1,9 @@
 import { LitElement, html, nothing } from 'lit';
 import { ROLES_IMG_URL, normalizeScript, setCustomScripts, getScriptOptions, getAllRoles, getRoles, getScriptRoleLayout, loadBundledScripts } from '../data.js';
-import { blankSeat, MIN, MAX, MAX_STEP, phaseRoundToStep, stepToPhaseRound, playVoteYesSound, playVoteNoSound } from '../utils.js';
+import { blankSeat, MIN, MAX, MAX_STEP, phaseRoundToStep, stepToPhaseRound, playVoteYesSound, playVoteNoSound, parseBackupXml } from '../utils.js';
 import './botc-circle.js';
 import './botc-edit-modal.js';
+import './botc-stats-modal.js';
 import './botc-list-modal.js';
 import './botc-notes-modal.js';
 import './botc-nominations-modal.js';
@@ -58,6 +59,7 @@ export class BotcApp extends LitElement {
     _nomsOpen:         { state: true },
     _settingsOpen:     { state: true },
     _charcountOpen:    { state: true },
+    _statsOpen:        { state: true },
     _pdfOpen:          { state: true },
     _nightorderOpen:   { state: true },
     _referenceOpen:    { state: true },
@@ -116,6 +118,7 @@ export class BotcApp extends LitElement {
     this._nomsOpen         = false;
     this._settingsOpen     = false;
     this._charcountOpen    = false;
+    this._statsOpen        = false;
     this._pdfOpen          = false;
     this._nightorderOpen   = false;
     this._referenceOpen    = false;
@@ -804,18 +807,7 @@ export class BotcApp extends LitElement {
   }
 
   _parseBackupXml(xmlText) {
-    const doc = new DOMParser().parseFromString(xmlText, 'application/xml');
-    if (doc.querySelector('parsererror')) throw new Error('Invalid XML file.');
-
-    const root = doc.querySelector('botc-helper-backup');
-    const dataNode = root?.querySelector('data');
-    if (!root || !dataNode) throw new Error('Unsupported backup format.');
-
-    const payload = JSON.parse(dataNode.textContent || '{}');
-    if (!payload || typeof payload !== 'object' || !payload.app) {
-      throw new Error('Backup file is missing game data.');
-    }
-    return payload;
+    return parseBackupXml(xmlText);
   }
 
   _applyBackupPayload(payload) {
@@ -1528,6 +1520,8 @@ export class BotcApp extends LitElement {
             @click="${() => { this._nomsOpen = true; this.requestUpdate(); }}">⚖️</button>
           <button class="topbar-icon-btn" title="Reference"
             @click="${() => { this._referenceOpen = true; this._referenceTab = 'roles'; this.requestUpdate(); }}">📖</button>
+          <button class="topbar-icon-btn" title="Game Stats"
+            @click="${() => { this._statsOpen = true; this.requestUpdate(); }}">📈</button>
           <button class="topbar-icon-btn" title="Settings"
             @click="${() => { this._settingsOpen = true; this.requestUpdate(); }}">⚙️</button>
         </div>
@@ -1914,6 +1908,15 @@ export class BotcApp extends LitElement {
           this.requestUpdate();
         }}"
       ></botc-charcount-modal>
+
+      <!-- Game stats modal -->
+      <botc-stats-modal
+        .open="${this._statsOpen}"
+        @modal-close="${() => {
+          this._statsOpen = false;
+          this.requestUpdate();
+        }}"
+      ></botc-stats-modal>
 
       <!-- PDF / role image modal -->
       <botc-pdf-modal

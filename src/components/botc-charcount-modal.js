@@ -94,6 +94,14 @@ export class BotcCharcountModal extends LitElement {
                       <td class="row-label" colspan="12">Character count for this script will be added soon.</td>
                     </tr>
                   `}
+                  ${rowsData && cc.goodPct ? html`
+                    <tr class="row-good-pct">
+                      <td class="row-label">% Good</td>
+                      ${cc.goodPct.map((val, i) => html`
+                        <td class="${i === activeIdx ? 'col-active' : ''}">${val}%</td>
+                      `)}
+                    </tr>
+                  ` : ''}
                 </tbody>
               </table>
             </div>

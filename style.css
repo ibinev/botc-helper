@@ -981,9 +981,42 @@ body.hide-role .pli-role        { display: none; }
 .row-minion    td.row-label { background: var(--charcount-minion-sticky); color: #e06060; }
 .row-demon     td { background: rgba(192,57,43,0.18); }
 .row-demon     td.row-label { background: var(--charcount-demon-sticky); color: #ff8080; }
+.row-good-pct  td { background: var(--bg-card); border-top: 1.5px solid var(--border-strong); font-style: italic; }
+.row-good-pct  td.row-label { background: var(--bg-card); color: var(--gold-light); }
 .charcount-table td:not(.row-label) { font-size: 16px; font-weight: 700; }
 .charcount-table th.col-active, .charcount-table td.col-active { outline: 2px solid var(--gold); outline-offset: -2px; position: relative; }
 .charcount-note { font-size: 11px; color: var(--text-muted); text-align: center; max-width: 420px; line-height: 1.6; }
+
+/* ── Game stats ────────────────────────────────────────── */
+#stats-sheet { position: fixed; inset: 0; display: flex; flex-direction: column; background: var(--chrome-surface); z-index: 200; }
+#stats-toolbar { flex-shrink: 0; display: flex; align-items: center; gap: 10px; padding: 10px 16px; padding-top: max(10px, env(safe-area-inset-top)); background: var(--chrome-surface); border-bottom: 0.5px solid var(--chrome-border); }
+#stats-body { flex: 1; overflow-y: auto; display: flex; flex-direction: column; align-items: center; padding: 24px 16px; gap: 16px; }
+.stats-actions { display: flex; gap: 10px; }
+.stats-hint, .stats-status { font-size: 13px; color: var(--text-secondary); text-align: center; max-width: 420px; line-height: 1.6; }
+.stats-status--error { color: var(--evil-text); }
+.stats-meta { font-size: 11px; color: var(--text-muted); text-align: center; }
+.stats-card { width: 100%; max-width: 480px; background: var(--bg-input); border: 0.5px solid var(--border-strong); border-radius: var(--radius-md); padding: 14px 16px; }
+.stats-card-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-secondary); margin-bottom: 10px; }
+.stats-card-value { font-size: 24px; font-weight: 700; color: var(--gold-light); text-align: center; }
+.stats-card-label { font-size: 11px; color: var(--text-secondary); text-align: center; margin-top: 4px; }
+.stats-grid { width: 100%; max-width: 480px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.stats-grid .stats-card { padding: 12px 8px; }
+.stats-winbar { display: flex; width: 100%; height: 28px; border-radius: var(--radius-sm); overflow: hidden; font-size: 12px; font-weight: 700; }
+.stats-winbar-good { background: rgba(63,107,17,0.5); color: #cdeaa0; display: flex; align-items: center; justify-content: center; }
+.stats-winbar-evil { background: rgba(192,57,43,0.5); color: #ffd8d3; display: flex; align-items: center; justify-content: center; }
+.stats-winbar-legend { display: flex; justify-content: space-between; margin-top: 8px; font-size: 12px; }
+.stats-legend-good { color: #8fca4b; }
+.stats-legend-evil { color: #ff8080; }
+.stats-rank-list { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.stats-rank-list li { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.stats-rank-icon { width: 20px; height: 20px; object-fit: contain; flex-shrink: 0; }
+.stats-rank-name { flex: 1; }
+.stats-rank-count { color: var(--text-secondary); font-weight: 700; }
+.stats-name-select {
+  width: 100%; padding: 9px 12px; border-radius: var(--radius-sm); border: 0.5px solid var(--border);
+  background: var(--bg-card); color: var(--text-primary); font-family: var(--font-sans); font-size: 14px;
+}
+.stats-mywins-result { display: flex; flex-direction: column; align-items: center; margin-top: 10px; }
 
 /* ── Topbar extras ────────────────────────────────────── */
 .btn-move-done { border-color: var(--gold); color: var(--gold-light); flex-shrink: 0; }

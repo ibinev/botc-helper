@@ -860,8 +860,14 @@ export function getCharacterCount(script = 'tb') {
     [1,1,1,1,1,2,2,2,3,3,3],
     [1,1,1,1,1,1,1,1,1,1,1],
   ];
+  const goodPct = baseRows[0].map((_, i) => {
+    const good  = baseRows[0][i] + baseRows[1][i];
+    const total = good + baseRows[2][i] + baseRows[3][i];
+    return Math.round((good / total) * 100);
+  });
   return {
     rows: baseRows,
+    goodPct,
     note: 'All scripts use the standard Clocktower character count distribution. 15+ follows the same pattern as 15 (9/2/3/1).',
   };
 }

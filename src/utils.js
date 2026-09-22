@@ -88,6 +88,22 @@ export function phaseRoundToStep(p, r) {
   return (r - 1) * 2 + (p === 'day' ? 1 : 0);
 }
 
+/** Parse a botc-helper backup XML file's text into its { schema, exportedAt, app } payload. */
+export function parseBackupXml(xmlText) {
+  const doc = new DOMParser().parseFromString(xmlText, 'application/xml');
+  if (doc.querySelector('parsererror')) throw new Error('Invalid XML file.');
+
+  const root = doc.querySelector('botc-helper-backup');
+  const dataNode = root?.querySelector('data');
+  if (!root || !dataNode) throw new Error('Unsupported backup format.');
+
+  const payload = JSON.parse(dataNode.textContent || '{}');
+  if (!payload || typeof payload !== 'object' || !payload.app) {
+    throw new Error('Backup file is missing game data.');
+  }
+  return payload;
+}
+
 // ── Vote sound effects (synthesized, no audio assets needed) ───────────
 let _audioCtx = null;
 function _getAudioCtx() {

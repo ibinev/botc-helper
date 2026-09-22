@@ -316,6 +316,23 @@ export class BotcCombo extends LitElement {
     }
 
     // ── Input ────────────────────────────────────────────────────────
+    // Select-mode (readonly) combos: a direct tap still triggers the browser's
+    // native focus, and iOS can scroll/resize the whole standalone-PWA viewport
+    // to "reveal" it even though it's readonly and no keyboard will show. Take
+    // over focusing manually with preventScroll to suppress that. Writable
+    // combos are left alone so normal tap-to-type/keyboard behavior still works.
+    if (!this.writable) {
+      let inputTouchMoved = false;
+      input.addEventListener('mousedown', e => { e.preventDefault(); input.focus({ preventScroll: true }); });
+      input.addEventListener('touchstart', () => { inputTouchMoved = false; }, { passive: true });
+      input.addEventListener('touchmove',  () => { inputTouchMoved = true;  }, { passive: true });
+      input.addEventListener('touchend', e => {
+        if (inputTouchMoved) return;
+        if (e.cancelable) e.preventDefault();
+        input.focus({ preventScroll: true });
+      });
+    }
+
     input.addEventListener('focus', () => {
       if (!this._isOpen) this._open();
     });
