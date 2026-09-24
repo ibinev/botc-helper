@@ -5,6 +5,47 @@ import { getScriptMeta, ROLE_ICONS, getAllRoles, loadBundledScripts } from '../d
 const CACHE_KEY  = 'botc_stats_cache';
 const NAME_KEY   = 'botc_stats_myname';
 
+// File System Access API lets us remember the chosen folder and silently
+// re-scan it (Chrome/Edge only) — Firefox/Safari fall back to the classic
+// one-shot <input webkitdirectory> picker (must be re-chosen each session).
+const SUPPORTS_FS_ACCESS = typeof window !== 'undefined' && 'showDirectoryPicker' in window;
+const IDB_NAME  = 'botc-stats';
+const IDB_STORE = 'handles';
+const IDB_KEY   = 'dirHandle';
+
+function idbOpen() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(IDB_NAME, 1);
+    req.onupgradeneeded = () => req.result.createObjectStore(IDB_STORE);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function idbGetDirHandle() {
+  try {
+    const db = await idbOpen();
+    return await new Promise((resolve, reject) => {
+      const tx = db.transaction(IDB_STORE, 'readonly');
+      const req = tx.objectStore(IDB_STORE).get(IDB_KEY);
+      req.onsuccess = () => resolve(req.result || null);
+      req.onerror = () => reject(req.error);
+    });
+  } catch { return null; }
+}
+
+async function idbSetDirHandle(handle) {
+  try {
+    const db = await idbOpen();
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction(IDB_STORE, 'readwrite');
+      tx.objectStore(IDB_STORE).put(handle, IDB_KEY);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  } catch { /* ignore */ }
+}
+
 /**
  * <botc-stats-modal>
  *
@@ -33,6 +74,10 @@ export class BotcStatsModal extends LitElement {
     this._summary  = null;
     this._myName   = '';
     this._catByNameMap = null;
+    this._dirHandle = null;
+    this._restoringHandle = SUPPORTS_FS_ACCESS
+      ? idbGetDirHandle().then(h => { this._dirHandle = h; })
+      : Promise.resolve();
     this._loadCache();
     this._loadMyName();
   }
@@ -40,6 +85,7 @@ export class BotcStatsModal extends LitElement {
   updated(changed) {
     if (changed.has('open')) {
       this.querySelector('#modal-stats')?.classList.toggle('visible', this.open);
+      if (this.open) this._autoRefresh();
     }
   }
 
@@ -243,6 +289,58 @@ export class BotcStatsModal extends LitElement {
     };
   }
 
+  // Recursively walk a chosen directory handle, collecting every .xml file.
+  async _collectXmlFiles(dirHandle) {
+    const files = [];
+    for await (const entry of dirHandle.values()) {
+      if (entry.kind === 'file' && /\.xml$/i.test(entry.name)) {
+        files.push(await entry.getFile());
+      } else if (entry.kind === 'directory') {
+        files.push(...await this._collectXmlFiles(entry));
+      }
+    }
+    return files;
+  }
+
+  // Silently re-scans the previously-chosen folder — called every time the
+  // modal opens (only possible on browsers with File System Access support,
+  // since the classic <input webkitdirectory> only ever gives a one-shot
+  // snapshot with no persistent handle to re-read later).
+  async _autoRefresh() {
+    if (!SUPPORTS_FS_ACCESS) return;
+    await this._restoringHandle;
+    if (!this._dirHandle) return;
+    try {
+      let perm = await this._dirHandle.queryPermission({ mode: 'read' });
+      if (perm !== 'granted') perm = await this._dirHandle.requestPermission({ mode: 'read' });
+      if (perm !== 'granted') {
+        this._error = 'Folder access needs to be re-granted — click "Choose Folder" again.';
+        this.requestUpdate();
+        return;
+      }
+      const files = await this._collectXmlFiles(this._dirHandle);
+      await this._processFiles(files);
+    } catch (e) {
+      console.warn('[Game Stats] Auto-refresh failed:', e);
+    }
+  }
+
+  async _pickFolder() {
+    if (SUPPORTS_FS_ACCESS) {
+      try {
+        const handle = await window.showDirectoryPicker();
+        this._dirHandle = handle;
+        idbSetDirHandle(handle);
+        const files = await this._collectXmlFiles(handle);
+        await this._processFiles(files);
+      } catch (e) {
+        if (e?.name !== 'AbortError') console.warn('[Game Stats] Folder pick failed:', e);
+      }
+      return;
+    }
+    this.querySelector('#stats-folder-input')?.click();
+  }
+
   async _processFiles(fileList) {
     const files = Array.from(fileList || []).filter(f => /\.xml$/i.test(f.name));
     if (!files.length) {
@@ -423,7 +521,7 @@ export class BotcStatsModal extends LitElement {
               @change="${e => { this._processFiles(e.target.files); e.target.value = ''; }}">
             <div class="stats-actions">
               <button class="btn btn-primary"
-                @click="${() => this.querySelector('#stats-folder-input')?.click()}">📂 Choose Folder</button>
+                @click="${() => this._pickFolder()}">📂 Choose Folder</button>
               ${s ? html`<button class="btn" @click="${this._clearCache}">🗑 Clear</button>` : nothing}
             </div>
             ${this._loading ? html`<p class="stats-status">Reading backup files…</p>` : nothing}

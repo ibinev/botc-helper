@@ -67,13 +67,13 @@ export class BotcEndgameModal extends LitElement {
   render() {
     if (!this.open) return nothing;
     return html`
-      <div class="killedby-backdrop"
+      <div class="mini-modal-backdrop"
         @click="${e => { if (e.target === e.currentTarget) this._dismiss(); }}">
-        <div class="killedby-card endgame-card">
-          <div class="killedby-card-header">
-            <span class="killedby-card-title">🏁 ${this.ended ? 'Game result' : 'End game'}</span>
+        <div class="mini-modal-card endgame-card">
+          <div class="mini-modal-header">
+            <span class="mini-modal-title">🏁 ${this.ended ? 'Game result' : 'End game'}</span>
           </div>
-          <div class="killedby-card-body">
+          <div class="mini-modal-body">
             <label class="endgame-label">Winning alignment</label>
             <div class="endgame-align-btns">
               <button class="endgame-align-btn align-good ${this.alignment === 'good' ? 'active' : ''}"
@@ -85,7 +85,7 @@ export class BotcEndgameModal extends LitElement {
             <textarea id="endgame-reason" class="endgame-reason"
               placeholder="How did the game end?"></textarea>
           </div>
-          <div class="killedby-card-actions">
+          <div class="mini-modal-actions">
             ${this.ended ? html`
               <button class="btn btn-danger" @click="${this._clear}">Undo end game</button>
             ` : nothing}
