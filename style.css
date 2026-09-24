@@ -593,7 +593,7 @@ body.hide-role .pli-role        { display: none; }
 .seat-move-field { display: flex; flex-direction: column; align-items: center; gap: 4px; flex-shrink: 0; }
 .seat-move-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-secondary); }
 .seat-move-select {
-  width: 52px; padding: 6px 4px; text-align: center; border-radius: var(--radius-sm); border: 0.5px solid var(--border);
+  width: 52px; padding: 6px 4px; text-align: center; text-align-last: center; border-radius: var(--radius-sm); border: 0.5px solid var(--border);
   background: var(--bg-card); color: var(--text-primary); font-family: var(--font-sans); font-size: 14px; font-weight: 700;
 }
 
@@ -795,6 +795,9 @@ body.hide-role .pli-role        { display: none; }
 .cycle-endgame-btn.ended { color: var(--good-text); }
 .death-skull { font-size: 13px; flex-shrink: 0; opacity: 0.7; }
 .death-name  { font-size: 13px; color: var(--text-primary); flex: 1; }
+.change-flow { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.change-role { display: inline-flex; align-items: center; gap: 4px; }
+.change-arrow { color: var(--text-muted); font-weight: 700; font-size: 12px; }
 .collapsible-header { display: flex; align-items: center; justify-content: space-between; cursor: pointer; padding: 4px 0; -webkit-tap-highlight-color: transparent; }
 .collapsible-header .list-section-title { margin: 0; }
 .collapsible-chevron { font-size: 12px; color: var(--text-muted); transition: transform var(--duration-base) var(--ease-standard); display: inline-block; }

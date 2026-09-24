@@ -16,6 +16,7 @@ import { esc } from '../utils.js';
  *   deathsCollapsed   {Boolean}
  *   poisonedCollapsed {Boolean}
  *   allseatsCollapsed {Boolean}
+ *   changesCollapsed  {Boolean}
  *
  * Fires:
  *   seat-open        – { detail: { idx } }
@@ -33,6 +34,7 @@ export class BotcListModal extends LitElement {
     deathsCollapsed:   { type: Boolean },
     poisonedCollapsed: { type: Boolean },
     allseatsCollapsed: { type: Boolean },
+    changesCollapsed:  { type: Boolean },
   };
 
   createRenderRoot() { return this; }
@@ -48,6 +50,7 @@ export class BotcListModal extends LitElement {
     this.deathsCollapsed   = true;
     this.poisonedCollapsed = true;
     this.allseatsCollapsed = true;
+    this.changesCollapsed  = true;
   }
 
   updated(changed) {
@@ -110,6 +113,7 @@ export class BotcListModal extends LitElement {
       deaths:   this.deathsCollapsed,
       poisoned: this.poisonedCollapsed,
       allseats: this.allseatsCollapsed,
+      changes:  this.changesCollapsed,
     };
     next[key] = !next[key];
     this.dispatchEvent(new CustomEvent('collapse-change', {
@@ -187,10 +191,62 @@ export class BotcListModal extends LitElement {
     `);
   }
 
+  _alignLabel(v) {
+    return v === 'good' ? 'Good' : v === 'evil' ? 'Evil' : v === 'suspicious' ? 'Suspicious' : 'Unknown';
+  }
+
+  _changeEntryHtml(c) {
+    const isRole = c.field === 'role';
+    const fromIcon = isRole ? ROLE_ICONS[c.from] : null;
+    const toIcon   = isRole ? ROLE_ICONS[c.to]   : null;
+    return html`
+      <div class="death-entry change-entry">
+        <span class="death-icon">${isRole ? '🎭' : '⚖️'}</span>
+        <span class="death-name">${c.name || 'Seat ' + (c.i + 1)}</span>
+        <span class="change-flow">
+          ${isRole ? html`
+            <span class="change-role">${fromIcon ? html`<img class="pli-role-icon" src="${fromIcon}" alt="">` : nothing}<span class="pli-role">${c.from}</span></span>
+            <span class="change-arrow">→</span>
+            <span class="change-role">${toIcon ? html`<img class="pli-role-icon" src="${toIcon}" alt="">` : nothing}<span class="pli-role">${c.to}</span></span>
+          ` : html`
+            <span class="pli-badge badge-${c.from}">${this._alignLabel(c.from)}</span>
+            <span class="change-arrow">→</span>
+            <span class="pli-badge badge-${c.to}">${this._alignLabel(c.to)}</span>
+          `}
+        </span>
+      </div>
+    `;
+  }
+
+  _buildChangesLog(seats) {
+    const entries = [];
+    seats.forEach((s, i) => {
+      (s.changeLog || []).forEach(c => entries.push({ ...c, i, name: s.name }));
+    });
+    const groups = {};
+    entries.forEach(c => {
+      const label = (c.phase === 'day' ? 'Day ' : 'Night ') + c.round;
+      if (!groups[label]) groups[label] = { phase: c.phase, round: c.round, entries: [] };
+      groups[label].entries.push(c);
+    });
+    const sortedKeys = Object.keys(groups).sort((a, b) => {
+      const ga = groups[a], gb = groups[b];
+      if (ga.round !== gb.round) return ga.round - gb.round;
+      return ga.phase === 'night' ? -1 : 1;
+    });
+    return sortedKeys.map(label => html`
+      <div class="death-group">
+        <div class="death-cycle-label">${label}</div>
+        ${groups[label].entries.map(c => this._changeEntryHtml(c))}
+      </div>
+    `);
+  }
+
   render() {
     const named = this.seats.filter(s => s.name);
     const dead = this.seats.map((s, i) => ({ s, i })).filter(({ s }) => s.dead && s.diedAt);
     const poisoned = this.seats.map((s, i) => ({ s, i })).filter(({ s }) => s.poisonedAt);
+    const changes = this.seats.flatMap(s => s.changeLog || []);
 
     const sections = [];
     if (named.length) {
@@ -214,6 +270,17 @@ export class BotcListModal extends LitElement {
         </div>
         <div class="collapsible-body ${this.deathsCollapsed ? 'collapsed' : ''}">
           ${this._buildGroupedLog(dead, 'diedAt', '☠')}
+        </div>
+      `);
+    }
+    if (changes.length) {
+      sections.push(html`
+        <div class="collapsible-header" @click="${() => this._toggleCollapse('changes')}">
+          <div class="list-section-title list-section-title--flush">Changes</div>
+          <span class="collapsible-chevron ${this.changesCollapsed ? 'collapsible-chevron--collapsed' : ''}">▾</span>
+        </div>
+        <div class="collapsible-body ${this.changesCollapsed ? 'collapsed' : ''}">
+          ${this._buildChangesLog(this.seats)}
         </div>
       `);
     }
