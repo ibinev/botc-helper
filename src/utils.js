@@ -15,7 +15,8 @@ export function blankSeat() {
   return {
     name: '', role: '', trueRole: '', alignment: 'unknown',
     notes: '', dead: false, usedVote: false, suspicious: false,
-    drunk: false, poisoned: false, diedAt: null, poisonedAt: null, killedBy: ''
+    drunk: false, poisoned: false, diedAt: null, poisonedAt: null, killedBy: '',
+    roleClaims: []
   };
 }
 

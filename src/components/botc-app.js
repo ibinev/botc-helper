@@ -13,7 +13,7 @@ import './botc-pdf-modal.js';
 import './botc-nightorder-modal.js';
 import './botc-reference-modal.js';
 import './botc-readme-modal.js';
-import './botc-killedby-popup.js';
+import './botc-role-picker-popup.js';
 import './botc-endgame-modal.js';
 
 const LS_KEY = 'botc_town_square_v1';
@@ -1055,6 +1055,105 @@ export class BotcApp extends LitElement {
     this.requestUpdate();
   }
 
+  // Inverse of _remapSeatIndex: shifts indices at/after the insertion point up by one.
+  _remapSeatIndexForInsert(idx, insertedAt) {
+    if (idx === null || idx === undefined) return idx;
+    return idx >= insertedAt ? idx + 1 : idx;
+  }
+
+  _insertSeatIntoNominations(insertedAt) {
+    const nominations = {};
+    Object.entries(this.nominations || {}).forEach(([key, entries]) => {
+      nominations[key] = (entries || []).map(entry => ({
+        ...entry,
+        from: this._remapSeatIndexForInsert(entry.from, insertedAt),
+        to: this._remapSeatIndexForInsert(entry.to, insertedAt),
+        votes: (entry.votes || []).map(idx => this._remapSeatIndexForInsert(idx, insertedAt)),
+        ghostVoters: (entry.ghostVoters || []).map(idx => this._remapSeatIndexForInsert(idx, insertedAt)),
+      }));
+    });
+    this.nominations = nominations;
+  }
+
+  _insertSeatIntoPoisonSnapshots(insertedAt) {
+    const poisonSnapshots = {};
+    Object.entries(this.poisonSnapshots || {}).forEach(([key, seats]) => {
+      poisonSnapshots[key] = (seats || []).map(idx => this._remapSeatIndexForInsert(idx, insertedAt));
+    });
+    this.poisonSnapshots = poisonSnapshots;
+  }
+
+  // Inserts a new blank seat right before `at`, shifting everyone from that
+  // position onward up by one and remapping nominations/poison snapshots.
+  // The circle layout is reset to the default evenly-spaced arrangement.
+  _insertSeatAt(at) {
+    if (this.seatCount >= MAX) return;
+
+    const seats = this.seats.slice();
+    seats.splice(at, 0, blankSeat());
+    this.seats = seats;
+    this.seatCount += 1;
+    this.seatPositions = Array.from({ length: this.seatCount }, () => null);
+    this.selected = this._remapSeatIndexForInsert(this.selected, at);
+
+    this._insertSeatIntoNominations(at);
+    this._insertSeatIntoPoisonSnapshots(at);
+    this._applyPhaseCycle();
+
+    this._saveState();
+    this._saveNominations();
+    this._savePoisonSnapshots();
+    this.requestUpdate();
+  }
+
+  // Moves the seat currently at `from` to position `to`, shifting the seats
+  // in between and remapping nominations/poison snapshots to follow. Used by
+  // the edit modal's "Seat #" control to relocate an already-seated player.
+  _moveSeat(from, to) {
+    const max = this.seatCount - 1;
+    from = Math.max(0, Math.min(max, from));
+    to   = Math.max(0, Math.min(max, to));
+    if (from === to) return;
+
+    const seats = this.seats.slice();
+    const [moved] = seats.splice(from, 1);
+    seats.splice(to, 0, moved);
+    this.seats = seats;
+    this.seatPositions = Array.from({ length: this.seatCount }, () => null);
+
+    const remap = idx => {
+      if (idx === null || idx === undefined) return idx;
+      if (idx === from) return to;
+      if (from < to)  return (idx > from && idx <= to) ? idx - 1 : idx;
+      return (idx >= to && idx < from) ? idx + 1 : idx;
+    };
+    const nominations = {};
+    Object.entries(this.nominations || {}).forEach(([key, entries]) => {
+      nominations[key] = (entries || []).map(entry => ({
+        ...entry,
+        from: remap(entry.from),
+        to: remap(entry.to),
+        votes: (entry.votes || []).map(remap),
+        ghostVoters: (entry.ghostVoters || []).map(remap),
+      }));
+    });
+    this.nominations = nominations;
+
+    const poisonSnapshots = {};
+    Object.entries(this.poisonSnapshots || {}).forEach(([key, idxs]) => {
+      poisonSnapshots[key] = (idxs || []).map(remap);
+    });
+    this.poisonSnapshots = poisonSnapshots;
+
+    this.selected = remap(this.selected);
+    this._applyPhaseCycle();
+
+    this._saveState();
+    this._saveNominations();
+    this._savePoisonSnapshots();
+    this.requestUpdate();
+  }
+
   // ── Cycle (phase/round) ──────────────────────────────────────────────
   _nomKey() { return 'day-' + this.round; }
 
@@ -1552,6 +1651,7 @@ export class BotcApp extends LitElement {
           .selected="${this.selected}"
           .moveMode="${this.moveMode}"
           .removeMode="${this.removeMode}"
+          .atMaxSeats="${this.seatCount >= MAX}"
           .storyView="${this.storyView}"
           .nomMode="${this.nomMode}"
           .nomFrom="${this.nomFrom}"
@@ -1566,6 +1666,7 @@ export class BotcApp extends LitElement {
           @seat-click="${e => this._openSeat(e.detail.idx)}"
           @nom-click="${e => this._handleNomClick(e.detail.idx)}"
           @seat-remove="${e => this._removeSeat(e.detail.idx)}"
+          @seat-insert="${e => this._insertSeatAt(e.detail.idx)}"
           @seat-drag-end="${e => this._onSeatDragEnd(e.detail)}"
         ></botc-circle>
 
@@ -1677,10 +1778,12 @@ export class BotcApp extends LitElement {
         .script="${this.script}"
         .seat="${this.selected !== null ? this.seats[this.selected] : null}"
         .seatIdx="${this.selected}"
+        .seatCount="${this.seatCount}"
         .playerPool="${this.playerPool.filter(n => !this.seats.some((s, i) => i !== this.selected && s.name === n))}"
         .fullPool="${this.playerPool}"
         @seat-save="${e => this._saveSeat(e.detail)}"
         @seat-clear="${e => this._clearSeat(e.detail.idx)}"
+        @seat-move="${e => this._moveSeat(e.detail.from, e.detail.to)}"
         @player-pool-change="${e => { this.playerPool = e.detail.pool; this._savePlayerPool(); this.requestUpdate(); }}"
         @modal-close="${() => { this.selected = null; this._editOpen = false; this._saveState(); this.requestUpdate(); }}"
       ></botc-edit-modal>
@@ -2005,16 +2108,19 @@ export class BotcApp extends LitElement {
       ` : nothing}
 
       <!-- Killed-by role popup (from Deaths list) -->
-      <botc-killedby-popup
+      <botc-role-picker-popup
         .open="${this._killedByPopupOpen}"
-        .value="${this._killedByPopupValue}"
         .script="${this.script}"
-        @killedby-save="${e => {
+        .title="${'Killed by'}"
+        .value="${this._killedByPopupValue}"
+        .clearable="${!!this._killedByPopupValue}"
+        @role-picker-select="${e => {
           this._saveKilledBy({ idx: this._killedByPopupIdx, value: e.detail.value });
           this._killedByPopupOpen = false;
           this.requestUpdate();
         }}"
-      ></botc-killedby-popup>
+        @role-picker-dismiss="${() => { this._killedByPopupOpen = false; this.requestUpdate(); }}"
+      ></botc-role-picker-popup>
 
       <!-- End game popup -->
       <botc-endgame-modal

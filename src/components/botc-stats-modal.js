@@ -121,23 +121,33 @@ export class BotcStatsModal extends LitElement {
     const customLabel = (app.customScripts || []).find(s => s.id === scriptId)?.label;
 
     // A "bluff" is a claimed role that doesn't match the seat's true role.
-    const bluffs = seats
-      .filter(s => s.role && s.trueRole && s.role.trim() !== s.trueRole.trim())
-      .map(s => s.role.trim());
+    // Prefer the multi-select roleClaims array; fall back to the legacy
+    // single `role` string for older saved games.
+    const claimsOf = s => (Array.isArray(s.roleClaims) && s.roleClaims.length)
+      ? s.roleClaims.map(r => (r || '').trim()).filter(Boolean)
+      : (s.role ? [s.role.trim()] : []);
+    const bluffs = seats.flatMap(s => {
+      if (!s.trueRole) return [];
+      const trueRole = s.trueRole.trim();
+      return claimsOf(s).filter(r => r !== trueRole);
+    });
     const demons  = seats.filter(s => s.trueRole && this._catOf(s.trueRole.trim()) === 'demon').map(s => s.trueRole.trim());
     const minions = seats.filter(s => s.trueRole && this._catOf(s.trueRole.trim()) === 'minion').map(s => s.trueRole.trim());
 
     const seatNames = seats
       .map(s => {
+        const claims = claimsOf(s);
         // "True role" is usually only recorded when it differs from the claimed
         // role (bluffs/drunk/evil) — a good, non-deceived player is very often
         // left blank, so fall back to the claimed role to still resolve a team
         // (otherwise these seats/games were silently excluded from win stats).
-        const roleForTeam = (s.trueRole && s.trueRole.trim()) || (s.role && s.role.trim()) || '';
+        const roleForTeam = (s.trueRole && s.trueRole.trim()) || claims[0] || '';
+        const bluffRoles = s.trueRole ? claims.filter(r => r !== s.trueRole.trim()) : [];
         return {
           name: String(s.name || '').trim(),
           team: roleForTeam ? this._teamOf(roleForTeam) : null,
           role: roleForTeam || null,
+          bluffRoles,
         };
       })
       .filter(x => x.name);
@@ -210,6 +220,7 @@ export class BotcStatsModal extends LitElement {
     if (!needle) return null;
     let played = 0, wins = 0, goodCount = 0, evilCount = 0;
     const roleCounts = new Map();
+    const bluffCounts = new Map();
     (s.games || []).forEach(g => {
       const seat = g.seatNames.find(x => x.name === needle && x.team);
       if (!seat) return;
@@ -218,14 +229,17 @@ export class BotcStatsModal extends LitElement {
       if (seat.team === 'good') goodCount++;
       else if (seat.team === 'evil') evilCount++;
       if (seat.role) roleCounts.set(seat.role, (roleCounts.get(seat.role) || 0) + 1);
+      (seat.bluffRoles || []).forEach(r => bluffCounts.set(r, (bluffCounts.get(r) || 0) + 1));
     });
     const roleRank = [...roleCounts.entries()].sort((a, b) => b[1] - a[1]);
+    const bluffRank = [...bluffCounts.entries()].sort((a, b) => b[1] - a[1]);
     return {
       played, wins,
       pct: played ? Math.round((wins / played) * 100) : 0,
       goodCount, evilCount,
       goodPct: played ? Math.round((goodCount / played) * 100) : 0,
       roleRank,
+      bluffRank,
     };
   }
 
@@ -321,9 +335,21 @@ export class BotcStatsModal extends LitElement {
             <span class="stats-card-label">(${stats.goodPct}% good)</span>
           </div>
           ${stats.roleRank.length ? html`
-            <div class="stats-mystats-label stats-mystats-subtitle">Starting Role</div>
+            <div class="stats-mystats-label stats-mystats-subtitle">Roles</div>
             <ol class="stats-rank-list">
               ${stats.roleRank.map(([role, count]) => html`
+                <li>
+                  ${ROLE_ICONS[role] ? html`<img class="stats-rank-icon" src="${ROLE_ICONS[role]}" alt="">` : nothing}
+                  <span class="stats-rank-name">${role}</span>
+                  <span class="stats-rank-count">${count}</span>
+                </li>
+              `)}
+            </ol>
+          ` : nothing}
+          ${stats.bluffRank.length ? html`
+            <div class="stats-mystats-label stats-mystats-subtitle">Bluffed</div>
+            <ol class="stats-rank-list">
+              ${stats.bluffRank.map(([role, count]) => html`
                 <li>
                   ${ROLE_ICONS[role] ? html`<img class="stats-rank-icon" src="${ROLE_ICONS[role]}" alt="">` : nothing}
                   <span class="stats-rank-name">${role}</span>

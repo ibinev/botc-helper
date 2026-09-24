@@ -1,4 +1,4 @@
-const VERSION = 'v34';
+const VERSION = 'v36';
 const CACHE = 'botc-' + VERSION;
 // Derive base path so this works at root (localhost) or a subpath (GitHub Pages)
 const BASE = self.location.pathname.replace(/\/sw\.js$/, '') || '';
@@ -28,7 +28,7 @@ const LOCAL_ASSETS = [
   BASE + '/src/components/botc-circle.js',
   BASE + '/src/components/botc-edit-modal.js',
   BASE + '/src/components/botc-role-field.js',
-  BASE + '/src/components/botc-killedby-popup.js',
+  BASE + '/src/components/botc-role-picker-popup.js',
   BASE + '/src/components/botc-endgame-modal.js',
   BASE + '/src/components/botc-list-modal.js',
   BASE + '/src/components/botc-notes-modal.js',

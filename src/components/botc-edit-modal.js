@@ -10,19 +10,26 @@ import { ROLE_ICONS, getAllRoles, CAT_LABELS } from '../data.js';
  *
  * Properties:
  *   open    {Boolean}       – show/hide
- *   seat    {Object|null}   – seat data
- *   seatIdx {Number|null}
+ *   seat      {Object|null}   – seat data
+ *   seatIdx   {Number|null}
+ *   seatCount {Number}
  *
  * Fires:
  *   seat-save   – { detail: { idx, data } }
  *   seat-clear  – { detail: { idx } }
+ *   seat-move   – { detail: { from, to } }   move this seat to a new position
  *   modal-close – (no detail)
+ *
+ * Role claimed: seat.roleClaims is the multi-select array of claimed roles
+ * (seat.role is kept in sync as roleClaims[0] for other code that still reads
+ * a single string). Edited via the `multi` mode of <botc-role-field>.
  */
 export class BotcEditModal extends LitElement {
   static properties = {
     open:              { type: Boolean },
     seat:              { type: Object  },
     seatIdx:           { type: Number  },
+    seatCount:         { type: Number  },
     script:            { type: String  },
     playerPool:        { type: Array   },
     fullPool:          { type: Array   },
@@ -43,6 +50,7 @@ export class BotcEditModal extends LitElement {
     this.open    = false;
     this.seat       = null;
     this.seatIdx    = null;
+    this.seatCount  = 12;
     this.script          = 'tb';
     this.playerPool        = [];
     this.fullPool           = [];
@@ -100,7 +108,10 @@ export class BotcEditModal extends LitElement {
     this._alignmentValue = s.alignment ?? 'unknown';
     if (notesTA)   notesTA.value   = s.notes ?? '';
 
-    this._isTravelerSeat = this._roleMeta(s.trueRole || s.role)?.cat === 'traveler';
+    const roleClaims = (Array.isArray(s.roleClaims) && s.roleClaims.length)
+      ? s.roleClaims
+      : (s.role ? [s.role] : []);
+    this._isTravelerSeat = this._roleMeta(s.trueRole || roleClaims[0])?.cat === 'traveler';
     this._deadActive     = !!s.dead;
     this._voteActive     = this._isTravelerSeat ? this._deadActive : !!s.usedVote;
     this._drunkActive    = !!s.drunk;
@@ -110,7 +121,7 @@ export class BotcEditModal extends LitElement {
 
     // Set role fields after Lit has re-rendered
     requestAnimationFrame(() => {
-      this.querySelector('#field-role')?.setValue(s.role ?? '');
+      this.querySelector('#field-role')?.setValue(roleClaims);
       this.querySelector('#field-true-role')?.setValue(s.trueRole ?? '');
     });
   }
@@ -213,12 +224,14 @@ export class BotcEditModal extends LitElement {
     this._roleInfoOpen = '';
     this._roleInfoRole = '';
     this._alignOpen = false;
-    const roleCombo     = this.querySelector('#field-role');
+    const roleField     = this.querySelector('#field-role');
     const trueCombo     = this.querySelector('#field-true-role');
+    const roleClaims = roleField?.getValue() ?? [];
     const alignment = this._alignmentValue || 'unknown';
     const data = {
       name:      (this.querySelector('#f-name')?.value ?? '').trim(),
-      role:      roleCombo?.getValue() ?? '',
+      role:      roleClaims[0] || '',
+      roleClaims: [...roleClaims],
       trueRole:  trueCombo?.getValue() ?? '',
       alignment,
       notes:     (this.querySelector('#f-notes')?.value ?? '').trim(),
@@ -231,6 +244,13 @@ export class BotcEditModal extends LitElement {
     };
     this.dispatchEvent(new CustomEvent('seat-save', {
       detail: { idx: this.seatIdx, data }, bubbles: true, composed: true
+    }));
+  }
+
+  _onMoveSeat(newIdx) {
+    if (this.seatIdx === null || newIdx === this.seatIdx) return;
+    this.dispatchEvent(new CustomEvent('seat-move', {
+      detail: { from: this.seatIdx, to: newIdx }, bubbles: true, composed: true
     }));
   }
 
@@ -366,6 +386,18 @@ export class BotcEditModal extends LitElement {
                 <div class="modal-title">${title}</div>
                 <div class="modal-subtitle">${subtitle}</div>
               </div>
+              ${this.seatIdx !== null ? html`
+                <div class="seat-move-field">
+                  <label class="seat-move-label" for="f-seatnum">Seat #</label>
+                  <select id="f-seatnum" class="seat-move-select"
+                    .value="${String(this.seatIdx)}"
+                    @change="${e => this._onMoveSeat(parseInt(e.target.value, 10))}">
+                    ${Array.from({ length: this.seatCount }, (_, i) => html`
+                      <option value="${i}" ?selected="${i === this.seatIdx}">${i + 1}</option>
+                    `)}
+                  </select>
+                </div>
+              ` : nothing}
             </div>
 
             <div class="field-grid">
@@ -448,7 +480,7 @@ export class BotcEditModal extends LitElement {
             </div>
 
             <div class="field-grid full">
-              <botc-role-field id="field-role" .script="${this.script}" .writable=${false} label="Role claimed" placeholder="Washerwoman…"></botc-role-field>
+              <botc-role-field id="field-role" .script="${this.script}" .writable=${false} .multi=${true} label="Role claimed" placeholder="Washerwoman…"></botc-role-field>
             </div>
 
             <div class="field-grid full">

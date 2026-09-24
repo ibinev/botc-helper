@@ -27,6 +27,7 @@ import { esc, defaultPos } from '../utils.js';
  *   seat-click       – { detail: { idx } }            seat tapped (normal mode)
  *   nom-click        – { detail: { idx } }            seat tapped (nom mode)
  *   seat-drag-end    – { detail: { idx, x, y } }      seat dragged to new position
+ *   seat-insert      – { detail: { idx } }            insert a blank seat before this one (remove/rearrange mode)
  */
 export class BotcCircle extends LitElement {
   static properties = {
@@ -35,6 +36,7 @@ export class BotcCircle extends LitElement {
     selected:      { type: Number },
     moveMode:      { type: Boolean },
     removeMode:    { type: Boolean },
+    atMaxSeats:    { type: Boolean },
     nomMode:       { type: String  },
     nomFrom:       { type: Number  },
     nominations:   { type: Object  },
@@ -60,6 +62,7 @@ export class BotcCircle extends LitElement {
     this.selected      = null;
     this.moveMode      = false;
     this.removeMode    = false;
+    this.atMaxSeats    = false;
     this.nomMode       = false;
     this.nomFrom       = null;
     this.nominations   = {};
@@ -215,21 +218,26 @@ export class BotcCircle extends LitElement {
   _renderSeat(s, i) {
     const pos      = this._pos(i);
     const roles = getRoles(this.script);
-    const roleData = s.role ? roles.find(r => r.name === s.role) : null;
-    const isBluff  = !!(s.role && s.trueRole && s.role !== s.trueRole);
+    // Claimed roles: prefer the multi-select roleClaims array, fall back to
+    // the legacy single `role` string for older saved games.
+    const claimed = (Array.isArray(s.roleClaims) && s.roleClaims.length)
+      ? s.roleClaims.filter(Boolean)
+      : (s.role ? [s.role] : []);
+    const roleData = claimed[0] ? roles.find(r => r.name === claimed[0]) : null;
+    const isBluff  = !!(s.trueRole && claimed.length && !claimed.includes(s.trueRole));
 
-    // When bluffed: left = bluffed role, right = true role.
-    // When not bluffed: left = trueRole || role, right = drunk/poisoned.
-    const leftRole      = isBluff ? s.role : (s.trueRole || s.role);
-    const leftRoleData  = leftRole ? roles.find(r => r.name === leftRole) : null;
-    const iconSrc       = leftRole && ROLE_ICONS[leftRole] ? ROLE_ICONS[leftRole] : null;
+    // Main icon stack: all claimed roles (or the true role alone if nothing's
+    // been claimed yet). The true role gets its own separate badge only when
+    // it's NOT among the claims (i.e. actively bluffing).
+    const stackRoles = claimed.length ? claimed : (s.trueRole ? [s.trueRole] : []);
+    const stackIcons  = stackRoles.map(r => ROLE_ICONS[r]).filter(Boolean);
 
     const trueIconSrc   = isBluff && s.trueRole && ROLE_ICONS[s.trueRole] ? ROLE_ICONS[s.trueRole] : null;
     const drunkIconSrc  = !isBluff
       ? (s.poisoned ? ROLE_ICONS['Poisoner'] : s.drunk ? ROLE_ICONS['Drunk'] : null)
       : null;
 
-    const displayRole     = s.trueRole || s.role;
+    const displayRole     = s.trueRole || (claimed.length > 1 ? '…' : claimed[0]);
     const displayRoleData = displayRole ? roles.find(r => r.name === displayRole) : null;
     const dotClass = displayRoleData
       ? ` dot-${displayRoleData.cat}`
@@ -247,7 +255,8 @@ export class BotcCircle extends LitElement {
 
     const isTravelerTarget = (idx) => {
       const seat = this.seats[idx];
-      const roleName = seat?.trueRole || seat?.role;
+      const seatClaimed = (Array.isArray(seat?.roleClaims) && seat.roleClaims.length) ? seat.roleClaims : (seat?.role ? [seat.role] : []);
+      const roleName = seat?.trueRole || seatClaimed[0];
       if (!roleName) return false;
       return roles.find(r => r.name === roleName)?.cat === 'traveler';
     };
@@ -296,10 +305,23 @@ export class BotcCircle extends LitElement {
                 detail: { idx: i }, bubbles: true, composed: true
               }));
             }}">✕</button>
+          <button class="seat-insert-btn" type="button" title="Insert new seat before ${i + 1}"
+            ?hidden="${this.atMaxSeats}"
+            @click="${e => {
+              e.stopPropagation();
+              this.dispatchEvent(new CustomEvent('seat-insert', {
+                detail: { idx: i }, bubbles: true, composed: true
+              }));
+            }}">+</button>
         ` : nothing}
-        ${iconSrc
-          ? html`<img class="seat-role-icon" src="${iconSrc}" alt="${leftRole}" title="${leftRole}">`
-          : nothing}
+        ${stackIcons.length > 1 ? html`
+          <div class="seat-role-icon-stack" title="${stackRoles.join(', ')}">
+            ${stackIcons.slice(0, 3).map((src, idx) => html`
+              <img class="seat-role-icon--stacked" style="--stack-i:${idx}" src="${src}" alt="${stackRoles[idx]}">
+            `)}
+            ${stackIcons.length > 3 ? html`<span class="seat-role-icon-more">+${stackIcons.length - 3}</span>` : nothing}
+          </div>
+        ` : (stackIcons.length === 1 ? html`<img class="seat-role-icon" src="${stackIcons[0]}" alt="${stackRoles[0]}" title="${stackRoles[0]}">` : nothing)}
         ${trueIconSrc
           ? html`<img class="seat-true-icon" src="${trueIconSrc}" alt="${s.trueRole}" title="${s.trueRole}">`
           : nothing}
