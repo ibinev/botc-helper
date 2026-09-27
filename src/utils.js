@@ -89,6 +89,14 @@ export function phaseRoundToStep(p, r) {
   return (r - 1) * 2 + (p === 'day' ? 1 : 0);
 }
 
+// True if a seat was still alive during a given day's nominations — i.e. it
+// either never died, or died on that day itself (executed at day's end,
+// after voting) or later. Dying on an earlier day/night excludes it.
+export function wasAliveOnDay(seat, dayNum) {
+  if (!seat.diedAt) return true;
+  return phaseRoundToStep(seat.diedAt.phase, seat.diedAt.round) >= phaseRoundToStep('day', dayNum);
+}
+
 /** Parse a botc-helper backup XML file's text into its { schema, exportedAt, app } payload. */
 export function parseBackupXml(xmlText) {
   const doc = new DOMParser().parseFromString(xmlText, 'application/xml');

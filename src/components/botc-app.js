@@ -7,6 +7,7 @@ import './botc-stats-modal.js';
 import './botc-list-modal.js';
 import './botc-notes-modal.js';
 import './botc-nominations-modal.js';
+import './botc-voting-analysis-modal.js';
 import './botc-settings-modal.js';
 import './botc-charcount-modal.js';
 import './botc-pdf-modal.js';
@@ -58,6 +59,7 @@ export class BotcApp extends LitElement {
     _listOpen:         { state: true },
     _notesOpen:        { state: true },
     _nomsOpen:         { state: true },
+    _votingAnalysisOpen: { state: true },
     _settingsOpen:     { state: true },
     _charcountOpen:    { state: true },
     _statsOpen:        { state: true },
@@ -118,6 +120,7 @@ export class BotcApp extends LitElement {
     this._listOpen         = false;
     this._notesOpen        = false;
     this._nomsOpen         = false;
+    this._votingAnalysisOpen = false;
     this._settingsOpen     = false;
     this._charcountOpen    = false;
     this._statsOpen        = false;
@@ -1651,10 +1654,10 @@ export class BotcApp extends LitElement {
             @click="${() => { this._notesOpen = true; this.requestUpdate(); }}">📜</button>
           <button class="topbar-icon-btn" title="Nominations"
             @click="${() => { this._nomsOpen = true; this.requestUpdate(); }}">⚖️</button>
-          <button class="topbar-icon-btn" title="Reference"
-            @click="${() => { this._referenceOpen = true; this._referenceTab = 'roles'; this.requestUpdate(); }}">📖</button>
           <button class="topbar-icon-btn" title="Game Stats"
             @click="${() => { this._statsOpen = true; this.requestUpdate(); }}">📈</button>
+          <button class="topbar-icon-btn" title="Reference"
+            @click="${() => { this._referenceOpen = true; this._referenceTab = 'roles'; this.requestUpdate(); }}">📖</button>
           <button class="topbar-icon-btn" title="Settings"
             @click="${() => { this._settingsOpen = true; this.requestUpdate(); }}">⚙️</button>
         </div>
@@ -1868,11 +1871,27 @@ export class BotcApp extends LitElement {
           this._nomsOpen = false;
           this._startNomMode();
         }}"
+        @open-voting-analysis="${() => {
+          this._nomsOpen = false;
+          this._votingAnalysisOpen = true;
+          this.requestUpdate();
+        }}"
         @modal-close="${() => {
           this._nomsOpen = false;
           this.requestUpdate();
         }}"
       ></botc-nominations-modal>
+
+      <!-- Voting pattern analysis modal -->
+      <botc-voting-analysis-modal
+        .open="${this._votingAnalysisOpen}"
+        .nominations="${this.nominations}"
+        .seats="${this.seats}"
+        @modal-close="${() => {
+          this._votingAnalysisOpen = false;
+          this.requestUpdate();
+        }}"
+      ></botc-voting-analysis-modal>
 
       <!-- Settings modal -->
       <botc-settings-modal

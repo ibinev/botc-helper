@@ -188,12 +188,17 @@ export class BotcStatsModal extends LitElement {
         // left blank, so fall back to the claimed role to still resolve a team
         // (otherwise these seats/games were silently excluded from win stats).
         const roleForTeam = (s.trueRole && s.trueRole.trim()) || claims[0] || '';
-        const bluffRoles = s.trueRole ? claims.filter(r => r !== s.trueRole.trim()) : [];
+        const trueRole = s.trueRole ? s.trueRole.trim() : '';
+        // Without a recorded True Role we can't know what was actually bluffed,
+        // so all claims are shown as a bluff of themselves (claims === [real]).
+        // Claims made in the same game are grouped into one entry (not one per claim).
+        const bluffClaims = trueRole ? claims.filter(r => r !== trueRole) : claims;
+        const bluff = bluffClaims.length ? { claims: bluffClaims, real: trueRole || roleForTeam } : null;
         return {
           name: String(s.name || '').trim(),
           team: roleForTeam ? this._teamOf(roleForTeam) : null,
           role: roleForTeam || null,
-          bluffRoles,
+          bluff,
         };
       })
       .filter(x => x.name);
@@ -267,6 +272,7 @@ export class BotcStatsModal extends LitElement {
     let played = 0, wins = 0, goodCount = 0, evilCount = 0;
     const roleCounts = new Map();
     const bluffCounts = new Map();
+    const bluffPairCounts = new Map(); // "claim1+claim2→realRole" -> { claims, real, count }
     (s.games || []).forEach(g => {
       const seat = g.seatNames.find(x => x.name === needle && x.team);
       if (!seat) return;
@@ -275,10 +281,23 @@ export class BotcStatsModal extends LitElement {
       if (seat.team === 'good') goodCount++;
       else if (seat.team === 'evil') evilCount++;
       if (seat.role) roleCounts.set(seat.role, (roleCounts.get(seat.role) || 0) + 1);
-      (seat.bluffRoles || []).forEach(r => bluffCounts.set(r, (bluffCounts.get(r) || 0) + 1));
+      if (seat.bluff) {
+        // Only genuine bluffs count — claims matching the real role (no
+        // True Role known, so it repeats itself) aren't actually a bluff,
+        // so they're dropped from both the flat tally and the grouped row.
+        const distinctClaims = seat.bluff.real ? seat.bluff.claims.filter(r => r !== seat.bluff.real) : seat.bluff.claims;
+        distinctClaims.forEach(r => bluffCounts.set(r, (bluffCounts.get(r) || 0) + 1));
+        if (distinctClaims.length) {
+          const key = `${distinctClaims.join('+')}→${seat.bluff.real}`;
+          const prior = bluffPairCounts.get(key);
+          if (prior) prior.count++;
+          else bluffPairCounts.set(key, { claims: distinctClaims, real: seat.bluff.real, count: 1 });
+        }
+      }
     });
     const roleRank = [...roleCounts.entries()].sort((a, b) => b[1] - a[1]);
     const bluffRank = [...bluffCounts.entries()].sort((a, b) => b[1] - a[1]);
+    const bluffPairRank = [...bluffPairCounts.values()].sort((a, b) => b.count - a.count);
     return {
       played, wins,
       pct: played ? Math.round((wins / played) * 100) : 0,
@@ -286,6 +305,7 @@ export class BotcStatsModal extends LitElement {
       goodPct: played ? Math.round((goodCount / played) * 100) : 0,
       roleRank,
       bluffRank,
+      bluffPairRank,
     };
   }
 
@@ -422,15 +442,24 @@ export class BotcStatsModal extends LitElement {
           ${names.map(n => html`<option value="${n}" ?selected="${n === this._myName}">${n}</option>`)}
         </select>
         ${!stats ? nothing : !stats.played ? html`<p class="stats-status">No games found for that name.</p>` : html`
-          <div class="stats-mywins-result">
-            <span class="stats-card-value">${stats.wins}/${stats.played}</span>
-            <span class="stats-card-label">Result: games won (${stats.pct}%)</span>
+          <div class="stats-mystats-label stats-mystats-subtitle">Win Rate</div>
+          <div class="stats-winbar">
+            <div class="stats-winbar-good" style="width:${stats.pct}%">${stats.pct ? `${stats.pct}%` : ''}</div>
+            <div class="stats-winbar-evil" style="width:${100 - stats.pct}%">${100 - stats.pct ? `${100 - stats.pct}%` : ''}</div>
           </div>
-          <div class="stats-mystats-row">
-            <span class="stats-mystats-label">Starting Type</span>
+          <div class="stats-winbar-legend">
+            <span class="stats-legend-good">🟢 Won ${stats.wins}</span>
+            <span class="stats-legend-evil">🔴 Lost ${stats.played - stats.wins}</span>
+          </div>
+
+          <div class="stats-mystats-label stats-mystats-subtitle">Good / Evil</div>
+          <div class="stats-winbar">
+            <div class="stats-winbar-good" style="width:${stats.goodPct}%">${stats.goodPct ? `${stats.goodPct}%` : ''}</div>
+            <div class="stats-winbar-evil" style="width:${100 - stats.goodPct}%">${100 - stats.goodPct ? `${100 - stats.goodPct}%` : ''}</div>
+          </div>
+          <div class="stats-winbar-legend">
             <span class="stats-legend-good">🟢 Good ${stats.goodCount}</span>
             <span class="stats-legend-evil">🔴 Evil ${stats.evilCount}</span>
-            <span class="stats-card-label">(${stats.goodPct}% good)</span>
           </div>
           ${stats.roleRank.length ? html`
             <div class="stats-mystats-label stats-mystats-subtitle">Roles</div>
@@ -455,6 +484,29 @@ export class BotcStatsModal extends LitElement {
                 </li>
               `)}
             </ol>
+          ` : html`
+            <div class="stats-mystats-label stats-mystats-subtitle">Bluffed</div>
+            <p class="stats-hint">No roles claimed yet for this player.</p>
+          `}
+          ${stats.bluffPairRank.length ? html`
+            <div class="stats-mystats-label stats-mystats-subtitle">Bluff → Real Role</div>
+            <ol class="stats-rank-list">
+              ${stats.bluffPairRank.map(p => html`
+                <li>
+                  <span class="va-pair-names">
+                    ${p.claims.map((c, i) => html`
+                      ${i > 0 ? html`<span class="va-pair-sep">+</span>` : nothing}
+                      ${ROLE_ICONS[c] ? html`<img class="stats-rank-icon" src="${ROLE_ICONS[c]}" alt="">` : nothing}
+                      <span class="stats-rank-name">${c}</span>
+                    `)}
+                  </span>
+                  <span class="va-pair-sep">→</span>
+                  ${ROLE_ICONS[p.real] ? html`<img class="stats-rank-icon" src="${ROLE_ICONS[p.real]}" alt="">` : nothing}
+                  <span class="stats-rank-name">${p.real}</span>
+                  <span class="stats-rank-count">${p.count}</span>
+                </li>
+              `)}
+            </ol>
           ` : nothing}
         `}
       </div>
@@ -468,6 +520,10 @@ export class BotcStatsModal extends LitElement {
 
     return html`
       <p class="stats-meta">Based on ${s.gamesCount} finished game${s.gamesCount === 1 ? '' : 's'} of ${s.totalFiles} file${s.totalFiles === 1 ? '' : 's'}${(s.skippedUnfinished || s.skippedInvalid) ? ` (${s.skippedUnfinished || 0} unfinished, ${s.skippedInvalid || 0} invalid/unreadable skipped — see console for details)` : ''}.</p>
+
+      ${this._renderMyWins(s)}
+
+      <div class="stats-section-title">Overall Game Stats</div>
 
       <div class="stats-card">
         <div class="stats-card-title">Win Rate</div>
@@ -495,8 +551,6 @@ export class BotcStatsModal extends LitElement {
           <div class="stats-card-label">Execution rate (${s.totalExecs} of ${s.totalNoms})</div>
         </div>
       </div>
-
-      ${this._renderMyWins(s)}
 
       ${this._renderRankCard('Most Common Demon', s.topDemons, { icons: true })}
       ${this._renderRankCard('Most Common Minion', s.topMinions, { icons: true })}

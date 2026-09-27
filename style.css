@@ -835,7 +835,8 @@ body.hide-role .pli-role        { display: none; }
 .nom-day-label { font-size: 10px; text-transform: uppercase; letter-spacing: .1em; color: var(--text-muted); margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between; }
 .nom-entry { display: flex; align-items: center; gap: 8px; padding: 9px 10px; border-radius: var(--radius-sm); border: 0.5px solid var(--border); background: var(--bg-input); margin-bottom: 4px; }
 .nom-arrow  { color: var(--gold); font-size: 15px; flex-shrink: 0; }
-.nom-player { font-size: 13px; color: var(--text-primary); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nom-player { font-size: 13px; color: var(--text-primary); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-flex; align-items: center; gap: 4px; }
+.nom-player-icon { width: 20px; height: 20px; object-fit: contain; border-radius: 4px; flex-shrink: 0; vertical-align: middle; }
 .nom-player.align-good { color: #8fca4b; }
 .nom-player.align-evil { color: #e06060; }
 .nom-player.align-susp { color: #d08ef0; }
@@ -1084,10 +1085,32 @@ body.hide-role .pli-role        { display: none; }
   width: 100%; padding: 9px 12px; border-radius: var(--radius-sm); border: 0.5px solid var(--border);
   background: var(--bg-card); color: var(--text-primary); font-family: var(--font-sans); font-size: 14px;
 }
-.stats-mywins-result { display: flex; flex-direction: column; align-items: center; margin-top: 10px; }
-.stats-mystats-row { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 10px; font-size: 12px; flex-wrap: wrap; }
 .stats-mystats-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-secondary); }
 .stats-mystats-subtitle { margin-top: 14px; margin-bottom: 6px; }
+.stats-section-title { width: 100%; max-width: 480px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); border-top: 0.5px solid var(--border); padding-top: 14px; margin-top: 2px; }
+
+/* ── Voting pattern analysis ──────────────────────────── */
+#va-sheet { position: fixed; inset: 0; display: flex; flex-direction: column; background: var(--chrome-surface); z-index: 200; }
+#va-toolbar { flex-shrink: 0; display: flex; align-items: center; gap: 10px; padding: 10px 16px; padding-top: max(10px, env(safe-area-inset-top)); background: var(--chrome-surface); border-bottom: 0.5px solid var(--chrome-border); }
+#va-body { flex: 1; overflow-y: auto; display: flex; flex-direction: column; align-items: center; padding: 24px 16px; gap: 16px; }
+.va-card { width: 100%; max-width: 560px; }
+.va-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.va-table th, .va-table td { padding: 6px 4px; text-align: center; }
+.va-table th { color: var(--text-secondary); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 0.5px solid var(--border); }
+.va-table th:first-child, .va-table td.va-name { text-align: left; }
+.va-table tbody tr + tr td { border-top: 0.5px solid var(--border); }
+.va-rate-low { color: #ff8080; font-weight: 700; }
+.va-name.align-good { color: #8fca4b; }
+.va-name.align-evil { color: #e06060; }
+.va-name.align-susp { color: #d08ef0; }
+.va-pair-names { flex: 1; }
+.va-pair-sep { margin: 0 4px; color: var(--text-muted); }
+.va-pair-flagged { background: rgba(192,57,43,0.1); border: 0.5px solid rgba(192,57,43,0.25); border-radius: var(--radius-sm); padding: 4px 8px; margin: -4px -8px; }
+.va-flag-icon { flex-shrink: 0; }
+.va-contra-hint { text-align: left; margin-bottom: 10px; }
+.va-contra-list { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.va-contra-item { font-size: 12.5px; line-height: 1.6; padding: 8px 10px; border-radius: var(--radius-sm); background: rgba(192,57,43,0.08); border: 0.5px solid rgba(192,57,43,0.2); }
+.va-contra-item .va-name { font-weight: 700; }
 
 /* ── Topbar extras ────────────────────────────────────── */
 .btn-move-done { border-color: var(--gold); color: var(--gold-light); flex-shrink: 0; }
@@ -1834,6 +1857,7 @@ button:focus-visible {
 
 /* ── Nominations modal ────────────────────────────────── */
 .nom-modal-header  { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-4); }
+.nom-modal-header-actions { display: flex; align-items: center; gap: 8px; }
 .btn-primary--sm   { font-size: 12px; padding: 6px 14px; }
 .nom-count-label   { color: var(--text-secondary); font-size: 9px; }
 .nom-entry--stacked { flex-direction: column; align-items: stretch; }

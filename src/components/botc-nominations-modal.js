@@ -1,5 +1,6 @@
 import { LitElement, html, nothing } from 'lit';
 import { ROLE_ICONS } from '../data.js';
+import { wasAliveOnDay } from '../utils.js';
 
 /**
  * <botc-nominations-modal>
@@ -99,6 +100,25 @@ export class BotcNominationsModal extends LitElement {
     return 'align-none';
   }
 
+  _claimedRole(idx) {
+    const s = this.seats[idx];
+    if (!s) return null;
+    const claimed = (Array.isArray(s.roleClaims) && s.roleClaims.length)
+      ? s.roleClaims.filter(Boolean)
+      : (s.role ? [s.role] : []);
+    return claimed[0] || null;
+  }
+
+  _nomPlayerHtml(idx, extra = nothing) {
+    const role = this._claimedRole(idx);
+    const icon = role ? ROLE_ICONS[role] : null;
+    return html`
+      <span class="nom-player ${this._alignClass(idx)}">
+        ${icon ? html`<img class="nom-player-icon" src="${icon}" alt="" title="${role}">` : nothing}${this._seatLabel(idx)}${extra}
+      </span>
+    `;
+  }
+
   _onClose() {
     this.dispatchEvent(new CustomEvent('modal-close', { bubbles: true, composed: true }));
   }
@@ -119,26 +139,31 @@ export class BotcNominationsModal extends LitElement {
     this.dispatchEvent(new CustomEvent('new-nom', { bubbles: true, composed: true }));
   }
 
+  _onOpenAnalysis() {
+    this.dispatchEvent(new CustomEvent('open-voting-analysis', { bubbles: true, composed: true }));
+  }
+
   _notVotedForDay(key) {
     const dayNoms = this.nominations[key] || [];
     // Only show if at least one nomination has votes recorded
     const anyVotes = dayNoms.some(e => (e.votes || []).length > 0);
     if (!anyVotes) return [];
+    const dayNum = parseInt(key.split('-')[1], 10);
     const voted = new Set();
     dayNoms.forEach(e => (e.votes || []).forEach(vi => voted.add(vi)));
     return this.seats
       .map((s, i) => ({ s, i }))
-      .filter(({ s, i }) => !s.dead && !voted.has(i));
+      .filter(({ s, i }) => wasAliveOnDay(s, dayNum) && !voted.has(i));
   }
 
-  // Every alive seat plus any dead seat that ghost-voted on this nomination,
-  // each flagged voted/not-voted so both states can be shown side by side.
-  // Voted seats are listed first, then not-voted; within each group the order
-  // follows the clockwise voting order (starting right after the nominee).
-  _nomVoteRows(entry) {
+  // Every alive-at-the-time seat plus any dead seat that ghost-voted on this
+  // nomination, each flagged voted/not-voted so both states can be shown side
+  // by side. Voted seats are listed first, then not-voted; within each group
+  // the order follows the clockwise voting order (starting right after the nominee).
+  _nomVoteRows(entry, dayNum) {
     const votedSet = new Set(entry.votes || []);
     const idxs = new Set();
-    this.seats.forEach((s, i) => { if (!s.dead) idxs.add(i); });
+    this.seats.forEach((s, i) => { if (wasAliveOnDay(s, dayNum)) idxs.add(i); });
     votedSet.forEach(i => idxs.add(i));
     const n = this.seats.length;
     const start = ((entry.to ?? 0) + 1) % n;
@@ -166,10 +191,14 @@ export class BotcNominationsModal extends LitElement {
 
             <div class="nom-modal-header">
               <div class="modal-title">⚖️ Nominations</div>
-              ${this.phase !== 'night' ? html`
-                <button class="btn btn-primary btn-primary--sm"
-                  @click="${this._onNewNom}">➕ New</button>
-              ` : nothing}
+              <div class="nom-modal-header-actions">
+                <button class="btn btn-primary--sm" title="Voting pattern analysis"
+                  @click="${this._onOpenAnalysis}">📊 Analysis</button>
+                ${this.phase !== 'night' ? html`
+                  <button class="btn btn-primary btn-primary--sm"
+                    @click="${this._onNewNom}">➕ New</button>
+                ` : nothing}
+              </div>
             </div>
 
             ${allKeys.length === 0 ? html`
@@ -222,12 +251,12 @@ export class BotcNominationsModal extends LitElement {
                     return html`
                       <div class="nom-entry nom-entry--stacked">
                         <div class="nom-entry-main">
-                          <span class="nom-player">${this._seatLabel(e.from)}</span>
+                          ${this._nomPlayerHtml(e.from)}
                           <span class="nom-arrow">→</span>
-                          <span class="nom-player">${this._seatLabel(e.to)}${killedByIcon ? html`
+                          ${this._nomPlayerHtml(e.to, killedByIcon ? html`
                             <span class="nom-killedby" title="Killed by ${killedByRole}">
                               <img class="nom-killedby-icon" src="${killedByIcon}" alt="${killedByRole}">
-                            </span>` : nothing}</span>
+                            </span>` : nothing)}
                           <button class="nom-vote-btn ${voteOutcome}"
                             @click="${() => this._onVoteMode(key, origIdx)}">${voteLabel}</button>
                           <button class="nom-del" title="Remove"
@@ -235,7 +264,7 @@ export class BotcNominationsModal extends LitElement {
                         </div>
                         <div class="nom-voters">
                           ${(() => {
-                            const rows = this._nomVoteRows(e);
+                            const rows = this._nomVoteRows(e, parseInt(dayNum, 10));
                             if (!rows.length) return html`<span class="nom-no-votes">No votes recorded</span>`;
                             const chip = ({ i, voted }) => html`
                               <span class="nom-voter-chip ${voted ? 'nom-vote-yes' : 'nom-vote-no'} ${this._alignClass(i)}">
