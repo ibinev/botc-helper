@@ -36,7 +36,6 @@ export class BotcApp extends LitElement {
     nomVoteCursor:     { type: Number  },
     nomVoteConfirm:    { type: Boolean },
     nominations:       { type: Object  },
-    poisonSnapshots:   { type: Object  },
     gameNotes:         { type: Object  },
     storyView:         { type: Boolean },
     compactMode:       { type: Boolean },
@@ -49,7 +48,6 @@ export class BotcApp extends LitElement {
     customScripts:     { type: Array   },
     playerPool:        { type: Array   },
     deathsCollapsed:   { type: Boolean },
-    poisonedCollapsed: { type: Boolean },
     allseatsCollapsed: { type: Boolean },
     changesCollapsed:  { type: Boolean },
     gameEnded:         { type: Boolean },
@@ -98,7 +96,6 @@ export class BotcApp extends LitElement {
     this.nomVoteCursor     = null;
     this.nomVoteConfirm    = false;
     this.nominations       = {};
-    this.poisonSnapshots   = {};
     this.gameNotes         = {};
     this.storyView         = false;
     this.compactMode       = false;
@@ -111,7 +108,6 @@ export class BotcApp extends LitElement {
     this.customScripts     = [];
     this.playerPool        = [];
     this.deathsCollapsed   = true;
-    this.poisonedCollapsed = true;
     this.allseatsCollapsed = true;
     this.changesCollapsed  = true;
     this.gameEnded         = false;
@@ -267,7 +263,6 @@ export class BotcApp extends LitElement {
     this._loadCustomScripts();
     this._loadGameNotes();
     this._loadNominations();
-    this._loadPoisonSnapshots();
     this._loadCollapsePrefs();
     this._loadStoryView();
     this._loadCompactMode();
@@ -300,7 +295,6 @@ export class BotcApp extends LitElement {
     this._saveScript();
     this._saveState();
     this._saveNominations();
-    this._savePoisonSnapshots();
     this._saveGameNotes();
     this._savePlayerPool();
   }
@@ -364,19 +358,6 @@ export class BotcApp extends LitElement {
     } catch(e) {}
   }
 
-  _savePoisonSnapshots() {
-    try {
-      localStorage.setItem('botc_poison_snaps', JSON.stringify(this.poisonSnapshots));
-    } catch(e) {}
-  }
-
-  _loadPoisonSnapshots() {
-    try {
-      const r = localStorage.getItem('botc_poison_snaps');
-      if (r) this.poisonSnapshots = JSON.parse(r);
-    } catch(e) {}
-  }
-
   _saveGameNotes() {
     try {
       localStorage.setItem('botc_game_notes', JSON.stringify(this.gameNotes));
@@ -399,7 +380,6 @@ export class BotcApp extends LitElement {
     try {
       localStorage.setItem('botc_collapse_prefs', JSON.stringify({
         deaths:   this.deathsCollapsed,
-        poisoned: this.poisonedCollapsed,
         allseats: this.allseatsCollapsed,
         changes:  this.changesCollapsed,
       }));
@@ -412,7 +392,6 @@ export class BotcApp extends LitElement {
       if (r) {
         const p = JSON.parse(r);
         this.deathsCollapsed   = !!p.deaths;
-        this.poisonedCollapsed = !!p.poisoned;
         this.allseatsCollapsed = !!p.allseats;
         this.changesCollapsed  = !!p.changes;
       }
@@ -693,7 +672,6 @@ export class BotcApp extends LitElement {
         gameEnded: this.gameEnded,
         gameEndInfo: this.gameEndInfo,
         nominations: this.nominations,
-        poisonSnapshots: this.poisonSnapshots,
         gameNotes: this.gameNotes,
         // Only the script actually in use, not the whole local custom-script
         // library — importing a backup shouldn't hand over unrelated scripts.
@@ -701,7 +679,6 @@ export class BotcApp extends LitElement {
         script: this.script,
         playerPool: this.playerPool,
         deathsCollapsed: this.deathsCollapsed,
-        poisonedCollapsed: this.poisonedCollapsed,
         allseatsCollapsed: this.allseatsCollapsed,
         changesCollapsed: this.changesCollapsed,
         storyView: this.storyView,
@@ -858,7 +835,6 @@ export class BotcApp extends LitElement {
     }
 
     this.nominations = app.nominations && typeof app.nominations === 'object' ? app.nominations : {};
-    this.poisonSnapshots = app.poisonSnapshots && typeof app.poisonSnapshots === 'object' ? app.poisonSnapshots : {};
     this.gameNotes = app.gameNotes && typeof app.gameNotes === 'object' ? app.gameNotes : {};
     // Merge only: add any custom script the backup used that we don't already
     // have locally (matched by id OR by name — a script with the same name
@@ -886,7 +862,6 @@ export class BotcApp extends LitElement {
     this.playerPool = Array.isArray(app.playerPool) ? app.playerPool : [];
 
     this.deathsCollapsed = !!app.deathsCollapsed;
-    this.poisonedCollapsed = !!app.poisonedCollapsed;
     this.allseatsCollapsed = !!app.allseatsCollapsed;
     this.changesCollapsed = !!app.changesCollapsed;
     this.storyView = !!app.storyView;
@@ -914,7 +889,6 @@ export class BotcApp extends LitElement {
 
     this._saveState();
     this._saveNominations();
-    this._savePoisonSnapshots();
     this._saveGameNotes();
     this._saveCustomScripts();
     this._saveScript();
@@ -1022,18 +996,6 @@ export class BotcApp extends LitElement {
     this.nominations = nominations;
   }
 
-  _removeSeatFromPoisonSnapshots(removedIdx) {
-    const poisonSnapshots = {};
-
-    Object.entries(this.poisonSnapshots || {}).forEach(([key, seats]) => {
-      poisonSnapshots[key] = (seats || [])
-        .map(idx => this._remapSeatIndex(idx, removedIdx))
-        .filter(idx => idx !== null);
-    });
-
-    this.poisonSnapshots = poisonSnapshots;
-  }
-
   _removeSeat(idx) {
     if (this.seatCount <= MIN) return;
 
@@ -1053,14 +1015,12 @@ export class BotcApp extends LitElement {
     this._nomsOpen = false;
 
     this._removeSeatFromNominations(idx);
-    this._removeSeatFromPoisonSnapshots(idx);
       this._applyPhaseCycle();
 
     if (this.seatCount <= MIN) this.removeMode = false;
 
     this._saveState();
     this._saveNominations();
-    this._savePoisonSnapshots();
     this.requestUpdate();
   }
 
@@ -1084,16 +1044,8 @@ export class BotcApp extends LitElement {
     this.nominations = nominations;
   }
 
-  _insertSeatIntoPoisonSnapshots(insertedAt) {
-    const poisonSnapshots = {};
-    Object.entries(this.poisonSnapshots || {}).forEach(([key, seats]) => {
-      poisonSnapshots[key] = (seats || []).map(idx => this._remapSeatIndexForInsert(idx, insertedAt));
-    });
-    this.poisonSnapshots = poisonSnapshots;
-  }
-
   // Inserts a new blank seat right before `at`, shifting everyone from that
-  // position onward up by one and remapping nominations/poison snapshots.
+  // position onward up by one and remapping nominations.
   // The circle layout is reset to the default evenly-spaced arrangement.
   _insertSeatAt(at) {
     if (this.seatCount >= MAX) return;
@@ -1106,17 +1058,15 @@ export class BotcApp extends LitElement {
     this.selected = this._remapSeatIndexForInsert(this.selected, at);
 
     this._insertSeatIntoNominations(at);
-    this._insertSeatIntoPoisonSnapshots(at);
     this._applyPhaseCycle();
 
     this._saveState();
     this._saveNominations();
-    this._savePoisonSnapshots();
     this.requestUpdate();
   }
 
   // Moves the seat currently at `from` to position `to`, shifting the seats
-  // in between and remapping nominations/poison snapshots to follow. Used by
+  // in between and remapping nominations to follow. Used by
   // the edit modal's "Seat #" control to relocate an already-seated player.
   _moveSeat(from, to) {
     const max = this.seatCount - 1;
@@ -1148,18 +1098,11 @@ export class BotcApp extends LitElement {
     });
     this.nominations = nominations;
 
-    const poisonSnapshots = {};
-    Object.entries(this.poisonSnapshots || {}).forEach(([key, idxs]) => {
-      poisonSnapshots[key] = (idxs || []).map(remap);
-    });
-    this.poisonSnapshots = poisonSnapshots;
-
     this.selected = remap(this.selected);
     this._applyPhaseCycle();
 
     this._saveState();
     this._saveNominations();
-    this._savePoisonSnapshots();
     this.requestUpdate();
   }
 
@@ -1171,27 +1114,10 @@ export class BotcApp extends LitElement {
     if (dir > 0 && this.gameEnded && step >= (this.gameEndInfo?.endedStep ?? step)) return;
     const next = Math.max(0, Math.min(MAX_STEP, step + dir));
     if (next === step) return;
-    // Save poison snapshot for current cycle
-    const oldKey = (this.phase === 'day' ? 'day-' : 'night-') + this.round;
-    const snap = { ...this.poisonSnapshots };
-    snap[oldKey] = this.seats.reduce((acc, s, i) => { if (s.poisoned) acc.push(i); return acc; }, []);
     const pr = stepToPhaseRound(next);
     this.phase = pr.phase;
     this.round = pr.round;
-    // Restore or clear poison for the new cycle
-    const newKey = (this.phase === 'day' ? 'day-' : 'night-') + this.round;
-    const newSnap = snap[newKey];
-    const seats = this.seats.map((s, i) => {
-      const wasOn = s.poisoned;
-      const nowOn = newSnap ? newSnap.includes(i) : false;
-      const updated = { ...s, poisoned: nowOn };
-      if (nowOn && !wasOn) updated.poisonedAt = { phase: this.phase, round: this.round };
-      return updated;
-    });
-    this.poisonSnapshots = snap;
-    this.seats = seats;
     this._applyPhaseCycle();
-    this._savePoisonSnapshots();
     this._saveState();
     if (this.phase === 'night') {
       if (this.nomMode) this._cancelNomMode();
@@ -1442,8 +1368,6 @@ export class BotcApp extends LitElement {
       diedAt:     data.dead && !old.dead ? { phase: this.phase, round: this.round } :
                  !data.dead && old.dead  ? null : old.diedAt,
       killedBy:   data.dead ? (data.killedBy || '') : '',
-      poisonedAt: data.poisoned && !old.poisoned ? { phase: this.phase, round: this.round } :
-                 !data.poisoned && old.poisoned  ? null : old.poisonedAt,
       changeLog,
     };
     const seats = [...this.seats];
@@ -1488,9 +1412,7 @@ export class BotcApp extends LitElement {
 
     this.gameNotes         = {};
     this.nominations       = {};
-    this.poisonSnapshots   = {};
     this.deathsCollapsed   = true;
-    this.poisonedCollapsed = true;
     this.allseatsCollapsed = true;
     this.changesCollapsed  = true;
 
@@ -1526,9 +1448,7 @@ export class BotcApp extends LitElement {
 
     this.gameNotes         = {};
     this.nominations       = {};
-    this.poisonSnapshots   = {};
     this.deathsCollapsed   = true;
-    this.poisonedCollapsed = true;
     this.allseatsCollapsed = true;
     this.changesCollapsed  = true;
 
@@ -1818,7 +1738,6 @@ export class BotcApp extends LitElement {
         .phase="${this.phase}"
         .round="${this.round}"
         .deathsCollapsed="${this.deathsCollapsed}"
-        .poisonedCollapsed="${this.poisonedCollapsed}"
         .allseatsCollapsed="${this.allseatsCollapsed}"
         .changesCollapsed="${this.changesCollapsed}"
         @seat-open="${e => { this._listOpen = false; this._openSeat(e.detail.idx); }}"
@@ -1830,7 +1749,6 @@ export class BotcApp extends LitElement {
         }}"
         @collapse-change="${e => {
           this.deathsCollapsed   = e.detail.deaths;
-          this.poisonedCollapsed = e.detail.poisoned;
           this.allseatsCollapsed = e.detail.allseats;
           this.changesCollapsed  = e.detail.changes;
           this._saveCollapsePrefs();

@@ -1,4 +1,4 @@
-const VERSION = 'v54';
+const VERSION = 'v55';
 const CACHE = 'botc-' + VERSION;
 // Derive base path so this works at root (localhost) or a subpath (GitHub Pages)
 const BASE = self.location.pathname.replace(/\/sw\.js$/, '') || '';

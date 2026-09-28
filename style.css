@@ -682,7 +682,6 @@ body.hide-role .pli-role        { display: none; }
 .tog.on-vote     { background: rgba(186,117,23,0.15); color: var(--text-secondary); border-color: var(--border-strong); }
 .tog.tog-disabled { opacity: 0.6; cursor: default; }
 .tog.on-drunk    { background: rgba(24,95,165,0.25); color: #7ab8f5; border-color: #3a7fc1; }
-.tog.on-poisoned { background: var(--evil-bg); color: var(--evil-text); border-color: var(--blood); }
 .killed-by-field { margin-top: 10px; }
 .killed-by-label { display: block; font-size: 10px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; }
 .killed-by-opt { font-weight: 400; opacity: 0.6; text-transform: none; letter-spacing: 0; }

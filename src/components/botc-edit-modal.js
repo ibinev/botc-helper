@@ -68,7 +68,6 @@ export class BotcEditModal extends LitElement {
     this._deadActive     = false;
     this._voteActive     = false;
     this._drunkActive    = false;
-    this._poisonedActive = false;
     this._isTravelerSeat = false;
   }
 
@@ -115,7 +114,6 @@ export class BotcEditModal extends LitElement {
     this._deadActive     = !!s.dead;
     this._voteActive     = this._isTravelerSeat ? this._deadActive : !!s.usedVote;
     this._drunkActive    = !!s.drunk;
-    this._poisonedActive = !!s.poisoned;
     this._killedByValue  = s.killedBy || '';
     this._syncToggles();
 
@@ -130,7 +128,6 @@ export class BotcEditModal extends LitElement {
     this._setTog('tog-dead',     this._deadActive,     'on-dead');
     this._setTog('tog-vote',     this._voteActive,     'on-vote');
     this._setTog('tog-drunk',    this._drunkActive,    'on-drunk');
-    this._setTog('tog-poisoned', this._poisonedActive, 'on-poisoned');
     const voteBtn = this.querySelector('#tog-vote');
     if (voteBtn) {
       voteBtn.style.display = this._deadActive ? '' : 'none';
@@ -164,11 +161,6 @@ export class BotcEditModal extends LitElement {
         break;
       case 'tog-drunk':
         this._drunkActive = !this._drunkActive;
-        if (this._drunkActive) this._poisonedActive = false;
-        break;
-      case 'tog-poisoned':
-        this._poisonedActive = !this._poisonedActive;
-        if (this._poisonedActive) this._drunkActive = false;
         break;
     }
     this._syncToggles();
@@ -238,7 +230,6 @@ export class BotcEditModal extends LitElement {
       dead:      this._deadActive,
       usedVote:  this._voteActive,
       drunk:     this._drunkActive,
-      poisoned:  this._poisonedActive,
       suspicious: alignment === 'suspicious',
       killedBy:  this._deadActive ? this._killedByValue : '',
     };
@@ -505,11 +496,6 @@ export class BotcEditModal extends LitElement {
                   @click="${() => this._onToggle('tog-drunk')}">
                   <img src="${ROLE_ICONS['Drunk']}"
                     alt="Drunk" class="tog-icon">Drunk
-                </button>
-                <button class="tog" id="tog-poisoned" data-on="on-poisoned"
-                  @click="${() => this._onToggle('tog-poisoned')}">
-                  <img src="${ROLE_ICONS['Poisoner']}"
-                    alt="Poisoned" class="tog-icon">Poisoned
                 </button>
               </div>
             </div>

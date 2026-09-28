@@ -27,7 +27,7 @@ Use this when running a live game and you need a fast reminder.
 - Use 📖 Reference -> Night tab for wake order checklist
 
 5. 🧪 Status tracking
-- Seat editor toggles: Dead, Ghost vote, Drunk, Poisoned
+- Seat editor toggles: Dead, Ghost vote, Drunk
 - Top bar pills: 🟢 alive count, 💀 dead count
 - Click 🟢 alive count to hide/show dead seats on the board
 
@@ -47,7 +47,6 @@ Use this when running a live game and you need a fast reminder.
 - 📖 Reference
 - ⚙️ Settings
 - 👻 Ghost vote used
-- 🧪 Poisoned
 - ☠ Dead marker
 
 ## 1. 🚀 Quick Start
@@ -99,7 +98,7 @@ The UI has three primary areas:
 - 🏁 Opens a popup to record the winning alignment (Good/Evil) and a reason
 - After saving, the game is marked ended: you can't start/resume nominations and votes
 - You can still move backward and forward, but not past the day/night the game ended on
-- Editing seats (roles, notes, dead/drunk/poisoned, etc.) still works
+- Editing seats (roles, notes, dead/drunk, etc.) still works
 - Clicking 🏁 again lets you review or update the recorded result
 - On the exact day/night the game ended, a "Good Wins!" / "Evil Wins!" banner appears centered above the sun/moon icon in the circle
 
@@ -141,12 +140,9 @@ Editable fields:
   - Dead
   - Ghost vote used (visible only if Dead is enabled)
   - Drunk
-  - Poisoned
 
 Behavior details:
-- Drunk and Poisoned are mutually exclusive in toggle logic.
 - Dead state stores death timing (phase + round). Marking a seat Dead opens an optional "Killed by which role?" popup — if set, a small role icon appears next to that player's name in the Nominations history when they died the same day as a nomination.
-- Poisoned state stores poisoning timing (phase + round).
 - Travelers have no ghost vote — marking a Traveler Dead auto-marks their ghost vote as used/unavailable and it can't be toggled.
 - Clear seat resets that seat to empty.
 
@@ -235,10 +231,6 @@ Players list modal contains collapsible sections:
 
 2. Deaths
 - Grouped by cycle label (Day N / Night N)
-- Shows player and role snapshot
-
-3. Poisoned
-- Grouped by cycle label
 - Shows player and role snapshot
 
 Collapse states are remembered between sessions.

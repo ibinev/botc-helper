@@ -234,7 +234,7 @@ export class BotcCircle extends LitElement {
 
     const trueIconSrc   = isBluff && s.trueRole && ROLE_ICONS[s.trueRole] ? ROLE_ICONS[s.trueRole] : null;
     const drunkIconSrc  = !isBluff
-      ? (s.poisoned ? ROLE_ICONS['Poisoner'] : s.drunk ? ROLE_ICONS['Drunk'] : null)
+      ? (s.drunk ? ROLE_ICONS['Drunk'] : null)
       : null;
 
     const displayRole     = s.trueRole || (claimed.length > 1 ? '…' : claimed[0]);
@@ -327,8 +327,8 @@ export class BotcCircle extends LitElement {
           : nothing}
         ${drunkIconSrc
           ? html`<img class="seat-drunk-icon" src="${drunkIconSrc}"
-              alt="${s.poisoned ? 'Poisoned' : 'Drunk'}"
-              title="${s.poisoned ? 'Poisoned' : 'Drunk'}">`
+              alt="Drunk"
+              title="Drunk">`
           : nothing}
         <span class="seat-num">${i + 1}</span>
         <div class="seat-inner">

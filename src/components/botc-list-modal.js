@@ -5,7 +5,7 @@ import { esc } from '../utils.js';
 /**
  * <botc-list-modal>
  *
- * Player list bottom sheet with collapsible Deaths and Poisoned sections.
+ * Player list bottom sheet with collapsible Deaths and Changes sections.
  *
  * Properties:
  *   open              {Boolean}
@@ -14,14 +14,13 @@ import { esc } from '../utils.js';
  *   phase             {String}
  *   round             {Number}
  *   deathsCollapsed   {Boolean}
- *   poisonedCollapsed {Boolean}
  *   allseatsCollapsed {Boolean}
  *   changesCollapsed  {Boolean}
  *
  * Fires:
  *   seat-open        – { detail: { idx } }
  *   modal-close      – (no detail)
- *   collapse-change  – { detail: { deaths, poisoned, allseats } }
+ *   collapse-change  – { detail: { deaths, allseats, changes } }
  */
 export class BotcListModal extends LitElement {
   static properties = {
@@ -32,7 +31,6 @@ export class BotcListModal extends LitElement {
     round:             { type: Number  },
     script:            { type: String  },
     deathsCollapsed:   { type: Boolean },
-    poisonedCollapsed: { type: Boolean },
     allseatsCollapsed: { type: Boolean },
     changesCollapsed:  { type: Boolean },
   };
@@ -48,7 +46,6 @@ export class BotcListModal extends LitElement {
     this.round             = 1;
     this.script            = 'tb';
     this.deathsCollapsed   = true;
-    this.poisonedCollapsed = true;
     this.allseatsCollapsed = true;
     this.changesCollapsed  = true;
   }
@@ -111,7 +108,6 @@ export class BotcListModal extends LitElement {
   _toggleCollapse(key) {
     const next = {
       deaths:   this.deathsCollapsed,
-      poisoned: this.poisonedCollapsed,
       allseats: this.allseatsCollapsed,
       changes:  this.changesCollapsed,
     };
@@ -245,7 +241,6 @@ export class BotcListModal extends LitElement {
   render() {
     const named = this.seats.filter(s => s.name);
     const dead = this.seats.map((s, i) => ({ s, i })).filter(({ s }) => s.dead && s.diedAt);
-    const poisoned = this.seats.map((s, i) => ({ s, i })).filter(({ s }) => s.poisonedAt);
     const changes = this.seats.flatMap(s => s.changeLog || []);
 
     const sections = [];
@@ -281,17 +276,6 @@ export class BotcListModal extends LitElement {
         </div>
         <div class="collapsible-body ${this.changesCollapsed ? 'collapsed' : ''}">
           ${this._buildChangesLog(this.seats)}
-        </div>
-      `);
-    }
-    if (poisoned.length) {
-      sections.push(html`
-        <div class="collapsible-header" @click="${() => this._toggleCollapse('poisoned')}">
-          <div class="list-section-title list-section-title--flush">Poisoned</div>
-          <span class="collapsible-chevron ${this.poisonedCollapsed ? 'collapsible-chevron--collapsed' : ''}">▾</span>
-        </div>
-        <div class="collapsible-body ${this.poisonedCollapsed ? 'collapsed' : ''}">
-          ${this._buildGroupedLog(poisoned, 'poisonedAt', '🧪')}
         </div>
       `);
     }
