@@ -118,6 +118,19 @@ export class BotcReferenceModal extends LitElement {
     `;
   }
 
+  _sectionHeader(cat, label, count) {
+    return html`
+      <div class="rc-section-header rc-section-header--${cat}">
+        <span class="rc-section-line"></span>
+        <span class="rc-section-pill">${label} <span class="rc-section-count">(${count})</span></span>
+      </div>
+    `;
+  }
+
+  _flowStyle(count) {
+    return `--rc-rows:${Math.max(1, Math.ceil(count / 2))}`;
+  }
+
   _orderedRoles(roles, cat) {
     const customLayout = getScriptRoleLayout(this.script);
     if (customLayout?.[cat]) {
@@ -218,45 +231,45 @@ export class BotcReferenceModal extends LitElement {
     return html`
       <div class="ref-body">
         ${hasTownsfolk ? html`
-          <div class="rc-section-header rc-section-header--townsfolk"><span class="rc-section-dot"></span>Townsfolk <span class="rc-section-count">(${countTownsfolk})</span></div>
+          ${this._sectionHeader('townsfolk', 'Townsfolk', countTownsfolk)}
           ${customLayout?.townsfolk ? html`
             <div class="rc-two-col">
               <div class="rc-two-col-left">${leftTownsfolk.map(r => this._roleCard(r, inPlay))}</div>
               <div class="rc-two-col-right">${rightTownsfolk.map(r => this._roleCard(r, inPlay))}</div>
             </div>
           ` : html`
-            <div class="rc-grid rc-grid--col-flow">${townsfolk.map(r => this._roleCard(r, inPlay))}</div>
+            <div class="rc-grid rc-grid--col-flow" style="${this._flowStyle(countTownsfolk)}">${townsfolk.map(r => this._roleCard(r, inPlay))}</div>
           `}
         ` : nothing}
 
         ${hasOutsiders ? html`
-          <div class="rc-section-header rc-section-header--outsider"><span class="rc-section-dot"></span>Outsiders <span class="rc-section-count">(${countOutsiders})</span></div>
-          <div class="rc-grid rc-grid--2">${outsiders.map(r => this._roleCard(r, inPlay))}</div>
+          ${this._sectionHeader('outsider', 'Outsiders', countOutsiders)}
+          <div class="rc-grid rc-grid--flow" style="${this._flowStyle(countOutsiders)}">${outsiders.map(r => this._roleCard(r, inPlay))}</div>
         ` : nothing}
 
         ${hasMinions ? html`
-          <div class="rc-section-header rc-section-header--minion"><span class="rc-section-dot"></span>Minions <span class="rc-section-count">(${countMinions})</span></div>
-          <div class="rc-grid rc-grid--2">${minions.map(r => this._roleCard(r, inPlay))}</div>
+          ${this._sectionHeader('minion', 'Minions', countMinions)}
+          <div class="rc-grid rc-grid--flow" style="${this._flowStyle(countMinions)}">${minions.map(r => this._roleCard(r, inPlay))}</div>
         ` : nothing}
 
         ${hasDemons ? html`
-          <div class="rc-section-header rc-section-header--demon"><span class="rc-section-dot"></span>Demon <span class="rc-section-count">(${countDemons})</span></div>
-          <div class="rc-grid ${this.script === 'bmr' || this.script === 'snv' || hasCustomLayout ? 'rc-grid--2' : 'rc-grid--1 rc-grid--demon'}">${demons.map(r => this._roleCard(r, inPlay))}</div>
+          ${this._sectionHeader('demon', 'Demon', countDemons)}
+          <div class="rc-grid ${this.script === 'bmr' || this.script === 'snv' || hasCustomLayout ? 'rc-grid--flow' : 'rc-grid--1 rc-grid--demon'}" style="${this._flowStyle(countDemons)}">${demons.map(r => this._roleCard(r, inPlay))}</div>
         ` : nothing}
 
         ${hasTravelers ? html`
-          <div class="rc-section-header rc-section-header--traveler"><span class="rc-section-dot"></span>Travelers <span class="rc-section-count">(${countTravelers})</span></div>
-          <div class="rc-grid rc-grid--2">${this._orderedRoles(travelers, 'traveler').map(r => this._roleCard(r, inPlay))}</div>
+          ${this._sectionHeader('traveler', 'Travelers', countTravelers)}
+          <div class="rc-grid rc-grid--flow" style="${this._flowStyle(countTravelers)}">${this._orderedRoles(travelers, 'traveler').map(r => this._roleCard(r, inPlay))}</div>
         ` : nothing}
 
         ${hasLorics ? html`
-          <div class="rc-section-header rc-section-header--loric"><span class="rc-section-dot"></span>Loric <span class="rc-section-count">(${countLorics})</span></div>
-          <div class="rc-grid rc-grid--2">${lorics.map(r => this._roleCard(r, inPlay))}</div>
+          ${this._sectionHeader('loric', 'Loric', countLorics)}
+          <div class="rc-grid rc-grid--flow" style="${this._flowStyle(countLorics)}">${lorics.map(r => this._roleCard(r, inPlay))}</div>
         ` : nothing}
 
         ${hasFabls ? html`
-          <div class="rc-section-header rc-section-header--fabled"><span class="rc-section-dot"></span>Fabled <span class="rc-section-count">(${countFabls})</span></div>
-          <div class="rc-grid rc-grid--2">${fablsWithDjinn.map(r => this._roleCard(r, inPlay))}</div>
+          ${this._sectionHeader('fabled', 'Fabled', countFabls)}
+          <div class="rc-grid rc-grid--flow" style="${this._flowStyle(countFabls)}">${fablsWithDjinn.map(r => this._roleCard(r, inPlay))}</div>
           ${jinxes.length ? html`
             <div class="rc-jinx-list">
               <div class="rc-jinx-title">Djinn special rules for this script</div>

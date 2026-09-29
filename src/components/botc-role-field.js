@@ -9,7 +9,10 @@ import './botc-role-picker-popup.js';
  * A labelled role picker with a built-in info popup. Single mode uses a
  * type-to-filter combo-box; multi mode (`multi` attribute) shows the current
  * picks as chips and opens <botc-role-picker-popup> (tap-a-role-circle, no
- * typing) to add/remove picks.
+ * typing) to add/remove picks. Picker mode (`picker` attribute, single-value
+ * only) shows the current pick as one chip and opens the same tap-a-role
+ * popup in single-select mode — a tap applies the value immediately and
+ * closes the popup, no Done button (same UX as the "Killed by" popup).
  *
  * Properties:
  *   label       {String}  – field label text
@@ -18,6 +21,7 @@ import './botc-role-picker-popup.js';
  *   placeholder {String}  – combo/empty-chip-well placeholder
  *   writable    {Boolean} – forwarded to botc-combo, single mode only (default: true)
  *   multi       {Boolean} – multi-select mode (default: false)
+ *   picker      {Boolean} – single-value tap-a-role popup instead of the combo (default: false, ignored when multi is true)
  *
  * Public API:
  *   getValue()       → role name string (single mode) or string[] (multi mode)
@@ -34,6 +38,7 @@ export class BotcRoleField extends LitElement {
     placeholder:   { type: String },
     writable:      { type: Boolean },
     multi:         { type: Boolean },
+    picker:        { type: Boolean },
     _infoOpen:     { state: true },
     _currentValue: { state: true },
     _pickerOpen:   { state: true },
@@ -49,6 +54,7 @@ export class BotcRoleField extends LitElement {
     this.placeholder = 'Search…';
     this.writable    = true;
     this.multi       = false;
+    this.picker      = false;
     this._infoOpen   = false;
     this._currentValue = '';
     this._pickerOpen = false;
@@ -105,6 +111,23 @@ export class BotcRoleField extends LitElement {
     this._pickerOpen = false;
     this.dispatchEvent(new CustomEvent('role-change', {
       detail: { value: [...this._currentValue] }, bubbles: true, composed: true
+    }));
+  }
+
+  _onPickerSelect(e) {
+    this._currentValue = e.detail?.value || '';
+    this._pickerOpen = false;
+    if (this._infoOpen && !this._currentValue) this._infoOpen = false;
+    this.dispatchEvent(new CustomEvent('role-change', {
+      detail: { value: this._currentValue }, bubbles: true, composed: true
+    }));
+  }
+
+  _clearSingle() {
+    this._currentValue = '';
+    this._infoOpen = false;
+    this.dispatchEvent(new CustomEvent('role-change', {
+      detail: { value: '' }, bubbles: true, composed: true
     }));
   }
 
@@ -173,6 +196,29 @@ export class BotcRoleField extends LitElement {
             ` : nothing}
             <button class="combo-toggle" type="button" title="Add role" @click="${() => { this._pickerOpen = true; }}">+</button>
           </div>
+        ` : (this.picker ? html`
+          <div class="role-field-multi-row">
+            <button type="button" class="role-field-chip-well" @click="${() => { this._pickerOpen = true; }}">
+              ${this._currentValue
+                ? html`
+                    <span class="role-field-chip role-field-chip--single">
+                      ${ROLE_ICONS[this._currentValue] ? html`<img class="role-field-chip-icon" src="${ROLE_ICONS[this._currentValue]}" alt="">` : nothing}
+                      <span class="role-field-chip-name">${this._currentValue}</span>
+                    </span>
+                  `
+                : html`<span class="role-field-chip-placeholder">${this.placeholder}</span>`}
+            </button>
+            ${this._currentValue ? html`<button class="combo-clear visible" type="button" title="Clear" @click="${e => { e.stopPropagation(); this._clearSingle(); }}">✕</button>` : nothing}
+            ${this._currentValue ? html`
+              <button class="combo-info" type="button" title="Role info" @click="${e => { e.stopPropagation(); this._toggleInfo(); }}">
+                <svg class="combo-info-svg" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                  <circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1"/>
+                  <text x="8" y="8" text-anchor="middle" dominant-baseline="central" font-size="10" font-weight="700" fill="currentColor" font-family="sans-serif">i</text>
+                </svg>
+              </button>
+            ` : nothing}
+            <button class="combo-toggle" type="button" title="Pick role" @click="${() => { this._pickerOpen = true; }}">▾</button>
+          </div>
         ` : html`
           <botc-combo
             .script="${this.script}"
@@ -182,7 +228,7 @@ export class BotcRoleField extends LitElement {
             @combo-change="${this._onComboChange}"
             @combo-info-click="${this._toggleInfo}"
           ></botc-combo>
-        `}
+        `)}
       </div>
     `;
   }
@@ -208,7 +254,18 @@ export class BotcRoleField extends LitElement {
           @role-picker-change="${e => this._onPickerChange(e)}"
           @role-picker-dismiss="${() => { this._pickerOpen = false; }}"
         ></botc-role-picker-popup>
-      ` : nothing}
+      ` : (this.picker ? html`
+        <botc-role-picker-popup
+          .open="${this._pickerOpen}"
+          .script="${this.script}"
+          .title="${this.label || 'Pick a role'}"
+          .multi="${false}"
+          .value="${this._currentValue}"
+          .clearable="${!!this._currentValue}"
+          @role-picker-select="${e => this._onPickerSelect(e)}"
+          @role-picker-dismiss="${() => { this._pickerOpen = false; }}"
+        ></botc-role-picker-popup>
+      ` : nothing)}
 
       ${infoRoles.length ? html`
         <div class="role-info-modal-backdrop"

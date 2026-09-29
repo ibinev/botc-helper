@@ -1,4 +1,4 @@
-const VERSION = 'v55';
+const VERSION = 'v61';
 const CACHE = 'botc-' + VERSION;
 // Derive base path so this works at root (localhost) or a subpath (GitHub Pages)
 const BASE = self.location.pathname.replace(/\/sw\.js$/, '') || '';
@@ -73,6 +73,9 @@ self.addEventListener('fetch', e => {
           const fresh = fetch(e.request).then(res => {
             if (res.ok) cache.put(e.request, res.clone());
             return res;
+          }).catch(err => {
+            if (cached) return cached; // background refresh failed but we already had a cached copy
+            throw err;
           });
           return cached || fresh;
         })
@@ -89,6 +92,9 @@ self.addEventListener('fetch', e => {
           const fresh = fetch(e.request).then(res => {
             cache.put(e.request, res.clone());
             return res;
+          }).catch(err => {
+            if (cached) return cached; // background refresh failed but we already had a cached copy
+            throw err;
           });
           return cached || fresh;
         })

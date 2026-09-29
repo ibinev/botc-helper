@@ -224,18 +224,18 @@ export class BotcCircle extends LitElement {
       ? s.roleClaims.filter(Boolean)
       : (s.role ? [s.role] : []);
     const roleData = claimed[0] ? roles.find(r => r.name === claimed[0]) : null;
-    const isBluff  = !!(s.trueRole && claimed.length && !claimed.includes(s.trueRole));
 
-    // Main icon stack: all claimed roles (or the true role alone if nothing's
-    // been claimed yet). The true role gets its own separate badge only when
-    // it's NOT among the claims (i.e. actively bluffing).
-    const stackRoles = claimed.length ? claimed : (s.trueRole ? [s.trueRole] : []);
+    // Left icon stack: claimed roles, but suppressed when it's a single claim
+    // matching the true role (shown only on the right then, not duplicated).
+    // With several claims, a matching one still shows on both ends.
+    const singleMatchingClaim = claimed.length === 1 && !!s.trueRole && claimed[0] === s.trueRole;
+    const stackRoles = singleMatchingClaim ? [] : claimed;
     const stackIcons  = stackRoles.map(r => ROLE_ICONS[r]).filter(Boolean);
 
-    const trueIconSrc   = isBluff && s.trueRole && ROLE_ICONS[s.trueRole] ? ROLE_ICONS[s.trueRole] : null;
-    const drunkIconSrc  = !isBluff
-      ? (s.drunk ? ROLE_ICONS['Drunk'] : null)
-      : null;
+    // True role always shows on the right when known, no exceptions.
+    const trueIconSrc   = s.trueRole && ROLE_ICONS[s.trueRole] ? ROLE_ICONS[s.trueRole] : null;
+    // Drunk is its own bottom-left badge so it never competes with the true-role slot.
+    const drunkBadgeSrc = s.drunk ? ROLE_ICONS['Drunk'] : null;
 
     const displayRole     = s.trueRole || (claimed.length > 1 ? '…' : claimed[0]);
     const displayRoleData = displayRole ? roles.find(r => r.name === displayRole) : null;
@@ -325,10 +325,8 @@ export class BotcCircle extends LitElement {
         ${trueIconSrc
           ? html`<img class="seat-true-icon" src="${trueIconSrc}" alt="${s.trueRole}" title="${s.trueRole}">`
           : nothing}
-        ${drunkIconSrc
-          ? html`<img class="seat-drunk-icon" src="${drunkIconSrc}"
-              alt="Drunk"
-              title="Drunk">`
+        ${drunkBadgeSrc
+          ? html`<div class="seat-drunk-badge" title="Drunk"><img src="${drunkBadgeSrc}" alt="Drunk"></div>`
           : nothing}
         <span class="seat-num">${i + 1}</span>
         <div class="seat-inner">
