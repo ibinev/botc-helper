@@ -2,6 +2,7 @@ import { LitElement, html, nothing } from 'lit';
 import './botc-combo.js';
 import './botc-role-field.js';
 import { ROLE_ICONS, getAllRoles, CAT_LABELS } from '../data.js';
+import { isPoisoned } from '../utils.js';
 
 /**
  * <botc-edit-modal>
@@ -31,6 +32,8 @@ export class BotcEditModal extends LitElement {
     seatIdx:           { type: Number  },
     seatCount:         { type: Number  },
     script:            { type: String  },
+    round:             { type: Number  },
+    phase:             { type: String  },
     playerPool:        { type: Array   },
     fullPool:          { type: Array   },
     _poolOpen:         { state: true   },
@@ -52,6 +55,8 @@ export class BotcEditModal extends LitElement {
     this.seatIdx    = null;
     this.seatCount  = 12;
     this.script          = 'tb';
+    this.round           = 1;
+    this.phase           = 'day';
     this.playerPool        = [];
     this.fullPool           = [];
     this._poolOpen          = false;
@@ -68,6 +73,7 @@ export class BotcEditModal extends LitElement {
     this._deadActive     = false;
     this._voteActive     = false;
     this._drunkActive    = false;
+    this._poisonActive   = false;
     this._isTravelerSeat = false;
   }
 
@@ -114,6 +120,7 @@ export class BotcEditModal extends LitElement {
     this._deadActive     = !!s.dead;
     this._voteActive     = this._isTravelerSeat ? this._deadActive : !!s.usedVote;
     this._drunkActive    = !!s.drunk;
+    this._poisonActive   = isPoisoned(s, this.round);
     this._killedByValue  = s.killedBy || '';
     this._syncToggles();
 
@@ -128,6 +135,7 @@ export class BotcEditModal extends LitElement {
     this._setTog('tog-dead',     this._deadActive,     'on-dead');
     this._setTog('tog-vote',     this._voteActive,     'on-vote');
     this._setTog('tog-drunk',    this._drunkActive,    'on-drunk');
+    this._setTog('tog-poison',   this._poisonActive,   'on-poison');
     const voteBtn = this.querySelector('#tog-vote');
     if (voteBtn) {
       voteBtn.style.display = this._deadActive ? '' : 'none';
@@ -161,6 +169,9 @@ export class BotcEditModal extends LitElement {
         break;
       case 'tog-drunk':
         this._drunkActive = !this._drunkActive;
+        break;
+      case 'tog-poison':
+        this._poisonActive = !this._poisonActive;
         break;
     }
     this._syncToggles();
@@ -230,6 +241,7 @@ export class BotcEditModal extends LitElement {
       dead:      this._deadActive,
       usedVote:  this._voteActive,
       drunk:     this._drunkActive,
+      poisoned:  this._poisonActive,
       suspicious: alignment === 'suspicious',
       killedBy:  this._deadActive ? this._killedByValue : '',
     };
@@ -496,6 +508,11 @@ export class BotcEditModal extends LitElement {
                   @click="${() => this._onToggle('tog-drunk')}">
                   <img src="${ROLE_ICONS['Drunk']}"
                     alt="Drunk" class="tog-icon">Drunk
+                </button>
+                <button class="tog" id="tog-poison" data-on="on-poison" title="Lasts this night + day, clears next night"
+                  @click="${() => this._onToggle('tog-poison')}">
+                  <img src="${ROLE_ICONS['Poisoner']}"
+                    alt="Poisoned" class="tog-icon">Poisoned
                 </button>
               </div>
             </div>

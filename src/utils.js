@@ -16,8 +16,16 @@ export function blankSeat() {
     name: '', role: '', trueRole: '', alignment: 'unknown',
     notes: '', dead: false, usedVote: false, suspicious: false,
     drunk: false, diedAt: null, killedBy: '',
-    roleClaims: [], changeLog: []
+    poisonedAt: null,
+    roleClaims: [], changeLog: [], poisonLog: []
   };
+}
+
+// Poison lasts for the round it was applied on (both Night N and Day N share
+// round N) and clears itself automatically once the cycle moves to round N+1
+// — no explicit "un-poison" step is needed, this is just a live comparison.
+export function isPoisoned(seat, round) {
+  return !!(seat && seat.poisonedAt && seat.poisonedAt.round === round);
 }
 
 /**

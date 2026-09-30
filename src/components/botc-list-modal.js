@@ -5,7 +5,7 @@ import { esc } from '../utils.js';
 /**
  * <botc-list-modal>
  *
- * Player list bottom sheet with collapsible Deaths and Changes sections.
+ * Player list bottom sheet with collapsible Deaths, Poisoned and Changes sections.
  *
  * Properties:
  *   open              {Boolean}
@@ -16,11 +16,12 @@ import { esc } from '../utils.js';
  *   deathsCollapsed   {Boolean}
  *   allseatsCollapsed {Boolean}
  *   changesCollapsed  {Boolean}
+ *   poisonedCollapsed {Boolean}
  *
  * Fires:
  *   seat-open        – { detail: { idx } }
  *   modal-close      – (no detail)
- *   collapse-change  – { detail: { deaths, allseats, changes } }
+ *   collapse-change  – { detail: { deaths, allseats, changes, poisoned } }
  */
 export class BotcListModal extends LitElement {
   static properties = {
@@ -33,6 +34,7 @@ export class BotcListModal extends LitElement {
     deathsCollapsed:   { type: Boolean },
     allseatsCollapsed: { type: Boolean },
     changesCollapsed:  { type: Boolean },
+    poisonedCollapsed: { type: Boolean },
   };
 
   createRenderRoot() { return this; }
@@ -48,6 +50,7 @@ export class BotcListModal extends LitElement {
     this.deathsCollapsed   = true;
     this.allseatsCollapsed = true;
     this.changesCollapsed  = true;
+    this.poisonedCollapsed = true;
   }
 
   updated(changed) {
@@ -110,6 +113,7 @@ export class BotcListModal extends LitElement {
       deaths:   this.deathsCollapsed,
       allseats: this.allseatsCollapsed,
       changes:  this.changesCollapsed,
+      poisoned: this.poisonedCollapsed,
     };
     next[key] = !next[key];
     this.dispatchEvent(new CustomEvent('collapse-change', {
@@ -238,9 +242,43 @@ export class BotcListModal extends LitElement {
     `);
   }
 
+  _poisonEntryHtml(p) {
+    return html`
+      <div class="death-entry">
+        <span class="death-icon"><img class="death-icon-img" src="${ROLE_ICONS['Poisoner']}" alt="Poisoned"></span>
+        <span class="death-name">${p.name || 'Seat ' + (p.i + 1)}</span>
+      </div>
+    `;
+  }
+
+  _buildPoisonLog(seats) {
+    const entries = [];
+    seats.forEach((s, i) => {
+      (s.poisonLog || []).forEach(p => entries.push({ ...p, i, name: s.name }));
+    });
+    const groups = {};
+    entries.forEach(p => {
+      const label = (p.phase === 'day' ? 'Day ' : 'Night ') + p.round;
+      if (!groups[label]) groups[label] = { phase: p.phase, round: p.round, entries: [] };
+      groups[label].entries.push(p);
+    });
+    const sortedKeys = Object.keys(groups).sort((a, b) => {
+      const ga = groups[a], gb = groups[b];
+      if (ga.round !== gb.round) return ga.round - gb.round;
+      return ga.phase === 'night' ? -1 : 1;
+    });
+    return sortedKeys.map(label => html`
+      <div class="death-group">
+        <div class="death-cycle-label">${label}</div>
+        ${groups[label].entries.map(p => this._poisonEntryHtml(p))}
+      </div>
+    `);
+  }
+
   render() {
     const named = this.seats.filter(s => s.name);
     const dead = this.seats.map((s, i) => ({ s, i })).filter(({ s }) => s.dead && s.diedAt);
+    const poisoned = this.seats.flatMap(s => s.poisonLog || []);
     const changes = this.seats.flatMap(s => s.changeLog || []);
 
     const sections = [];
@@ -276,6 +314,17 @@ export class BotcListModal extends LitElement {
         </div>
         <div class="collapsible-body ${this.changesCollapsed ? 'collapsed' : ''}">
           ${this._buildChangesLog(this.seats)}
+        </div>
+      `);
+    }
+    if (poisoned.length) {
+      sections.push(html`
+        <div class="collapsible-header" @click="${() => this._toggleCollapse('poisoned')}">
+          <div class="list-section-title list-section-title--flush">Poisoned</div>
+          <span class="collapsible-chevron ${this.poisonedCollapsed ? 'collapsible-chevron--collapsed' : ''}">▾</span>
+        </div>
+        <div class="collapsible-body ${this.poisonedCollapsed ? 'collapsed' : ''}">
+          ${this._buildPoisonLog(this.seats)}
         </div>
       `);
     }

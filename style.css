@@ -399,6 +399,14 @@ body.hide-dead #circle-inner.nom-votes-mode .seat.dead { display: block; }
   box-shadow: 0 1px 4px rgba(0,0,0,0.6); pointer-events: none;
 }
 .seat-drunk-badge img { width: 16px; height: 16px; object-fit: contain; }
+.seat-poison-badge {
+  position: absolute; bottom: -6px; right: -6px; z-index: 4;
+  width: 24px; height: 24px; border-radius: 50%;
+  background: rgba(20,14,8,0.92); border: 1.5px solid rgba(255,255,255,0.4);
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.6); pointer-events: none;
+}
+.seat-poison-badge img { width: 16px; height: 16px; object-fit: contain; }
 .seat-true-icon  { position: absolute; top: -14px; right: -14px; width: 55px; height: 55px; object-fit: contain; pointer-events: none; filter: drop-shadow(0 1px 4px rgba(0,0,0,0.9)); z-index: 3; }
 .seat-role-icon, .seat-role-icon-stack { position: absolute; top: -14px; left:  -14px; width: 55px; height: 55px; pointer-events: none; z-index: 3; }
 .seat-role-icon { object-fit: contain; filter: drop-shadow(0 1px 4px rgba(0,0,0,0.9)); }
@@ -470,6 +478,8 @@ body.compact-mode .seat-status-strip { bottom: 4px; }
 body.compact-mode .seat-role-icon, body.compact-mode .seat-role-icon-stack { width: 32px; height: 32px; top: -8px; left:  -8px; }
 body.compact-mode .seat-drunk-badge { width: 18px; height: 18px; bottom: -4px; left: -4px; }
 body.compact-mode .seat-drunk-badge img { width: 12px; height: 12px; }
+body.compact-mode .seat-poison-badge { width: 18px; height: 18px; bottom: -4px; right: -4px; }
+body.compact-mode .seat-poison-badge img { width: 12px; height: 12px; }
 body.compact-mode .seat-true-icon  { width: 32px; height: 32px; top: -8px; right: -8px; }
 
 @media (max-width: 479px) {
@@ -478,6 +488,8 @@ body.compact-mode .seat-true-icon  { width: 32px; height: 32px; top: -8px; right
   body.compact-mode .seat-role-icon, body.compact-mode .seat-role-icon-stack { width: 24px; height: 24px; top: -6px; left:  -6px; }
   body.compact-mode .seat-drunk-badge { width: 15px; height: 15px; bottom: -3px; left: -3px; }
   body.compact-mode .seat-drunk-badge img { width: 10px; height: 10px; }
+  body.compact-mode .seat-poison-badge { width: 15px; height: 15px; bottom: -3px; right: -3px; }
+  body.compact-mode .seat-poison-badge img { width: 10px; height: 10px; }
   body.compact-mode .seat-true-icon  { width: 24px; height: 24px; top: -6px; right: -6px; }
 }
 @media (min-width: 520px) {
@@ -485,6 +497,8 @@ body.compact-mode .seat-true-icon  { width: 32px; height: 32px; top: -8px; right
   body.compact-mode .seat-role-icon, body.compact-mode .seat-role-icon-stack { width: 34px; height: 34px; top: -9px; left:  -9px; }
   body.compact-mode .seat-drunk-badge { width: 20px; height: 20px; bottom: -5px; left: -5px; }
   body.compact-mode .seat-drunk-badge img { width: 13px; height: 13px; }
+  body.compact-mode .seat-poison-badge { width: 20px; height: 20px; bottom: -5px; right: -5px; }
+  body.compact-mode .seat-poison-badge img { width: 13px; height: 13px; }
   body.compact-mode .seat-true-icon  { width: 34px; height: 34px; top: -9px; right: -9px; }
 }
 
@@ -690,6 +704,7 @@ body.hide-role .pli-role        { display: none; }
 .tog.on-vote     { background: rgba(186,117,23,0.15); color: var(--text-secondary); border-color: var(--border-strong); }
 .tog.tog-disabled { opacity: 0.6; cursor: default; }
 .tog.on-drunk    { background: rgba(24,95,165,0.25); color: #7ab8f5; border-color: #3a7fc1; }
+.tog.on-poison   { background: rgba(190,45,45,0.25); color: #f08787; border-color: #a63a3a; }
 .killed-by-field { margin-top: 10px; }
 .killed-by-label { display: block; font-size: 10px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; }
 .killed-by-opt { font-weight: 400; opacity: 0.85; text-transform: none; letter-spacing: 0; }
@@ -1807,6 +1822,7 @@ body.hide-role .pli-role        { display: none; }
 .btn-close-sm { padding: 6px 12px; }
 .d-none       { display: none; }
 .tog-icon     { width: 18px; height: 18px; object-fit: contain; vertical-align: middle; margin-right: 4px; }
+.death-icon-img { width: 16px; height: 16px; object-fit: contain; vertical-align: middle; }
 .name-label   { display: block; font-size: 10px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px; }
 .player-name-control { display: flex; align-items: stretch; background: var(--bg-input); border: 0.5px solid var(--border); border-radius: var(--radius-sm); transition: border-color var(--duration-fast) var(--ease-standard), box-shadow var(--duration-fast) var(--ease-standard); overflow: hidden; }
 .player-name-control:focus-within,

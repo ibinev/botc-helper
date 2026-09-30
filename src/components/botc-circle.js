@@ -1,6 +1,6 @@
 import { LitElement, html, nothing } from 'lit';
 import { getRoles, ROLE_ICONS } from '../data.js';
-import { esc, defaultPos } from '../utils.js';
+import { esc, defaultPos, isPoisoned } from '../utils.js';
 
 /**
  * <botc-circle>
@@ -236,6 +236,8 @@ export class BotcCircle extends LitElement {
     const trueIconSrc   = s.trueRole && ROLE_ICONS[s.trueRole] ? ROLE_ICONS[s.trueRole] : null;
     // Drunk is its own bottom-left badge so it never competes with the true-role slot.
     const drunkBadgeSrc = s.drunk ? ROLE_ICONS['Drunk'] : null;
+    // Poisoned is a bottom-right badge; automatically expires once the round moves on.
+    const isPoisonedNow = isPoisoned(s, this.round);
 
     const displayRole     = s.trueRole || (claimed.length > 1 ? '…' : claimed[0]);
     const displayRoleData = displayRole ? roles.find(r => r.name === displayRole) : null;
@@ -327,6 +329,9 @@ export class BotcCircle extends LitElement {
           : nothing}
         ${drunkBadgeSrc
           ? html`<div class="seat-drunk-badge" title="Drunk"><img src="${drunkBadgeSrc}" alt="Drunk"></div>`
+          : nothing}
+        ${isPoisonedNow
+          ? html`<div class="seat-poison-badge" title="Poisoned"><img src="${ROLE_ICONS['Poisoner']}" alt="Poisoned"></div>`
           : nothing}
         <span class="seat-num">${i + 1}</span>
         <div class="seat-inner">

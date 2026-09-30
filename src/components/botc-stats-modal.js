@@ -361,20 +361,6 @@ export class BotcStatsModal extends LitElement {
     this.querySelector('#stats-folder-input')?.click();
   }
 
-  // Manual "Refresh" action. On File System Access browsers this silently
-  // re-scans the already-picked folder (same as the automatic on-open
-  // refresh). On browsers without that API (e.g. Safari/iOS) there is no way
-  // to re-read a folder without the user picking it again — the OS/browser
-  // itself requires that, it isn't something we can bypass — so this just
-  // re-opens the same folder/file picker as "Choose Folder".
-  async _onRefresh() {
-    if (SUPPORTS_FS_ACCESS && this._dirHandle) {
-      await this._autoRefresh();
-      return;
-    }
-    await this._pickFolder();
-  }
-
   async _processFiles(fileList) {
     const files = Array.from(fileList || []).filter(f => /\.xml$/i.test(f.name));
     if (!files.length) {
@@ -590,11 +576,6 @@ export class BotcStatsModal extends LitElement {
             <div class="stats-actions">
               <button class="btn btn-primary"
                 @click="${() => this._pickFolder()}">📂 Choose Folder</button>
-              ${s ? html`
-                <button class="btn" ?disabled="${this._loading}"
-                  title="${SUPPORTS_FS_ACCESS && this._dirHandle ? 'Re-scan the chosen folder' : 'Your browser can\'t silently re-scan a folder — this reopens the folder picker'}"
-                  @click="${() => this._onRefresh()}">🔄 Refresh</button>
-              ` : nothing}
               ${s ? html`<button class="btn" @click="${this._clearCache}">🗑 Clear</button>` : nothing}
             </div>
             ${this._loading ? html`<p class="stats-status">Reading backup files…</p>` : nothing}

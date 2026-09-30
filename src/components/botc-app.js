@@ -1,6 +1,6 @@
 import { LitElement, html, nothing } from 'lit';
 import { ROLES_IMG_URL, normalizeScript, setCustomScripts, getScriptOptions, getAllRoles, getRoles, getScriptRoleLayout, loadBundledScripts } from '../data.js';
-import { blankSeat, MIN, MAX, MAX_STEP, phaseRoundToStep, stepToPhaseRound, playVoteYesSound, playVoteNoSound, parseBackupXml } from '../utils.js';
+import { blankSeat, MIN, MAX, MAX_STEP, phaseRoundToStep, stepToPhaseRound, playVoteYesSound, playVoteNoSound, parseBackupXml, isPoisoned } from '../utils.js';
 import './botc-circle.js';
 import './botc-edit-modal.js';
 import './botc-stats-modal.js';
@@ -50,6 +50,7 @@ export class BotcApp extends LitElement {
     deathsCollapsed:   { type: Boolean },
     allseatsCollapsed: { type: Boolean },
     changesCollapsed:  { type: Boolean },
+    poisonedCollapsed: { type: Boolean },
     gameEnded:         { type: Boolean },
     gameEndInfo:       { type: Object  },
     // Modal visibility
@@ -110,6 +111,7 @@ export class BotcApp extends LitElement {
     this.deathsCollapsed   = true;
     this.allseatsCollapsed = true;
     this.changesCollapsed  = true;
+    this.poisonedCollapsed = true;
     this.gameEnded         = false;
     this.gameEndInfo       = null;
     this._editOpen         = false;
@@ -382,6 +384,7 @@ export class BotcApp extends LitElement {
         deaths:   this.deathsCollapsed,
         allseats: this.allseatsCollapsed,
         changes:  this.changesCollapsed,
+        poisoned: this.poisonedCollapsed,
       }));
     } catch(e) {}
   }
@@ -394,6 +397,7 @@ export class BotcApp extends LitElement {
         this.deathsCollapsed   = !!p.deaths;
         this.allseatsCollapsed = !!p.allseats;
         this.changesCollapsed  = !!p.changes;
+        this.poisonedCollapsed = p.poisoned === undefined ? true : !!p.poisoned;
       }
     } catch(e) {}
   }
@@ -681,6 +685,7 @@ export class BotcApp extends LitElement {
         deathsCollapsed: this.deathsCollapsed,
         allseatsCollapsed: this.allseatsCollapsed,
         changesCollapsed: this.changesCollapsed,
+        poisonedCollapsed: this.poisonedCollapsed,
         storyView: this.storyView,
         compactMode: this.compactMode,
         hideRole: this.hideRole,
@@ -864,6 +869,7 @@ export class BotcApp extends LitElement {
     this.deathsCollapsed = !!app.deathsCollapsed;
     this.allseatsCollapsed = !!app.allseatsCollapsed;
     this.changesCollapsed = !!app.changesCollapsed;
+    this.poisonedCollapsed = app.poisonedCollapsed === undefined ? true : !!app.poisonedCollapsed;
     this.storyView = !!app.storyView;
     this.compactMode = !!app.compactMode;
     this.hideRole = !!app.hideRole;
@@ -1362,13 +1368,26 @@ export class BotcApp extends LitElement {
     if (old.alignment && old.alignment !== 'unknown' && data.alignment && data.alignment !== old.alignment) {
       changeLog.push({ phase: this.phase, round: this.round, field: 'alignment', from: old.alignment, to: data.alignment });
     }
+    // Poison is round-scoped (lasts the night it was set + the following day,
+    // then auto-expires) — only poisonedAt is persisted, the transient
+    // `poisoned` on/off flag from the modal is never stored as-is. poisonLog
+    // is a separate permanent history (never auto-expires) for the list modal.
+    const { poisoned, ...restData } = data;
+    const wasPoisonedNow = isPoisoned(old, this.round);
+    const poisonLog = [...(old.poisonLog || [])];
+    if (poisoned && !wasPoisonedNow) {
+      poisonLog.push({ phase: this.phase, round: this.round });
+    }
     const seat = {
       ...old,
-      ...data,
+      ...restData,
       diedAt:     data.dead && !old.dead ? { phase: this.phase, round: this.round } :
                  !data.dead && old.dead  ? null : old.diedAt,
+      poisonedAt: poisoned && !wasPoisonedNow ? { phase: this.phase, round: this.round } :
+                 !poisoned && wasPoisonedNow  ? null : old.poisonedAt,
       killedBy:   data.dead ? (data.killedBy || '') : '',
       changeLog,
+      poisonLog,
     };
     const seats = [...this.seats];
     seats[idx] = seat;
@@ -1415,6 +1434,7 @@ export class BotcApp extends LitElement {
     this.deathsCollapsed   = true;
     this.allseatsCollapsed = true;
     this.changesCollapsed  = true;
+    this.poisonedCollapsed = true;
 
     const EXTRA_KEYS = [
       'botc_game_notes', 'botc_night_notes', 'botc_nominations',
@@ -1451,6 +1471,7 @@ export class BotcApp extends LitElement {
     this.deathsCollapsed   = true;
     this.allseatsCollapsed = true;
     this.changesCollapsed  = true;
+    this.poisonedCollapsed = true;
 
     const EXTRA_KEYS = [
       'botc_game_notes', 'botc_night_notes', 'botc_nominations',
@@ -1717,6 +1738,8 @@ export class BotcApp extends LitElement {
       <botc-edit-modal
         .open="${this._editOpen}"
         .script="${this.script}"
+        .round="${this.round}"
+        .phase="${this.phase}"
         .seat="${this.selected !== null ? this.seats[this.selected] : null}"
         .seatIdx="${this.selected}"
         .seatCount="${this.seatCount}"
@@ -1740,6 +1763,7 @@ export class BotcApp extends LitElement {
         .deathsCollapsed="${this.deathsCollapsed}"
         .allseatsCollapsed="${this.allseatsCollapsed}"
         .changesCollapsed="${this.changesCollapsed}"
+        .poisonedCollapsed="${this.poisonedCollapsed}"
         @seat-open="${e => { this._listOpen = false; this._openSeat(e.detail.idx); }}"
         @killedby-edit="${e => {
           this._killedByPopupIdx   = e.detail.idx;
@@ -1751,6 +1775,7 @@ export class BotcApp extends LitElement {
           this.deathsCollapsed   = e.detail.deaths;
           this.allseatsCollapsed = e.detail.allseats;
           this.changesCollapsed  = e.detail.changes;
+          this.poisonedCollapsed = e.detail.poisoned;
           this._saveCollapsePrefs();
           this.requestUpdate();
         }}"
