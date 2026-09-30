@@ -160,13 +160,23 @@ export function normalizeScript(script) {
 }
 
 // ── Role catalog (assets/roles.json) ───────────────────
-// Every character the app knows about (id, name, cat, align, ability, and an
-// optional experimental flag) lives in assets/roles.json. Scripts in
+// Every character the app knows about lives in assets/roles.json, using the
+// standard BotC script-tool schema (id, name, team, edition, ability, ...).
+// This app also needs `cat`/`align`/`experimental` internally — indexRoleCatalog()
+// derives them below rather than duplicating them in the JSON. Scripts in
 // assets/scripts/*.json only ever reference these roles by id.
 let ROLE_BY_ID = new Map();
 let ROLE_BY_NAME = new Map();
 let EXPERIMENTAL_ROLE_NAMES = new Set();
 let JINXES = [];
+// Canonical official night-order id sequences, loaded from assets/nightsheet.json.
+let NIGHT_SHEET_FIRST = [];
+let NIGHT_SHEET_OTHER = [];
+
+// roles.json's `team` matches the official schema (incl. British "traveller"),
+// `cat` below is this app's internal category id — same values except traveler.
+const TEAM_ALIGN = { townsfolk: 'good', outsider: 'good', loric: 'good', fabled: 'good', minion: 'evil', demon: 'evil', traveler: 'either' };
+const CORE_EDITIONS = new Set(['tb', 'bmr', 'snv']);
 
 function indexRoleCatalog(roles) {
   const byId = new Map();
@@ -174,6 +184,11 @@ function indexRoleCatalog(roles) {
   const experimental = new Set();
   (roles || []).forEach(role => {
     if (!role || !role.id || !role.name) return;
+    if (!role.cat) role.cat = role.team === 'traveller' ? 'traveler' : role.team;
+    if (!role.align) role.align = TEAM_ALIGN[role.cat] || 'unknown';
+    // Anything outside the 3 core editions (incl. the 'loric'/'fabled' pseudo-editions,
+    // which are never actually filtered by this flag) counts as experimental/homebrew.
+    if (role.experimental === undefined) role.experimental = !!(role.edition && !CORE_EDITIONS.has(role.edition));
     byId.set(role.id, role);
     if (!byName.has(role.name)) byName.set(role.name, role);
     if (role.experimental) experimental.add(role.name);
@@ -234,6 +249,22 @@ export async function loadCoreScripts(rolesUrl = 'assets/roles.json', baseUrl = 
     if (jinxRes.ok) JINXES = await jinxRes.json();
   } catch {
     JINXES = [];
+  }
+
+  // Canonical night order (assets/nightsheet.json) — official firstNight/
+  // otherNight id sequences covering every character. If this fails to load,
+  // the Night Order tab simply renders empty.
+  try {
+    const sheetUrl = rolesUrl.replace(/roles\.json$/, 'nightsheet.json');
+    const sheetRes = await fetch(sheetUrl, { cache: 'no-cache' });
+    if (sheetRes.ok) {
+      const sheet = await sheetRes.json();
+      NIGHT_SHEET_FIRST = Array.isArray(sheet.firstNight) ? sheet.firstNight : [];
+      NIGHT_SHEET_OTHER = Array.isArray(sheet.otherNight) ? sheet.otherNight : [];
+    }
+  } catch {
+    NIGHT_SHEET_FIRST = [];
+    NIGHT_SHEET_OTHER = [];
   }
 }
 
@@ -482,375 +513,102 @@ export const ROLE_ICONS = {
   ...EXPERIMENTAL_ICON_DEFAULTS,
 };
 
-// ── Night order (Trouble Brewing) ─────────────────────
+// ── Night order ─────────────────────────────────────
+// The canonical firstNight/otherNight step sequences (by role id) come from
+// assets/nightsheet.json — see loadCoreScripts(). Hint text itself now comes
+// straight from the role's own firstNightReminder/otherNightReminder field in
+// assets/roles.json (official script-tool schema); the maps below only carry
+// the cond/st flags that schema doesn't have (most roles need neither).
 // st:true  = Storyteller-only step (no player wakes)
 // cond:true = conditional (only wakes if triggered)
-export const NIGHT_ORDER = {
-  first: [
-    { name: 'Minion info',    st: true,   hint: 'Minions learn each other & the Demon' },
-    { name: 'Demon info',     st: true,   hint: 'Demon learns Minions & 3 not-in-play good roles' },
-    { name: 'Poisoner',       hint: 'Chooses a player to poison tonight' },
-    { name: 'Spy',            hint: 'Sees the Grimoire' },
-    { name: 'Washerwoman',    hint: 'Learns that one of two players is a Townsfolk' },
-    { name: 'Librarian',      hint: 'Learns that one of two players is an Outsider (or that there are none)' },
-    { name: 'Investigator',   hint: 'Learns that one of two players is a Minion' },
-    { name: 'Chef',           hint: 'Learns how many pairs of evil players sit adjacent' },
-    { name: 'Empath',         hint: 'Learns how many of their living neighbours are evil' },
-    { name: 'Fortune Teller', hint: 'Picks two players; learns if either is the Demon (or a red herring)' },
-    { name: 'Butler',         hint: 'Chooses their master for tonight' },
-  ],
-  other: [
-    { name: 'Poisoner',       hint: 'Chooses a player to poison tonight' },
-    { name: 'Monk',           hint: 'Chooses a player to protect from the Demon' },
-    { name: 'Scarlet Woman',  hint: 'Becomes the Demon if the Demon dies with ≥5 players alive', cond: true },
-    { name: 'Imp',            hint: 'Chooses a player to kill (can choose self to pass the Imp)' },
-    { name: 'Ravenkeeper',    hint: 'Wakes if killed tonight — learns the role of a player', cond: true },
-    { name: 'Undertaker',     hint: 'Learns the role of the player executed yesterday', cond: true },
-    { name: 'Empath',         hint: 'Learns how many of their living neighbours are evil' },
-    { name: 'Fortune Teller', hint: 'Picks two players; learns if either is the Demon (or a red herring)' },
-    { name: 'Butler',         hint: 'Chooses their master for tonight' },
-    { name: 'Spy',            hint: 'Sees the Grimoire' },
-  ],
-};
-
-// ── Night order (Bad Moon Rising) ────────────────────
-export const BMR_NIGHT_ORDER = {
-  first: [
-    { name: 'Minion info',       st: true, hint: 'If 7+ players: Minions learn each other; point to Demon.' },
-    { name: 'Lunatic',           hint: 'If 7+ players: show fake Minions and 3 fake out-of-play good roles to Lunatic; then show Lunatic to Demon.' },
-    { name: 'Demon info',        st: true, hint: 'If 7+ players: Demon learns Minions and 3 not-in-play good roles.' },
-    { name: 'Sailor',            hint: 'Chooses a living player; either Sailor or chosen player is drunk until dusk.' },
-    { name: 'Courtier',          hint: 'May choose a character to make drunk for 3 days and nights.' },
-    { name: 'Godfather',         hint: 'Learns which Outsider characters are in play.' },
-    { name: 'Devil\'s Advocate', hint: 'Chooses a living player who survives execution tomorrow.' },
-    { name: 'Lunatic',           hint: 'If Lunatic saw a first-night Demon, run Lunatic Demon action and show targets to Demon.' },
-    { name: 'Pukka',             hint: 'Chooses a player to poison.' },
-    { name: 'Grandmother',       hint: 'Learns the marked Grandchild and their character.' },
-    { name: 'Chambermaid',       hint: 'Chooses 2 living players and learns how many woke tonight due to ability.' },
-    { name: 'Goon',              hint: 'If first chosen tonight by an ability: chooser is drunk and Goon may change alignment.', cond: true },
-    { name: 'Dawn',              st: true, hint: 'Call for eyes open and announce deaths.' },
-  ],
-  other: [
-    { name: 'Minstrel',          st: true, hint: 'Clear/apply "Everyone drunk" marker if a Minion died by execution today.' },
-    { name: 'Sailor',            hint: 'Clear previous Sailor drunkenness, then Sailor chooses a living player.' },
-    { name: 'Innkeeper',         hint: 'Clear old Innkeeper markers; choose 2 players protected tonight, 1 is drunk.' },
-    { name: 'Courtier',          hint: 'Tick down active Courtier effect; if unused, may choose a character to make drunk 3 days/nights.', cond: true },
-    { name: 'Gambler',           hint: 'Chooses a player and guessed character; if wrong, Gambler dies.' },
-    { name: 'Devil\'s Advocate', hint: 'Chooses a living player who survives execution tomorrow.' },
-    { name: 'Lunatic',           hint: 'Run Lunatic Demon action and show Lunatic targets to Demon if any.', cond: true },
-    { name: 'Exorcist',          hint: 'Chooses a different player from last night; if Demon, Demon is shown Exorcist and does not act.' },
-    { name: 'Zombuul',           hint: 'If nobody died today, Zombuul chooses a player to die.', cond: true },
-    { name: 'Pukka',             hint: 'Previously poisoned player dies and is cured; Pukka chooses new poisoned player.' },
-    { name: 'Shabaloth',         hint: 'May regurgitate one previously killed player; then chooses 2 players to die.' },
-    { name: 'Po',                hint: 'If Po chose no-one last night, chooses 3 players; otherwise chooses none or 1.' },
-    { name: 'Assassin',          hint: 'If ability unused, may choose a player to die.', cond: true },
-    { name: 'Godfather',         hint: 'If an Outsider died today, chooses a player to die.', cond: true },
-    { name: 'Professor',         hint: 'If ability unused, may choose a dead Townsfolk to resurrect.', cond: true },
-    { name: 'Gossip',            st: true, hint: 'If today\'s Gossip statement was true, a player dies.', cond: true },
-    { name: 'Tinker',            st: true, hint: 'Tinker might die.', cond: true },
-    { name: 'Moonchild',         st: true, hint: 'If Moonchild chose today and target is good, target dies.', cond: true },
-    { name: 'Grandmother',       st: true, hint: 'If Demon killed Grandchild, Grandmother dies.', cond: true },
-    { name: 'Chambermaid',       hint: 'Chooses 2 living players and learns how many woke tonight due to ability.' },
-    { name: 'Goon',              hint: 'If first chosen tonight by an ability: chooser is drunk and Goon may change alignment.', cond: true },
-    { name: 'Dawn',              st: true, hint: 'Call for eyes open and announce deaths.' },
-  ],
-};
-
-// ── Night order (Sects & Violets) ───────────────────
-export const SNV_NIGHT_ORDER = {
-  first: [
-    { name: 'Minion info',   st: true, hint: 'Minions learn each other and the Demon.' },
-    { name: 'Demon info',    st: true, hint: 'Demon learns Minions and any script setup info.' },
-    { name: 'Clockmaker',    hint: 'Learns distance from Demon to nearest Minion.' },
-    { name: 'Dreamer',       hint: 'Chooses a player and learns 1 good + 1 evil character, one correct.' },
-    { name: 'Snake Charmer', hint: 'Chooses an alive player; if Demon, swap characters/alignments and poison new Demon.' },
-    { name: 'Mathematician', hint: 'Learns how many abilities worked abnormally since dawn due to another ability.' },
-    { name: 'Flowergirl',    hint: 'Learns if a Demon voted today (from day 1 onward).', cond: true },
-    { name: 'Seamstress',    hint: 'If unused, may choose 2 players to learn if they are same alignment.', cond: true },
-    { name: 'Philosopher',   hint: 'If unused, may choose a good character and gain that ability.', cond: true },
-    { name: 'Evil Twin',     hint: 'Evil Twin and chosen good Twin learn each other.' },
-    { name: 'Witch',         hint: 'Chooses a player who dies if they nominate tomorrow.' },
-    { name: 'Cerenovus',     hint: 'Chooses a player and good character; player is mad they are that character tomorrow.' },
-    { name: 'Dawn',          st: true, hint: 'Call for eyes open and announce deaths.' },
-  ],
-  other: [
-    { name: 'Philosopher',   hint: 'If unused, may choose a good character and gain that ability.', cond: true },
-    { name: 'Dreamer',       hint: 'Chooses a player and learns 1 good + 1 evil character, one correct.' },
-    { name: 'Snake Charmer', hint: 'Chooses an alive player; if Demon, swap and poison.' },
-    { name: 'Mathematician', hint: 'Learns how many abilities worked abnormally since dawn.' },
-    { name: 'Flowergirl',    hint: 'Learns if a Demon voted today.' },
-    { name: 'Town Crier',    hint: 'Learns if a Minion nominated today.' },
-    { name: 'Oracle',        hint: 'Learns how many dead players are evil.' },
-    { name: 'Seamstress',    hint: 'If unused, may choose 2 players to learn if they are same alignment.', cond: true },
-    { name: 'Juggler',       hint: 'The night after first-day juggles, learns how many guesses were correct.', cond: true },
-    { name: 'Witch',         hint: 'Chooses a player who dies if they nominate tomorrow.', cond: true },
-    { name: 'Cerenovus',     hint: 'Chooses a player and good character for tomorrow madness.', cond: true },
-    { name: 'Pit-Hag',       hint: 'Chooses a player and character they become (if not in play).', cond: true },
-    { name: 'Fang Gu',       hint: 'Chooses a player to die. First Outsider killed becomes evil Fang Gu.', cond: true },
-    { name: 'Vigormortis',   hint: 'Chooses a player to die. Minions killed by Vigormortis keep ability.', cond: true },
-    { name: 'No Dashii',     hint: 'Chooses a player to die; Townsfolk neighbors are poisoned.', cond: true },
-    { name: 'Vortox',        hint: 'Chooses a player to die; Townsfolk info is false while in play.', cond: true },
-    { name: 'Barber',        st: true, hint: 'If Barber died, Demon may choose 2 players to swap characters.', cond: true },
-    { name: 'Sage',          hint: 'If killed by Demon, learns two possible Demon players.', cond: true },
-    { name: 'Sweetheart',    st: true, hint: 'If Sweetheart died, choose a player to become drunk.' , cond: true },
-    { name: 'Dawn',          st: true, hint: 'Call for eyes open and announce deaths.' },
-  ],
-};
-
 const EMPTY_NIGHT_ORDER = { first: [], other: [] };
 
-const ROLE_NIGHT_INDEX = {
-  'Apprentice': { firstNight: 1, otherNight: 0 },
-  'Assassin': { firstNight: 0, otherNight: 36 },
-  'Barber': { firstNight: 0, otherNight: 40 },
-  'Barista': { firstNight: 1, otherNight: 1 },
-  'Bone Collector': { firstNight: 0, otherNight: 1 },
-  'Bureaucrat': { firstNight: 1, otherNight: 1 },
-  'Butler': { firstNight: 39, otherNight: 67 },
-  'Cerenovus': { firstNight: 25, otherNight: 15 },
-  'Chambermaid': { firstNight: 51, otherNight: 70 },
-  'Chef': { firstNight: 36, otherNight: 0 },
-  'Clockmaker': { firstNight: 41, otherNight: 0 },
-  'Courtier': { firstNight: 19, otherNight: 8 },
-  'Devil\'s Advocate': { firstNight: 22, otherNight: 13 },
-  'Dreamer': { firstNight: 42, otherNight: 56 },
-  'Empath': { firstNight: 37, otherNight: 53 },
-  'Evil Twin': { firstNight: 23, otherNight: 0 },
-  'Exorcist': { firstNight: 0, otherNight: 21 },
-  'Fang Gu': { firstNight: 0, otherNight: 29 },
-  'Flowergirl': { firstNight: 0, otherNight: 57 },
-  'Fortune Teller': { firstNight: 38, otherNight: 54 },
-  'Gambler': { firstNight: 0, otherNight: 10 },
-  'Godfather': { firstNight: 21, otherNight: 37 },
-  'Gossip': { firstNight: 0, otherNight: 38 },
-  'Grandmother': { firstNight: 40, otherNight: 51 },
-  'Harlot': { firstNight: 0, otherNight: 1 },
-  'Imp': { firstNight: 0, otherNight: 24 },
-  'Ojo': { firstNight: 0, otherNight: 24.5 },
-  // Experimental roles
-  'Acrobat':        { firstNight: 0,    otherNight: 43.5 },
-  'Al-Hadikhia':    { firstNight: 0,    otherNight: 24.5 },
-  'Balloonist':     { firstNight: 0,    otherNight: 63.5 },
-  'Bounty Hunter':  { firstNight: 45.5, otherNight: 59   },
-  'Cult Leader':    { firstNight: 0,    otherNight: 65.5 },
-  'Engineer':       { firstNight: 0,    otherNight: 13.5 },
-  'Fearmonger':     { firstNight: 0,    otherNight: 16.5 },
-  'General':        { firstNight: 0,    otherNight: 66.5 },
-  'Harpy':          { firstNight: 0,    otherNight: 17.5 },
-  'High Priestess': { firstNight: 0,    otherNight: 67.5 },
-  'Huntsman':       { firstNight: 0,    otherNight: 44.5 },
-  'Kazali':         { firstNight: 0,    otherNight: 27.5 },
-  'King':           { firstNight: 0,    otherNight: 62.5 },
-  'Knight':         { firstNight: 36,   otherNight: 0    },
-  'Legion':         { firstNight: 0,    otherNight: 34.5 },
-  "Lil' Monsta":    { firstNight: 8.5,  otherNight: 18.5 },
-  'Lleech':         { firstNight: 29,   otherNight: 26.5 },
-  'Lord of Typhon': { firstNight: 0,    otherNight: 25.5 },
-  'Lycanthrope':    { firstNight: 0,    otherNight: 22.5 },
-  'Mezepheles':     { firstNight: 25.5, otherNight: 0    },
-  'Nightwatchman':  { firstNight: 0,    otherNight: 45.5 },
-  'Noble':          { firstNight: 38.5, otherNight: 0    },
-  'Organ Grinder':  { firstNight: 0,    otherNight: 15.5 },
-  'Preacher':       { firstNight: 0,    otherNight: 6    },
-  'Shugenja':       { firstNight: 43.5, otherNight: 0    },
-  'Steward':        { firstNight: 44.5, otherNight: 0    },
-  'Summoner':       { firstNight: 27.5, otherNight: 27.6 },
-  'Village Idiot':  { firstNight: 0,    otherNight: 64.5 },
-  'Widow':          { firstNight: 50.5, otherNight: 0    },
-  'Xaan':           { firstNight: 0,    otherNight: 18.5 },
-  'Yaggababble':    { firstNight: 0,    otherNight: 35.5 },
-  'Innkeeper': { firstNight: 0, otherNight: 9 },
-  'Investigator': { firstNight: 35, otherNight: 0 },
-  'Juggler': { firstNight: 0, otherNight: 61 },
-  'Librarian': { firstNight: 34, otherNight: 0 },
-  'Lunatic': { firstNight: 8, otherNight: 20 },
-  'Mathematician': { firstNight: 52, otherNight: 71 },
-  'Monk': { firstNight: 0, otherNight: 12 },
-  'Moonchild': { firstNight: 0, otherNight: 50 },
-  'No Dashii': { firstNight: 0, otherNight: 30 },
-  'Ogre': { firstNight: 38.2, otherNight: 0 },
-  'Oracle': { firstNight: 0, otherNight: 59 },
-  'Philosopher': { firstNight: 2, otherNight: 2 },
-  'Pit-Hag': { firstNight: 0, otherNight: 16 },
-  'Po': { firstNight: 0, otherNight: 28 },
-  'Poisoner': { firstNight: 17, otherNight: 7 },
-  'Pixie': { firstNight: 38.1, otherNight: 0 },
-  'Professor': { firstNight: 0, otherNight: 43 },
-  'Pukka': { firstNight: 28, otherNight: 26 },
-  'Ravenkeeper': { firstNight: 0, otherNight: 52 },
-  'Sage': { firstNight: 0, otherNight: 42 },
-  'Sailor': { firstNight: 11, otherNight: 4 },
-  'Scarlet Woman': { firstNight: 0, otherNight: 19 },
-  'Seamstress': { firstNight: 43, otherNight: 60 },
-  'Shabaloth': { firstNight: 0, otherNight: 27 },
-  'Snake Charmer': { firstNight: 20, otherNight: 11 },
-  'Spy': { firstNight: 49, otherNight: 68 },
-  'Sweetheart': { firstNight: 0, otherNight: 41 },
-  'Thief': { firstNight: 1, otherNight: 1 },
-  'Tinker': { firstNight: 0, otherNight: 49 },
-  'Town Crier': { firstNight: 0, otherNight: 58 },
-  'Undertaker': { firstNight: 0, otherNight: 55 },
-  'Vigormortis': { firstNight: 0, otherNight: 32 },
-  'Vortox': { firstNight: 0, otherNight: 31 },
-  'Washerwoman': { firstNight: 33, otherNight: 0 },
-  'Witch': { firstNight: 24, otherNight: 14 },
-  'Zombuul': { firstNight: 0, otherNight: 25 },
+const FIRST_NIGHT_META_BY_ID = {
+  goon: { cond: true },
+  flowergirl: { cond: true },
+  seamstress: { cond: true },
+  philosopher: { cond: true },
 };
 
-const FIRST_HINT_BY_NAME = new Map();
-const OTHER_HINT_BY_NAME = new Map();
+const OTHER_NIGHT_META_BY_ID = {
+  scarletwoman: { cond: true },
+  ravenkeeper: { cond: true },
+  undertaker: { cond: true },
+  courtier: { cond: true },
+  lunatic: { cond: true },
+  zombuul: { cond: true },
+  assassin: { cond: true },
+  godfather: { cond: true },
+  professor: { cond: true },
+  gossip: { cond: true, st: true },
+  tinker: { cond: true, st: true },
+  moonchild: { cond: true, st: true },
+  grandmother: { cond: true, st: true },
+  goon: { cond: true },
+  seamstress: { cond: true },
+  juggler: { cond: true },
+  witch: { cond: true },
+  cerenovus: { cond: true },
+  pithag: { cond: true },
+  fanggu: { cond: true },
+  vigormortis: { cond: true },
+  nodashii: { cond: true },
+  vortox: { cond: true },
+  barber: { cond: true, st: true },
+  sage: { cond: true },
+  sweetheart: { cond: true, st: true },
+  philosopher: { cond: true },
+  king: { cond: true },
+  yaggababble: { cond: true },
+};
 
-[NIGHT_ORDER, BMR_NIGHT_ORDER, SNV_NIGHT_ORDER].forEach(order => {
-  (order.first || []).forEach(entry => {
-    if (!FIRST_HINT_BY_NAME.has(entry.name)) FIRST_HINT_BY_NAME.set(entry.name, entry);
-  });
-  (order.other || []).forEach(entry => {
-    if (!OTHER_HINT_BY_NAME.has(entry.name)) OTHER_HINT_BY_NAME.set(entry.name, entry);
-  });
-});
+// Builds { first, other } rows for a set of role objects by filtering the
+// canonical nightsheet id sequence down to roles actually in play.
+function buildNightOrderForRoles(roles) {
+  const idSet = new Set(roles.map(r => r.id));
+  const hasMinion = roles.some(r => r.cat === 'minion');
+  const hasDemon = roles.some(r => r.cat === 'demon');
 
-[
-  {
-    name: 'Pixie',
-    hint: 'Learns one in-play Townsfolk character',
-  },
-  {
-    name: 'Ogre',
-    hint: 'Chooses a player and becomes their alignment (without learning which)',
-  },
-  {
-    name: 'Ojo',
-    hint: 'Chooses a character: they die. If not in play, the Storyteller chooses who dies.',
-  },
-  { name: 'Bounty Hunter', hint: 'Learns 1 evil player in the game' },
-  { name: 'Knight',        hint: 'Learns 2 players who are not the Demon' },
-  { name: 'Noble',         hint: 'Learns 3 players, exactly 1 of whom is evil' },
-  { name: 'Steward',       hint: 'Learns 1 good player' },
-  { name: 'Shugenja',      hint: 'Learns if the nearest evil player is clockwise or anti-clockwise' },
-  { name: 'Widow',         hint: 'Looks at the Grimoire; chooses a player to poison' },
-  { name: 'Mezepheles',    hint: 'Learns their secret word' },
-  { name: 'Summoner',      hint: 'Gets 3 bluffs' },
-  { name: "Lil' Monsta",   hint: 'Minions silently choose who babysits Lil\' Monsta tonight' },
-  { name: 'Lleech',        hint: 'Chooses a player to poison (poisoned until they die)' },
-].forEach(entry => {
-  if (!FIRST_HINT_BY_NAME.has(entry.name)) FIRST_HINT_BY_NAME.set(entry.name, entry);
-});
-
-[
-  {
-    name: 'Ojo',
-    hint: 'Chooses a character: they die. If not in play, the Storyteller chooses who dies.',
-  },
-  { name: 'Acrobat',        hint: 'Chooses a player; if they are drunk or poisoned tonight, dies' },
-  { name: 'Al-Hadikhia',    hint: 'Chooses 3 players (announced); each silently chooses to live or die' },
-  { name: 'Balloonist',     hint: 'Learns a player of a different character type than last night' },
-  { name: 'Bounty Hunter',  hint: 'If the known evil player died, learns another evil player' },
-  { name: 'Cult Leader',    hint: 'Becomes the alignment of an alive neighbour' },
-  { name: 'Engineer',       hint: 'Once per game: chooses which Minions or which Demon is in play' },
-  { name: 'Fearmonger',     hint: 'Chooses a player; if nominated & executed, their team loses' },
-  { name: 'General',        hint: 'Learns which alignment the Storyteller believes is winning' },
-  { name: 'Harpy',          hint: 'Chooses 2 players; 1st is mad that 2nd is evil tomorrow, or one/both might die' },
-  { name: 'High Priestess', hint: 'Learns which player they should talk to most' },
-  { name: 'Huntsman',       hint: 'Once per game: chosen living player (Damsel becomes Townsfolk if chosen)' },
-  { name: 'Kazali',         hint: 'Chooses a player to kill' },
-  { name: 'King',           hint: 'If dead ≥ living: learns 1 alive character', cond: true },
-  { name: 'Legion',         hint: 'A player might die' },
-  { name: "Lil' Monsta",    hint: 'Minions silently choose who babysits Lil\' Monsta; that player may kill' },
-  { name: 'Lleech',         hint: 'Chooses a player to kill' },
-  { name: 'Lord of Typhon', hint: 'Chooses a player to kill' },
-  { name: 'Lycanthrope',    hint: 'Chooses an alive player; if good, they die & Demon doesn\'t kill tonight' },
-  { name: 'Nightwatchman',  hint: 'Once per game: chosen player learns who the Nightwatchman is' },
-  { name: 'Organ Grinder',  hint: 'Chooses whether to be drunk until dusk' },
-  { name: 'Preacher',       hint: 'Chooses a player; a Minion, if chosen, has no ability from now on' },
-  { name: 'Summoner',       hint: 'On the 3rd night: chooses a player to become an evil Demon' },
-  { name: 'Village Idiot',  hint: 'Chooses a player and learns their alignment' },
-  { name: 'Xaan',           hint: 'On night X: all Townsfolk are poisoned until dusk' },
-  { name: 'Yaggababble',    hint: 'A player might die for each time the secret phrase was said today', cond: true },
-].forEach(entry => {
-  if (!OTHER_HINT_BY_NAME.has(entry.name)) OTHER_HINT_BY_NAME.set(entry.name, entry);
-});
-
-function buildCustomNightOrder(custom) {
-  const selected = new Set(custom.roles || []);
-  const selectedData = [...selected].map(name => ROLE_BY_NAME.get(name)).filter(Boolean);
-  const hasMinion = selectedData.some(r => r.cat === 'minion');
-  const hasDemon = selectedData.some(r => r.cat === 'demon');
-
-  const first = [];
-  const other = [];
-
-  if (hasMinion) {
-    first.push({
-      order: 5,
-      entry: {
-        name: 'Minion info',
-        st: true,
-        minPlayers: 7,
-        hint: 'If 7+ players: Minions learn each other and who the Demon is.',
-      },
-    });
-  }
-  if (hasDemon) {
-    first.push({
-      order: 8,
-      entry: {
-        name: 'Demon info',
-        st: true,
-        minPlayers: 7,
-        hint: 'If 7+ players: Demon learns Minions and receives bluffs/setup info.',
-      },
-    });
-  }
-
-  selected.forEach(name => {
-    const idx = ROLE_NIGHT_INDEX[name];
-    if (idx?.firstNight > 0) {
-      const meta = FIRST_HINT_BY_NAME.get(name);
-      first.push({
-        order: idx.firstNight,
-        entry: {
-          name,
-          hint: meta?.hint || 'Acts on the first night.',
-          cond: !!meta?.cond,
-          st: !!meta?.st,
-        },
+  function buildSide(sheetIds, metaById, reminderKey) {
+    const rows = [];
+    sheetIds.forEach(stepId => {
+      if (stepId === 'dusk') return; // scene-setting marker only, nothing to show
+      if (stepId === 'minioninfo') {
+        if (hasMinion) rows.push({ name: 'Minion info', st: true, minPlayers: 7, hint: 'If 7+ players: Minions learn each other and who the Demon is.' });
+        return;
+      }
+      if (stepId === 'demoninfo') {
+        if (hasDemon) rows.push({ name: 'Demon info', st: true, minPlayers: 7, hint: 'If 7+ players: Demon learns Minions and receives bluffs/setup info.' });
+        return;
+      }
+      if (stepId === 'dawn') {
+        rows.push({ name: 'Dawn', st: true, hint: 'Call for eyes open and announce deaths' });
+        return;
+      }
+      if (!idSet.has(stepId)) return;
+      const role = ROLE_BY_ID.get(stepId);
+      if (!role) return;
+      const meta = metaById[stepId];
+      rows.push({
+        name: role.name,
+        hint: role[reminderKey] || `${role.name} acts.`,
+        cond: !!meta?.cond,
+        st: !!meta?.st,
       });
-    }
-  });
-
-  selected.forEach(name => {
-    const idx = ROLE_NIGHT_INDEX[name];
-    if (idx?.otherNight > 0) {
-      const meta = OTHER_HINT_BY_NAME.get(name);
-      other.push({
-        order: idx.otherNight,
-        entry: {
-          name,
-          hint: meta?.hint || 'Acts on other nights.',
-          cond: !!meta?.cond,
-          st: !!meta?.st,
-        },
-      });
-    }
-  });
-
-  first.sort((a, b) => a.order - b.order || a.entry.name.localeCompare(b.entry.name));
-  other.sort((a, b) => a.order - b.order || a.entry.name.localeCompare(b.entry.name));
+    });
+    return rows;
+  }
 
   return {
-    first: first.map(x => x.entry),
-    other: other.map(x => x.entry),
+    first: buildSide(NIGHT_SHEET_FIRST, FIRST_NIGHT_META_BY_ID, 'firstNightReminder'),
+    other: buildSide(NIGHT_SHEET_OTHER, OTHER_NIGHT_META_BY_ID, 'otherNightReminder'),
   };
 }
 
 export function getNightOrder(script = 'tb') {
-  const id = normalizeScript(script);
-  if (id === 'tb') return NIGHT_ORDER;
-  if (id === 'bmr') return BMR_NIGHT_ORDER;
-  if (id === 'snv') return SNV_NIGHT_ORDER;
-  const custom = getCustomScript(id);
-  if (custom) return buildCustomNightOrder(custom);
-  return EMPTY_NIGHT_ORDER;
+  const roles = getRoles(script);
+  if (!roles.length) return EMPTY_NIGHT_ORDER;
+  return buildNightOrderForRoles(roles);
 }
 
 export function getCharacterCount(script = 'tb') {

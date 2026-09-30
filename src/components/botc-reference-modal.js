@@ -80,6 +80,23 @@ export class BotcReferenceModal extends LitElement {
     if (changed.has('open')) {
       this.querySelector('#modal-reference')?.classList.toggle('visible', this.open);
     }
+    if (this.open && this._tab === 'charcount'
+        && (changed.has('_tab') || changed.has('seatCount') || changed.has('script') || changed.has('open'))) {
+      this._scrollToActiveCharcountCol();
+    }
+  }
+
+  // Keeps the seat-count's active column in view when the table overflows horizontally (mobile).
+  _scrollToActiveCharcountCol() {
+    requestAnimationFrame(() => {
+      const wrap = this.querySelector('.charcount-table-wrap');
+      const th   = wrap?.querySelector('.col-active');
+      if (!wrap || !th) return;
+      const wrapRect = wrap.getBoundingClientRect();
+      const thRect   = th.getBoundingClientRect();
+      const delta    = (thRect.left + thRect.width / 2) - (wrapRect.left + wrapRect.width / 2);
+      wrap.scrollBy({ left: delta, behavior: 'smooth' });
+    });
   }
 
   _onClose() {
@@ -303,6 +320,20 @@ export class BotcReferenceModal extends LitElement {
     return map;
   }
 
+  _renderHint(text) {
+    if (!text || !text.includes(':reminder:')) return text;
+    const parts = text.split(':reminder:');
+    const out = [];
+    parts.forEach((part, i) => {
+      const trimmed = part.trim();
+      if (trimmed) out.push(trimmed + ' ');
+      if (i < parts.length - 1) {
+        out.push(html`<i class="no-reminder-icon" title="Place/move a reminder token">!</i> `);
+      }
+    });
+    return out;
+  }
+
   _noRow(entry, idx) {
     const key        = this._noTab + '-' + idx;
     const done       = this._done.has(key);
@@ -321,7 +352,6 @@ export class BotcReferenceModal extends LitElement {
     return html`
       <div class="no-row ${done ? 'no-row--done' : ''} ${entry.st ? 'no-row--st' : ''} ${hasPlayers ? 'no-row--active' : ''} ${entry.cond ? 'no-row--cond' : ''}"
         @click="${toggle}">
-        <span class="no-step">${idx + 1}</span>
         <span class="no-check">${done ? '✓' : ''}</span>
         ${iconSrc
           ? html`<img class="no-icon" src="${iconSrc}" alt="">`
@@ -332,8 +362,7 @@ export class BotcReferenceModal extends LitElement {
             ${hasPlayers ? html`<span class="no-player-inline">- ${players.map(p => p.name).join(', ')}</span>` : nothing}
           </div>
           ${entry.cond ? html`<span class="no-cond-tag">conditional</span>` : nothing}
-          <span class="no-hint">${entry.hint}</span>
-          ${roleData?.ability ? html`<span class="no-ability">${roleData.ability}</span>` : nothing}
+          <span class="no-hint">${this._renderHint(entry.hint)}</span>
         </div>
       </div>
     `;
