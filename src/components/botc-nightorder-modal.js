@@ -116,15 +116,26 @@ export class BotcNightorderModal extends LitElement {
     return map;
   }
 
+  // Reminder text uses *word* to mark emphasis (matching the official
+  // script-tool reminder text convention) — render it bold.
+  _renderHint(text) {
+    if (!text) return text;
+    return text.split(/\*([^*]+)\*/g).map((part, i) => i % 2 === 1 ? html`<strong>${part}</strong>` : part);
+  }
+
   _renderRow(entry, idx) {
     const key      = this._tab + '-' + idx;
     const done     = this._done.has(key);
     const inPlay   = this._inPlay();
     const players  = entry.st ? [] : (inPlay[entry.name] || []);
     const hasPlayers = players.length > 0;
-    const iconSrc  = entry.st ? null : (ROLE_ICONS[entry.name] || null);
+    // `st: true` marks steps where no player wakes (the Storyteller resolves
+    // it silently) — that's independent of whether the row is a real role
+    // (Moonchild, Tinker, Grandmother, ...) or a generic bookkeeping step
+    // (Minion info, Demon info, Dawn). Only the latter lack a real icon.
+    const iconSrc  = ROLE_ICONS[entry.name] || null;
     const roles = getRoles(this.script);
-    const roleData = entry.st ? null : roles.find(r => r.name === entry.name);
+    const roleData = roles.find(r => r.name === entry.name);
     const catClass = roleData ? 'no-cat-' + roleData.cat : '';
 
     return html`
@@ -141,7 +152,7 @@ export class BotcNightorderModal extends LitElement {
           ${hasPlayers
             ? html`<span class="no-players">${players.map(p => p.name).join(', ')}</span>`
             : nothing}
-          <span class="no-hint">${entry.hint}</span>
+          <span class="no-hint">${this._renderHint(entry.hint)}</span>
         </div>
       </div>
     `;

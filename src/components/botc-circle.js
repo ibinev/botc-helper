@@ -149,12 +149,24 @@ export class BotcCircle extends LitElement {
 
   _attachDrag(el, idx) {
     let startPx, startPy, startEx, startEy, dragged;
+    // Live drag delta is applied via a GPU-composited transform (rAF-throttled)
+    // instead of writing left/top on every pointer event — left/top forces a
+    // layout pass per update, which is what made dragging feel clunky.
+    // left/top are only committed once, on drag end.
+    let curDx = 0, curDy = 0, rafId = null;
+
+    const applyFrame = () => {
+      rafId = null;
+      el.style.transform = `translate(-50%, -50%) translate3d(${curDx}px, ${curDy}px, 0)`;
+    };
 
     const onStart = (e) => {
       if (!this.moveMode) return;
       if (e.target instanceof Element && e.target.closest('.seat-remove-btn')) return;
       e.preventDefault();
       dragged = false;
+      curDx = 0;
+      curDy = 0;
 
       const clientX = e.touches ? e.touches[0].clientX : e.clientX;
       const clientY = e.touches ? e.touches[0].clientY : e.clientY;
@@ -166,26 +178,30 @@ export class BotcCircle extends LitElement {
       el.style.zIndex = 10;
 
       const onMove = (e2) => {
+        if (e2.cancelable) e2.preventDefault();
         const cx2 = e2.touches ? e2.touches[0].clientX : e2.clientX;
         const cy2 = e2.touches ? e2.touches[0].clientY : e2.clientY;
         const dir = this.storyView ? -1 : 1;
-        const dx = (cx2 - startPx) * dir;
-        const dy = (cy2 - startPy) * dir;
-        if (Math.abs(dx) + Math.abs(dy) > 3) dragged = true;
-        el.style.left = (startEx + dx) + 'px';
-        el.style.top  = (startEy + dy) + 'px';
+        curDx = (cx2 - startPx) * dir;
+        curDy = (cy2 - startPy) * dir;
+        if (Math.abs(curDx) + Math.abs(curDy) > 3) dragged = true;
+        if (rafId == null) rafId = requestAnimationFrame(applyFrame);
       };
 
-      const onEnd = (e2) => {
+      const onEnd = () => {
+        if (rafId != null) { cancelAnimationFrame(rafId); rafId = null; }
         el.classList.remove('dragging');
         el.style.zIndex = '';
+        el.style.transform = '';
         document.removeEventListener('mousemove', onMove);
         document.removeEventListener('mouseup',   onEnd);
         document.removeEventListener('touchmove', onMove);
         document.removeEventListener('touchend',  onEnd);
         if (dragged) {
-          const x = parseFloat(el.style.left);
-          const y = parseFloat(el.style.top);
+          const x = startEx + curDx;
+          const y = startEy + curDy;
+          el.style.left = x + 'px';
+          el.style.top  = y + 'px';
           this.dispatchEvent(new CustomEvent('seat-drag-end', {
             detail: { idx, x, y }, bubbles: true, composed: true
           }));
@@ -215,9 +231,9 @@ export class BotcCircle extends LitElement {
     });
   }
 
-  _renderSeat(s, i) {
+  _renderSeat(s, i, ctx) {
     const pos      = this._pos(i);
-    const roles = getRoles(this.script);
+    const roles = ctx.roles;
     // Claimed roles: prefer the multi-select roleClaims array, fall back to
     // the legacy single `role` string for older saved games.
     const claimed = (Array.isArray(s.roleClaims) && s.roleClaims.length)
@@ -245,40 +261,8 @@ export class BotcCircle extends LitElement {
       ? ` dot-${displayRoleData.cat}`
       : (roleData ? ` dot-${roleData.cat}` : '');
 
-    const dayKey  = 'day-' + this.round;
-    const dayNoms = this.phase === 'day' ? (this.nominations[dayKey] || []) : [];
-
-    // For each nomination compute vote count and whether threshold was reached.
-    const nomEntries = dayNoms.map(n => {
-      const needed = n.aliveCount ? Math.ceil(n.aliveCount / 2) : Infinity;
-      const count  = (n.votes || []).length;
-      return { to: n.to, count, reached: count >= needed };
-    });
-
-    const isTravelerTarget = (idx) => {
-      const seat = this.seats[idx];
-      const seatClaimed = (Array.isArray(seat?.roleClaims) && seat.roleClaims.length) ? seat.roleClaims : (seat?.role ? [seat.role] : []);
-      const roleName = seat?.trueRole || seatClaimed[0];
-      if (!roleName) return false;
-      return roles.find(r => r.name === roleName)?.cat === 'traveler';
-    };
-
-    // A traveler execution doesn't use up the day's single execution, so it
-    // gets its own skull(s) independent of the regular unique-top nomination.
-    const reachedEntries = nomEntries.filter(e => e.reached);
-    const nonTravelerReached = reachedEntries.filter(e => !isTravelerTarget(e.to));
-    const travelerReached    = reachedEntries.filter(e =>  isTravelerTarget(e.to));
-
-    const topReachedCount = nonTravelerReached.length
-      ? Math.max(...nonTravelerReached.map(e => e.count))
-      : -1;
-    const topReached = nonTravelerReached.filter(e => e.count === topReachedCount);
-    const skullSeat = topReached.length === 1 ? topReached[0].to : null;
-    const travelerSkullSeats = new Set(travelerReached.map(e => e.to));
-
-    const isNominated = dayNoms.some(n => n.to === i);
-    const isSkull     = skullSeat === i || travelerSkullSeats.has(i);
-
+    const isNominated = ctx.nominatedSeats.has(i);
+    const isSkull     = ctx.skullSeat === i || ctx.travelerSkullSeats.has(i);
 
     let nominatedIcon = '';
     if (isSkull) {
@@ -346,8 +330,48 @@ export class BotcCircle extends LitElement {
     `;
   }
 
+  // Nomination/skull-icon state is identical for every seat on a given
+  // render — compute it once here instead of redundantly inside the
+  // per-seat loop (was previously O(seats) work repeated per seat).
+  _buildNomContext() {
+    const roles  = getRoles(this.script);
+    const dayKey  = 'day-' + this.round;
+    const dayNoms = this.phase === 'day' ? (this.nominations[dayKey] || []) : [];
+
+    const nomEntries = dayNoms.map(n => {
+      const needed = n.aliveCount ? Math.ceil(n.aliveCount / 2) : Infinity;
+      const count  = (n.votes || []).length;
+      return { to: n.to, count, reached: count >= needed };
+    });
+
+    const isTravelerTarget = (idx) => {
+      const seat = this.seats[idx];
+      const seatClaimed = (Array.isArray(seat?.roleClaims) && seat.roleClaims.length) ? seat.roleClaims : (seat?.role ? [seat.role] : []);
+      const roleName = seat?.trueRole || seatClaimed[0];
+      if (!roleName) return false;
+      return roles.find(r => r.name === roleName)?.cat === 'traveler';
+    };
+
+    // A traveler execution doesn't use up the day's single execution, so it
+    // gets its own skull(s) independent of the regular unique-top nomination.
+    const reachedEntries = nomEntries.filter(e => e.reached);
+    const nonTravelerReached = reachedEntries.filter(e => !isTravelerTarget(e.to));
+    const travelerReached    = reachedEntries.filter(e =>  isTravelerTarget(e.to));
+
+    const topReachedCount = nonTravelerReached.length
+      ? Math.max(...nonTravelerReached.map(e => e.count))
+      : -1;
+    const topReached = nonTravelerReached.filter(e => e.count === topReachedCount);
+    const skullSeat = topReached.length === 1 ? topReached[0].to : null;
+    const travelerSkullSeats = new Set(travelerReached.map(e => e.to));
+    const nominatedSeats = new Set(dayNoms.map(n => n.to));
+
+    return { roles, skullSeat, travelerSkullSeats, nominatedSeats };
+  }
+
   render() {
     const isNomMode = !!this.nomMode;
+    const ctx = this._buildNomContext();
     return html`
       <div id="circle-stage">
         <div id="circle-inner" class="${isNomMode ? 'nom-mode' : ''} ${this.nomMode === 'votes' ? 'nom-votes-mode' : ''} ${this.moveMode ? 'move-mode' : ''} ${this.removeMode ? 'remove-mode' : ''} ${this.storyView ? 'story-view' : ''}">
@@ -364,7 +388,7 @@ export class BotcCircle extends LitElement {
             <div class="round-label">${this.phase === 'day' ? 'Day' : 'Night'} ${this.round}</div>
           </div>
           <div id="seats-container">
-            ${this.seats.map((s, i) => this._renderSeat(s, i))}
+            ${this.seats.map((s, i) => this._renderSeat(s, i, ctx))}
           </div>
         </div>
       </div>

@@ -321,12 +321,14 @@ export class BotcReferenceModal extends LitElement {
   }
 
   _renderHint(text) {
-    if (!text || !text.includes(':reminder:')) return text;
+    if (!text) return text;
+    const boldify = s => s.split(/\*([^*]+)\*/g).map((part, i) => i % 2 === 1 ? html`<strong>${part}</strong>` : part);
+    if (!text.includes(':reminder:')) return boldify(text);
     const parts = text.split(':reminder:');
     const out = [];
     parts.forEach((part, i) => {
       const trimmed = part.trim();
-      if (trimmed) out.push(trimmed + ' ');
+      if (trimmed) out.push(...boldify(trimmed + ' '));
       if (i < parts.length - 1) {
         out.push(html`<i class="no-reminder-icon" title="Place/move a reminder token">!</i> `);
       }
@@ -340,9 +342,9 @@ export class BotcReferenceModal extends LitElement {
     const inPlay     = this._inPlayMap();
     const players    = entry.st ? [] : (inPlay[entry.name] || []);
     const hasPlayers = players.length > 0;
-    const iconSrc    = entry.st ? null : (ROLE_ICONS[entry.name] || null);
+    const iconSrc    = ROLE_ICONS[entry.name] || null;
     const roles = getRoles(this.script);
-    const roleData   = entry.st ? null : roles.find(r => r.name === entry.name);
+    const roleData   = roles.find(r => r.name === entry.name);
     const catClass   = roleData ? 'no-cat-' + roleData.cat : '';
     const toggle     = () => {
       const next = new Set(this._done);

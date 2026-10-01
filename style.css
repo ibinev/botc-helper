@@ -365,6 +365,7 @@ body.hide-dead #circle-inner.nom-votes-mode .seat.dead { display: block; }
 .move-mode .seat { cursor: grab; }
 .move-mode .seat:active { cursor: grabbing; }
 .move-mode .seat.dragging .seat-inner { border-color: var(--gold-light); box-shadow: 0 0 0 4px rgba(201,151,58,0.3), 0 8px 28px rgba(0,0,0,0.6); transform: scale(1.1); }
+.move-mode .seat.dragging { will-change: transform; }
 .remove-mode .seat { cursor: default; }
 .remove-mode .seat .seat-inner { border-color: rgba(192,57,43,0.55); box-shadow: 0 0 0 2px rgba(192,57,43,0.25), 0 4px 18px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.12); }
 .seat-remove-btn { position: absolute; top: -8px; right: -8px; z-index: 6; width: 28px; height: 28px; border: 1px solid rgba(255,255,255,0.18); border-radius: 999px; background: linear-gradient(180deg, #c74b3f, #7e2018); color: #fff6f4; font-size: 14px; font-weight: 700; line-height: 1; display: flex; align-items: center; justify-content: center; box-shadow: 0 6px 16px rgba(0,0,0,0.45); cursor: pointer; transition: transform var(--duration-fast) var(--ease-standard), filter var(--duration-fast) var(--ease-standard); }
