@@ -172,6 +172,8 @@ let JINXES = [];
 // Canonical official night-order id sequences, loaded from assets/nightsheet.json.
 let NIGHT_SHEET_FIRST = [];
 let NIGHT_SHEET_OTHER = [];
+// Player-strategy hint text per role id, loaded from assets/hints.json.
+let ROLE_HINTS = new Map();
 
 // roles.json's `team` matches the official schema (incl. British "traveller"),
 // `cat` below is this app's internal category id — same values except traveler.
@@ -205,7 +207,12 @@ let ROLES = [];
 let BMR_CORE_ROLES = [];
 let SNV_CORE_ROLES = [];
 
-function tbRoles() { return ROLES.filter(r => r.cat !== 'traveler'); }
+// Trouble Brewing's role list previously excluded travelers here, which meant
+// getRoles('tb') could never resolve a traveler's category — breaking the
+// traveler exceptions (nomination/execution/ghost-vote/alive-count) for the
+// TB script specifically, and hiding TB's travelers from the Roles reference
+// tab and role pickers. BMR/SNV never had this filter; TB is now consistent.
+function tbRoles() { return ROLES; }
 function travelerRoles() { return ROLES.filter(r => r.cat === 'traveler'); }
 
 // Maps a standard script-tool array ([{id:'_meta',...}, {id:'roleid'}, ...])
@@ -266,6 +273,21 @@ export async function loadCoreScripts(rolesUrl = 'assets/roles.json', baseUrl = 
     NIGHT_SHEET_FIRST = [];
     NIGHT_SHEET_OTHER = [];
   }
+
+  // Player-strategy hints (assets/hints.json) — optional, the role info
+  // popup simply omits the tips section for roles with no entry.
+  try {
+    const hintsUrl = rolesUrl.replace(/roles\.json$/, 'hints.json');
+    const hintsRes = await fetch(hintsUrl, { cache: 'no-cache' });
+    if (hintsRes.ok) {
+      const hints = await hintsRes.json();
+      ROLE_HINTS = new Map((Array.isArray(hints) ? hints : [])
+        .filter(h => h && h.id && h.text)
+        .map(h => [h.id, h.text]));
+    }
+  } catch {
+    ROLE_HINTS = new Map();
+  }
 }
 
 function getCustomScript(script) {
@@ -292,6 +314,10 @@ export function isExperimentalRole(name) {
 
 export function getRoleById(id) {
   return ROLE_BY_ID.get(id) || null;
+}
+
+export function getRoleHint(id) {
+  return ROLE_HINTS.get(id) || null;
 }
 
 // Returns the Djinn special-rule entries that apply to a script: every known

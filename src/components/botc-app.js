@@ -1,6 +1,6 @@
 import { LitElement, html, nothing } from 'lit';
 import { ROLES_IMG_URL, normalizeScript, setCustomScripts, getScriptOptions, getAllRoles, getRoles, getScriptRoleLayout, loadBundledScripts } from '../data.js';
-import { blankSeat, MIN, MAX, MAX_STEP, phaseRoundToStep, stepToPhaseRound, playVoteYesSound, playVoteNoSound, parseBackupXml, isPoisoned } from '../utils.js';
+import { blankSeat, MIN, MAX, MAX_STEP, phaseRoundToStep, stepToPhaseRound, playVoteYesSound, playVoteNoSound, parseBackupXml, isPoisoned, hapticTick } from '../utils.js';
 import './botc-circle.js';
 import './botc-edit-modal.js';
 import './botc-stats-modal.js';
@@ -1120,6 +1120,7 @@ export class BotcApp extends LitElement {
     if (dir > 0 && this.gameEnded && step >= (this.gameEndInfo?.endedStep ?? step)) return;
     const next = Math.max(0, Math.min(MAX_STEP, step + dir));
     if (next === step) return;
+    hapticTick();
     const pr = stepToPhaseRound(next);
     this.phase = pr.phase;
     this.round = pr.round;
@@ -1498,8 +1499,10 @@ export class BotcApp extends LitElement {
   // ── Meta (alive/dead counts) ─────────────────────────────────────────
   _meta() {
     const isEvil = s => s.alignment === 'evil';
-    const alive     = this.seats.filter(s => !s.dead);
-    const dead      = this.seats.filter(s =>  s.dead);
+    // Travelers don't count toward the "real" alive/dead totals (matches the
+    // voting-threshold/ghost-vote/single-execution rules elsewhere).
+    const alive     = this.seats.filter(s => !s.dead && !this._isTraveler(s));
+    const dead      = this.seats.filter(s =>  s.dead && !this._isTraveler(s));
     return {
       alive:     alive.length,
       dead:      dead.length,
@@ -1517,7 +1520,7 @@ export class BotcApp extends LitElement {
     if (this.nomMode === 'to')   return '⚖️ ' + this._seatLabel(this.nomFrom) + ' is nominating… pick target';
     if (this.nomMode === 'votes') {
       const entry = this.nominations[this.nomVoteKey]?.[this.nomVoteIdx];
-      const alive = entry?.aliveCount ?? this.seats.filter(s => !s.dead).length;
+      const alive = entry?.aliveCount ?? this.seats.filter(s => !s.dead && !this._isTraveler(s)).length;
       const needed = Math.ceil(alive / 2);
       const voteCount = (entry?.votes || []).length;
       const reached = voteCount >= needed;
@@ -1531,7 +1534,7 @@ export class BotcApp extends LitElement {
     if (this.nomMode === 'votes') {
       const entry = this.nominations[this.nomVoteKey]?.[this.nomVoteIdx];
       const n = entry?.votes?.length || 0;
-      const alive = entry?.aliveCount ?? this.seats.filter(s => !s.dead).length;
+      const alive = entry?.aliveCount ?? this.seats.filter(s => !s.dead && !this._isTraveler(s)).length;
       
       return html`✓ <span class="btn-label">Done · </span><span class="nom-day-count">${n}/${alive} votes`;
     }
@@ -2003,6 +2006,7 @@ export class BotcApp extends LitElement {
       <botc-charcount-modal
         .open="${this._charcountOpen}"
         .script="${this.script}"
+        .seats="${this.seats}"
         .seatCount="${this.seatCount}"
         @modal-close="${() => {
           this._charcountOpen = false;

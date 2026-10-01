@@ -81,7 +81,7 @@ export class BotcReferenceModal extends LitElement {
       this.querySelector('#modal-reference')?.classList.toggle('visible', this.open);
     }
     if (this.open && this._tab === 'charcount'
-        && (changed.has('_tab') || changed.has('seatCount') || changed.has('script') || changed.has('open'))) {
+        && (changed.has('_tab') || changed.has('seatCount') || changed.has('seats') || changed.has('script') || changed.has('open'))) {
       this._scrollToActiveCharcountCol();
     }
   }
@@ -392,8 +392,21 @@ export class BotcReferenceModal extends LitElement {
   }
 
   // ── Char count helpers ───────────────────────────────
+  // Travelers sit outside the standard townsfolk/outsider/minion/demon
+  // distribution, so the recommended column is keyed off the seat count
+  // minus however many seats currently hold a traveler.
+  _effectivePlayerCount() {
+    const roles = getRoles(this.script);
+    const travelers = this.seats.filter(s => {
+      const roleName = s?.trueRole || s?.role;
+      return !!roleName && roles.find(r => r.name === roleName)?.cat === 'traveler';
+    }).length;
+    const total = this.seatCount || this.seats.length || 0;
+    return Math.max(0, total - travelers);
+  }
+
   _ccActiveIdx() {
-    const sc = this.seatCount;
+    const sc = this._effectivePlayerCount();
     if (sc < 5)  return CHARCOUNT_COLS.indexOf(5);
     if (sc < 15) return CHARCOUNT_COLS.indexOf(sc);
     return CHARCOUNT_COLS.indexOf('15+');

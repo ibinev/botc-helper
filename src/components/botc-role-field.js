@@ -1,5 +1,5 @@
 import { LitElement, html, nothing, render as litRender } from 'lit';
-import { ROLE_ICONS, CAT_LABELS, getAllRoles } from '../data.js';
+import { ROLE_ICONS, CAT_LABELS, getAllRoles, getRoleHint } from '../data.js';
 import './botc-combo.js';
 import './botc-role-picker-popup.js';
 
@@ -42,6 +42,7 @@ export class BotcRoleField extends LitElement {
     _infoOpen:     { state: true },
     _currentValue: { state: true },
     _pickerOpen:   { state: true },
+    _hintsOpen:    { state: true },
   };
 
   createRenderRoot() { return this; }
@@ -58,6 +59,7 @@ export class BotcRoleField extends LitElement {
     this._infoOpen   = false;
     this._currentValue = '';
     this._pickerOpen = false;
+    this._hintsOpen  = new Set();
     this._roleByName = new Map(getAllRoles().map(r => [r.name, r]));
     // The picker popup / info popup are rendered into a portal appended to
     // <body> instead of this element's own light-DOM subtree, because this
@@ -151,10 +153,17 @@ export class BotcRoleField extends LitElement {
     const hasValue = this.multi ? !!(this._currentValue && this._currentValue.length) : !!this._currentValue;
     if (!hasValue) return;
     this._infoOpen = !this._infoOpen;
+    if (this._infoOpen) this._hintsOpen = new Set();
   }
 
   _closeInfo() {
     this._infoOpen = false;
+  }
+
+  _toggleHint(name) {
+    const next = new Set(this._hintsOpen);
+    if (next.has(name)) next.delete(name); else next.add(name);
+    this._hintsOpen = next;
   }
 
   _roleMeta(name) {
@@ -162,6 +171,12 @@ export class BotcRoleField extends LitElement {
       name, cat: 'unknown', align: 'unknown',
       ability: 'No description available for this role.'
     };
+  }
+
+  // Renders *word* as <strong>word</strong>, matching the script-tool's
+  // reminder-text bolding convention used elsewhere in the app.
+  _boldify(text) {
+    return text.split(/\*([^*]+)\*/g).map((part, i) => i % 2 === 1 ? html`<strong>${part}</strong>` : part);
   }
 
   render() {
@@ -293,6 +308,15 @@ export class BotcRoleField extends LitElement {
                     </div>
                   </div>
                   <div class="role-info-entry-ability">${role.ability || 'No description available.'}</div>
+                  ${getRoleHint(role.id) ? html`
+                    <div class="collapsible-header role-hint-header" @click="${() => this._toggleHint(role.name)}">
+                      <span class="role-hint-label">💡 Player tips</span>
+                      <span class="collapsible-chevron ${this._hintsOpen.has(role.name) ? '' : 'collapsible-chevron--collapsed'}">▾</span>
+                    </div>
+                    <div class="collapsible-body role-hint-body ${this._hintsOpen.has(role.name) ? '' : 'collapsed'}">
+                      ${getRoleHint(role.id).split(/\n\n+/).map(p => html`<p>${this._boldify(p)}</p>`)}
+                    </div>
+                  ` : nothing}
                 </div>
               `)}
             </div>

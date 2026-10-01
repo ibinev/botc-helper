@@ -2,7 +2,7 @@ import { LitElement, html, nothing } from 'lit';
 import './botc-combo.js';
 import './botc-role-field.js';
 import { ROLE_ICONS, getAllRoles, CAT_LABELS } from '../data.js';
-import { isPoisoned } from '../utils.js';
+import { isPoisoned, hapticTick } from '../utils.js';
 
 /**
  * <botc-edit-modal>
@@ -152,6 +152,7 @@ export class BotcEditModal extends LitElement {
   }
 
   _onToggle(id) {
+    hapticTick();
     switch (id) {
       case 'tog-dead':
         this._deadActive = !this._deadActive;

@@ -1,6 +1,6 @@
 import { LitElement, html } from 'lit';
 import { CHARCOUNT_COLS } from '../utils.js';
-import { getCharacterCount } from '../data.js';
+import { getCharacterCount, getRoles } from '../data.js';
 
 /**
  * <botc-charcount-modal>
@@ -9,6 +9,7 @@ import { getCharacterCount } from '../data.js';
  *
  * Properties:
  *   open      {Boolean}
+ *   seats     {Array}
  *   seatCount {Number}
  *
  * Fires:
@@ -17,6 +18,7 @@ import { getCharacterCount } from '../data.js';
 export class BotcCharcountModal extends LitElement {
   static properties = {
     open:      { type: Boolean },
+    seats:     { type: Array   },
     seatCount: { type: Number  },
     script:    { type: String  },
   };
@@ -26,6 +28,7 @@ export class BotcCharcountModal extends LitElement {
   constructor() {
     super();
     this.open      = false;
+    this.seats     = [];
     this.seatCount = 12;
     this.script    = 'tb';
   }
@@ -41,10 +44,23 @@ export class BotcCharcountModal extends LitElement {
   }
 
   _activeColIdx() {
-    const sc = this.seatCount;
+    const sc = this._effectivePlayerCount();
     if (sc < 5)  return CHARCOUNT_COLS.indexOf(5);
     if (sc < 15) return CHARCOUNT_COLS.indexOf(sc);
     return CHARCOUNT_COLS.indexOf('15+');
+  }
+
+  // Travelers sit outside the standard townsfolk/outsider/minion/demon
+  // distribution, so the recommended column is keyed off the seat count
+  // minus however many seats currently hold a traveler.
+  _effectivePlayerCount() {
+    const roles = getRoles(this.script);
+    const travelers = this.seats.filter(s => {
+      const roleName = s?.trueRole || s?.role;
+      return !!roleName && roles.find(r => r.name === roleName)?.cat === 'traveler';
+    }).length;
+    const total = this.seatCount || this.seats.length || 0;
+    return Math.max(0, total - travelers);
   }
 
   _thClass(colIdx) { return colIdx === this._activeColIdx() ? 'col-active' : ''; }

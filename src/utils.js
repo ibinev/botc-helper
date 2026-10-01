@@ -28,6 +28,11 @@ export function isPoisoned(seat, round) {
   return !!(seat && seat.poisonedAt && seat.poisonedAt.round === round);
 }
 
+/** Tiny haptic-style buzz for toggle/button feedback — silently no-ops where unsupported. */
+export function hapticTick(ms = 10) {
+  try { navigator.vibrate?.(ms); } catch (e) {}
+}
+
 /**
  * Compute the default (x, y) position for seat i out of n
  * within a container of width W and height H.

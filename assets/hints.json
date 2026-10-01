@@ -1,0 +1,14 @@
+[
+	{
+		"id": "damsel",
+		"text": "*Don't claim Damsel.* Claiming a different, believable Townsfolk is usually safest. Pick one that fits the script and isn't likely to be confirmed or disproven.\n\n*Don't look suspicious.* Evil will study quiet, evasive, or oddly vague players. Act like a normal Townsfolk and share believable information and opinions.\n\n*Don't stay silent either.* Avoiding the spotlight can make you stand out, because the Minions are looking for the player with nothing to say.\n\n*Be careful who you tell.* Revealing yourself to a trusted player is only worth it if you're sure they're good. A Demon bluffing or a Minion posing as a friend can end the game.\n\n*Use the team.* Good players can throw suspicion onto each other or claim Damsel as a bluff, so the Minions waste their one guess on the wrong person.\n\n*Watch the public guessing.* The guess has to be public and during the day, so you get a warning sign when someone starts steering suspicion toward you.\n\nMight try to *bluff as the Huntsman* but it is risky with group that knows this bluff"
+	},
+	{
+		"id": "fortuneteller",
+		"text": "*Plan your fake info before the first day.* Decide in advance what you'll claim, so you're not improvising under pressure.\n\n*Tie the fake to your real results.* Use your real Fortune Teller info to decide who to suspect, and fabricate the claim around that.\n\n*Stay low-key.* Speak up enough that you look helpful, but not so much that you look like the town's leader.\n\n*Remember the red herring.* A \"yes\" on someone doesn't mean they're the demon. One good player always registers as a demon to you, so avoid confidently accusing someone from a single ping.\n\n*Watch out for the Recluse and Spy.* They can also register as the demon.\n\n*Chef, Investigator, Washerwoman, or Librarian are the safest* if you want the demon to ignore you. They give one-time info, so there's nothing to maintain, and they're rarely top kill targets."
+	},
+	{
+		"id": "monk",
+		"text": "*Pick your bluff before day 1 and don't change it.*\n\n*Protect quietly.* Guard players who have claimed useful info or look like likely demon targets. Never announce your target.\n\n*Explain no-death nights without claiming protection.* Say something like \"maybe the demon missed, or someone's protected,\" while attributing it to a Soldier or an unknown role.\n\n*Stay low profile.* Be helpful but not a leader, so you don't draw a kill.\n\n*Reveal only to someone you trust,* such as a likely good player who can vouch for you. Revealing late can also work: if you're about to be executed or the game is ending, share it so your protections are credited to town."
+	}
+]
