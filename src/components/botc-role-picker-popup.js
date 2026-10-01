@@ -17,6 +17,7 @@ import { getRoles, ROLE_ICONS, CAT_LABELS, CAT_ORDER } from '../data.js';
  *   value         {String|Array}   – current value: role name (single) or array (multi)
  *   disabledRoles {Array}          – role names shown greyed-out/unselectable
  *   clearable     {Boolean}        – show a "Clear" header action (single mode only)
+ *   showTravelers {Boolean}        – include the Travelers group (default: true)
  *
  * Fires:
  *   role-picker-select  – { detail: { value } }   single mode, fires immediately ('' = cleared)
@@ -32,6 +33,7 @@ export class BotcRolePickerPopup extends LitElement {
     value:         { type: Array   },
     disabledRoles: { type: Array   },
     clearable:     { type: Boolean },
+    showTravelers: { type: Boolean },
     _working:      { state: true   },
   };
 
@@ -46,6 +48,7 @@ export class BotcRolePickerPopup extends LitElement {
     this.value         = [];
     this.disabledRoles = [];
     this.clearable     = false;
+    this.showTravelers = true;
     this._working       = [];
   }
 
@@ -104,7 +107,7 @@ export class BotcRolePickerPopup extends LitElement {
     if (!this.open) return nothing;
     const roles = getRoles(this.script);
     const groups = CAT_ORDER
-      .filter(cat => cat !== 'loric' && cat !== 'fabled')
+      .filter(cat => cat !== 'loric' && cat !== 'fabled' && (this.showTravelers || cat !== 'traveler'))
       .map(cat => ({ cat, roles: roles.filter(r => r.cat === cat) }))
       .filter(g => g.roles.length);
 

@@ -22,6 +22,7 @@ import './botc-role-picker-popup.js';
  *   writable    {Boolean} – forwarded to botc-combo, single mode only (default: true)
  *   multi       {Boolean} – multi-select mode (default: false)
  *   picker      {Boolean} – single-value tap-a-role popup instead of the combo (default: false, ignored when multi is true)
+ *   showTravelers {Boolean} – include travelers in the picker popup (default: true)
  *
  * Public API:
  *   getValue()       → role name string (single mode) or string[] (multi mode)
@@ -39,6 +40,7 @@ export class BotcRoleField extends LitElement {
     writable:      { type: Boolean },
     multi:         { type: Boolean },
     picker:        { type: Boolean },
+    showTravelers: { type: Boolean },
     _infoOpen:     { state: true },
     _currentValue: { state: true },
     _pickerOpen:   { state: true },
@@ -56,6 +58,7 @@ export class BotcRoleField extends LitElement {
     this.writable    = true;
     this.multi       = false;
     this.picker      = false;
+    this.showTravelers = true;
     this._infoOpen   = false;
     this._currentValue = '';
     this._pickerOpen = false;
@@ -266,6 +269,7 @@ export class BotcRoleField extends LitElement {
           .title="${this.label || 'Pick roles'}"
           .multi="${true}"
           .value="${values}"
+          .showTravelers="${this.showTravelers}"
           @role-picker-change="${e => this._onPickerChange(e)}"
           @role-picker-dismiss="${() => { this._pickerOpen = false; }}"
         ></botc-role-picker-popup>
@@ -277,6 +281,7 @@ export class BotcRoleField extends LitElement {
           .multi="${false}"
           .value="${this._currentValue}"
           .clearable="${!!this._currentValue}"
+          .showTravelers="${this.showTravelers}"
           @role-picker-select="${e => this._onPickerSelect(e)}"
           @role-picker-dismiss="${() => { this._pickerOpen = false; }}"
         ></botc-role-picker-popup>

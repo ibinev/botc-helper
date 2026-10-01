@@ -1,5 +1,5 @@
 import { LitElement, html, nothing } from 'lit';
-import { ROLES_IMG_URL, normalizeScript, setCustomScripts, getScriptOptions, getAllRoles, getRoles, getScriptRoleLayout, loadBundledScripts } from '../data.js';
+import { ROLES_IMG_URL, normalizeScript, setCustomScripts, getScriptOptions, getAllRoles, getRoles, getScriptRoleLayout, loadBundledScripts, ROLE_ICONS } from '../data.js';
 import { blankSeat, MIN, MAX, MAX_STEP, phaseRoundToStep, stepToPhaseRound, playVoteYesSound, playVoteNoSound, parseBackupXml, isPoisoned, hapticTick } from '../utils.js';
 import './botc-circle.js';
 import './botc-edit-modal.js';
@@ -11,7 +11,6 @@ import './botc-voting-analysis-modal.js';
 import './botc-settings-modal.js';
 import './botc-charcount-modal.js';
 import './botc-pdf-modal.js';
-import './botc-nightorder-modal.js';
 import './botc-reference-modal.js';
 import './botc-readme-modal.js';
 import './botc-role-picker-popup.js';
@@ -63,9 +62,7 @@ export class BotcApp extends LitElement {
     _charcountOpen:    { state: true },
     _statsOpen:        { state: true },
     _pdfOpen:          { state: true },
-    _nightorderOpen:   { state: true },
     _referenceOpen:    { state: true },
-    _referenceTab:     { state: true },
     _readmeOpen:       { state: true },
     _confirmOpen:      { state: true },
     _confirmSoftOpen:  { state: true },
@@ -76,6 +73,7 @@ export class BotcApp extends LitElement {
     _killedByPopupIdx:   { state: true },
     _killedByPopupValue: { state: true },
     _endGameOpen:        { state: true },
+    _reminderTrayOpen:   { state: true },
   };
 
   createRenderRoot() { return this; }
@@ -123,9 +121,7 @@ export class BotcApp extends LitElement {
     this._charcountOpen    = false;
     this._statsOpen        = false;
     this._pdfOpen          = false;
-    this._nightorderOpen   = false;
     this._referenceOpen    = false;
-    this._referenceTab     = 'roles';
     this._readmeOpen       = false;
     this._confirmOpen      = false;
     this._confirmSoftOpen  = false;
@@ -136,6 +132,7 @@ export class BotcApp extends LitElement {
     this._killedByPopupIdx   = null;
     this._killedByPopupValue = '';
     this._endGameOpen        = false;
+    this._reminderTrayOpen   = false;
   }
 
   // ── Lifecycle ────────────────────────────────────────────────────────
@@ -1426,6 +1423,112 @@ export class BotcApp extends LitElement {
     this._saveState();
   }
 
+  // ── Reminder tokens (Storyteller mode) ───────────────────────────────
+  // One chip per reminder text on each seat's current True role, so the
+  // Storyteller can drag the exact token the script calls for onto any seat.
+  // Each role only ever has as many physical tokens as entries in its
+  // `reminders` array (e.g. the Monk has exactly 1 "Safe" token) — once a
+  // chip is placed on a seat it's removed from the tray until taken back off.
+  // A role's reminders are only offered on the nights (Night 1 vs. Day/Night
+  // 2+, paired per round) its ability actually wakes it: firstNightReminder-
+  // only roles (e.g. Washerwoman) stop appearing after round 1, otherNight-
+  // Reminder-only roles (e.g. Monk) don't appear until round 2+, roles with
+  // neither (pure day abilities, e.g. Virgin) are always offered.
+  _roleRemindersAvailable(role) {
+    const hasFirst = !!role.firstNightReminder;
+    const hasOther = !!role.otherNightReminder;
+    if (!hasFirst && !hasOther) return true;
+    return this.round === 1 ? hasFirst : hasOther;
+  }
+
+  _buildReminderChips() {
+    const roles = getRoles(this.script);
+    const placedKeys = new Set();
+    this.seats.forEach(seat => (seat.reminders || []).forEach(r => { if (r.sourceKey) placedKeys.add(r.sourceKey); }));
+    const chips = [];
+    this.seats.forEach((seat, idx) => {
+      if (!seat.trueRole) return;
+      const role = roles.find(r => r.name === seat.trueRole);
+      if (!role || !Array.isArray(role.reminders) || !this._roleRemindersAvailable(role)) return;
+      role.reminders.forEach((text, ri) => {
+        const key = `${idx}-${ri}`;
+        if (placedKeys.has(key)) return;
+        chips.push({ key, seatIdx: idx, seatName: seat.name || `Seat ${idx + 1}`, role: role.name, text, dead: !!seat.dead });
+      });
+    });
+    return chips;
+  }
+
+  _addReminderToSeat(idx, chip) {
+    const seats = [...this.seats];
+    const seat = seats[idx];
+    if (!seat) return;
+    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    seats[idx] = { ...seat, reminders: [...(seat.reminders || []), { id, text: chip.text, role: chip.role, sourceKey: chip.key }] };
+    this.seats = seats;
+    this._saveState();
+    this.requestUpdate();
+  }
+
+  _removeReminderFromSeat({ idx, id }) {
+    const seats = [...this.seats];
+    const seat = seats[idx];
+    if (!seat) return;
+    seats[idx] = { ...seat, reminders: (seat.reminders || []).filter(r => r.id !== id) };
+    this.seats = seats;
+    this._saveState();
+    this.requestUpdate();
+  }
+
+  // Pointer-based drag (mouse + touch) from a tray chip onto a seat — mirrors
+  // the seat-drag gesture in botc-circle.js rather than native HTML5 DnD,
+  // which doesn't work reliably on touch devices.
+  _onReminderChipPointerDown(e, chip) {
+    e.preventDefault();
+    const ghost = e.currentTarget.cloneNode(true);
+    ghost.classList.add('reminder-chip-ghost');
+    ghost.style.left = `${e.clientX}px`;
+    ghost.style.top  = `${e.clientY}px`;
+    document.body.appendChild(ghost);
+
+    let overSeatEl = null;
+
+    const move = (cx, cy) => {
+      ghost.style.left = `${cx}px`;
+      ghost.style.top  = `${cy}px`;
+      const el = document.elementFromPoint(cx, cy);
+      const seatEl = el ? el.closest('.seat') : null;
+      if (overSeatEl && overSeatEl !== seatEl) overSeatEl.classList.remove('reminder-drop-target');
+      if (seatEl) seatEl.classList.add('reminder-drop-target');
+      overSeatEl = seatEl;
+    };
+
+    const onMove = (ev) => {
+      if (ev.cancelable) ev.preventDefault();
+      const cx = ev.touches ? ev.touches[0].clientX : ev.clientX;
+      const cy = ev.touches ? ev.touches[0].clientY : ev.clientY;
+      move(cx, cy);
+    };
+
+    const onUp = () => {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup',   onUp);
+      document.removeEventListener('touchmove', onMove);
+      document.removeEventListener('touchend',  onUp);
+      ghost.remove();
+      if (overSeatEl) {
+        overSeatEl.classList.remove('reminder-drop-target');
+        const idx = parseInt(overSeatEl.dataset.idx, 10);
+        if (!Number.isNaN(idx)) this._addReminderToSeat(idx, chip);
+      }
+    };
+
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup',   onUp);
+    document.addEventListener('touchmove', onMove, { passive: false });
+    document.addEventListener('touchend',  onUp);
+  }
+
   // ── Reset ────────────────────────────────────────────────────────────
   _doReset() {
     this._clearStorage();
@@ -1563,6 +1666,7 @@ export class BotcApp extends LitElement {
     const nomActive  = !!this.nomMode;
     const thresholdReached = this._voteThresholdReached();
     const hasRolesImg = !!ROLES_IMG_URL;
+    const reminderChips = (this.storyView && this._reminderTrayOpen) ? this._buildReminderChips() : [];
 
     return html`
       <!-- Top bar -->
@@ -1601,7 +1705,11 @@ export class BotcApp extends LitElement {
           <button class="topbar-icon-btn" title="Game Stats"
             @click="${() => { this._statsOpen = true; this.requestUpdate(); }}">📈</button>
           <button class="topbar-icon-btn" title="Reference"
-            @click="${() => { this._referenceOpen = true; this._referenceTab = 'roles'; this.requestUpdate(); }}">📖</button>
+            @click="${() => { this._referenceOpen = true; this.requestUpdate(); }}">📖</button>
+          ${this.storyView ? html`
+            <button class="topbar-icon-btn ${this._reminderTrayOpen ? 'active' : ''}" title="Reminder tokens"
+              @click="${() => { this._reminderTrayOpen = !this._reminderTrayOpen; this.requestUpdate(); }}">🔖</button>
+          ` : nothing}
           <button class="topbar-icon-btn" title="Settings"
             @click="${() => { this._settingsOpen = true; this.requestUpdate(); }}">⚙️</button>
         </div>
@@ -1633,10 +1741,32 @@ export class BotcApp extends LitElement {
           @seat-remove="${e => this._removeSeat(e.detail.idx)}"
           @seat-insert="${e => this._insertSeatAt(e.detail.idx)}"
           @seat-drag-end="${e => this._onSeatDragEnd(e.detail)}"
+          @seat-reminder-remove="${e => this._removeReminderFromSeat(e.detail)}"
         ></botc-circle>
 
         <!-- Nomination step bar -->
         <div id="nom-step-bar" class="${nomBarText ? 'visible' : ''} ${thresholdReached ? 'threshold-reached' : ''}">${nomBarText}</div>
+
+        <!-- Reminder token tray (Storyteller mode) -->
+        ${this.storyView && this._reminderTrayOpen ? html`
+          <div id="reminder-tray">
+            <div class="reminder-tray-header">
+              <span>🔖 Drag a token onto a seat</span>
+              <button class="reminder-tray-close" @click="${() => { this._reminderTrayOpen = false; this.requestUpdate(); }}">✕</button>
+            </div>
+            <div class="reminder-tray-chips">
+              ${reminderChips.length ? reminderChips.map(c => html`
+                <div class="reminder-chip ${c.dead ? 'reminder-chip--dead' : ''}"
+                  @mousedown="${e => this._onReminderChipPointerDown(e, c)}"
+                  @touchstart="${e => this._onReminderChipPointerDown(e, c)}">
+                  ${ROLE_ICONS[c.role] ? html`<img class="reminder-chip-icon" src="${ROLE_ICONS[c.role]}" alt="${c.role}">` : nothing}
+                  <span class="reminder-chip-text">${c.text}</span>
+                  <span class="reminder-chip-sub">${c.seatName}</span>
+                </div>
+              `) : html`<div class="reminder-tray-empty">No True roles with reminder tokens are assigned yet.</div>`}
+            </div>
+          </div>
+        ` : nothing}
 
         <!-- Fast-voting: tap zones spanning from below the topbar to the bottom
              of the screen, so the round can be cast without hunting for small
@@ -1982,11 +2112,11 @@ export class BotcApp extends LitElement {
       <botc-reference-modal
         .open="${this._referenceOpen}"
         .script="${this.script}"
-        .initialTab="${this._referenceTab}"
         .seats="${this.seats}"
         .seatCount="${this.seatCount}"
         .phase="${this.phase}"
         .round="${this.round}"
+        .storyView="${this.storyView}"
         @modal-close="${() => {
           this._referenceOpen = false;
           this.requestUpdate();
@@ -2031,19 +2161,6 @@ export class BotcApp extends LitElement {
           this.requestUpdate();
         }}"
       ></botc-pdf-modal>
-
-      <!-- Night order modal -->
-      <botc-nightorder-modal
-        .open="${this._nightorderOpen}"
-        .script="${this.script}"
-        .seats="${this.seats}"
-        .phase="${this.phase}"
-        .round="${this.round}"
-        @modal-close="${() => {
-          this._nightorderOpen = false;
-          this.requestUpdate();
-        }}"
-      ></botc-nightorder-modal>
 
       <!-- Confirm reset dialog -->
       ${this._confirmOpen ? html`

@@ -626,8 +626,8 @@ export class BotcSettingsModal extends LitElement {
 
             <div class="settings-row">
               <div>
-                <div class="settings-label">Storyteller view</div>
-                <div class="settings-sub">Flip the circle 180° to match the Storyteller's perspective</div>
+                <div class="settings-label">Storyteller mode</div>
+                <div class="settings-sub">Flip the circle 180° to match the Storyteller's perspective. Also limits the Night Order tabs to characters currently assigned as a seat's True role.</div>
               </div>
               <div class="settings-control">
                 <button class="btn btn-sm btn-hints ${this.storyView ? 'active' : ''}"

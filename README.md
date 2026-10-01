@@ -11,7 +11,7 @@ Use this when running a live game and you need a fast reminder.
 
 1. ⚙️ Setup
 - Open Settings (⚙️) -> set Players and Script
-- Optional: enable Compact mode or Storyteller view
+- Optional: enable Compact mode or Storyteller mode
 
 2. 👥 Assign players
 - Tap seat -> set Name, Role claimed, True role (if needed)
@@ -285,8 +285,10 @@ Custom script builder:
 ### Compact mode
 - Shrinks seat visuals and reduces clutter
 
-### Storyteller view
+### Storyteller mode
 - Rotates board perspective by 180 degrees
+- Night Order tabs (First Night / Other Nights) only show characters currently assigned as a seat's True role
+- Adds a 🔖 Reminder tokens button to the top bar: opens a tray of reminder tokens (one per reminder text on each seat's current True role) that you can drag onto any seat; tap a token on a seat to remove it
 
 ### Seats
 - Enables drag-and-drop seat positioning
@@ -364,7 +366,7 @@ The layout also respects safe-area insets for notch devices.
 If something looks stale or mismatched:
 1. Hard refresh browser tab.
 2. Verify script selection in Settings.
-3. Check if compact mode / storyteller view / hide roles is active.
+3. Check if compact mode / storyteller mode / hide roles is active.
 4. If needed, use Clear table or Reset everything depending on desired scope.
 
 If running locally fails:

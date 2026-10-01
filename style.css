@@ -546,6 +546,47 @@ body.hide-role .pli-role        { display: none; }
 #nom-step-bar.visible { display: block; }
 #nom-step-bar.threshold-reached { background: rgba(90,158,47,0.93); color: #0d1f07; }
 #btn-nom.threshold-reached { border-color: #5a9e2f; color: #8fca4b; background: rgba(90,158,47,0.18); }
+
+/* ── Reminder tokens (Storyteller mode) ─────────────── */
+.seat-reminder-strip {
+  position: absolute; top: calc(100% + 8px); left: 50%; transform: translateX(-50%); z-index: 4;
+  display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; width: 198px; pointer-events: auto;
+}
+.seat-reminder-token {
+  width: 36px; height: 36px; border-radius: 50%; padding: 0; flex-shrink: 0;
+  background: rgba(20,14,8,0.92); border: 1.5px solid var(--gold); cursor: pointer;
+  display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 4px rgba(0,0,0,0.6);
+  font-size: 16px; font-weight: 700; color: var(--gold-light); -webkit-tap-highlight-color: transparent;
+}
+.seat-reminder-token img { width: 25px; height: 25px; object-fit: contain; }
+.seat.dead .seat-reminder-token { opacity: 0.45; filter: grayscale(0.85); }
+.seat-reminder-token--source-dead { opacity: 0.45; filter: grayscale(0.85); }
+.seat.reminder-drop-target .seat-inner { box-shadow: 0 0 0 4px var(--gold), 0 4px 24px rgba(201,151,58,0.6) !important; }
+body.hide-role .seat-reminder-strip { display: none; }
+
+#reminder-tray {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 25;
+  background: rgba(var(--bg-surface-rgb), 0.92); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  border-top: 1px solid var(--border-strong); box-shadow: 0 -4px 20px rgba(0,0,0,0.5);
+  padding: 10px 12px max(10px, env(safe-area-inset-bottom, 10px));
+}
+.reminder-tray-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; font-size: 12px; color: var(--gold-light); font-weight: 600; }
+.reminder-tray-close { width: 24px; height: 24px; border-radius: 50%; border: 0.5px solid var(--border); background: var(--bg-surface); color: var(--text-primary); cursor: pointer; }
+.reminder-tray-chips { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; }
+.reminder-tray-empty { font-size: 12px; color: var(--text-muted); font-style: italic; padding: 6px 2px; }
+.reminder-chip {
+  flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 2px;
+  width: 64px; padding: 6px 4px; border-radius: var(--radius-sm); background: var(--bg-surface);
+  border: 1px solid var(--border); cursor: grab; touch-action: none; user-select: none; -webkit-tap-highlight-color: transparent;
+}
+.reminder-chip-icon { width: 24px; height: 24px; object-fit: contain; }
+.reminder-chip-text { font-size: 10px; font-weight: 600; color: var(--text-primary); text-align: center; line-height: 1.2; }
+.reminder-chip-sub { font-size: 9px; color: var(--text-muted); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 60px; }
+.reminder-chip-ghost {
+  position: fixed; transform: translate(-50%, -50%); z-index: 500; pointer-events: none;
+  opacity: 0.9; box-shadow: 0 6px 20px rgba(0,0,0,0.6);
+}
+.reminder-chip--dead { opacity: 0.45; filter: grayscale(0.85); }
 .nom-mode .seat .seat-inner { border-color: rgba(201,151,58,0.35); }
 .seat.nom-from .seat-inner { border-color: var(--gold-light) !important; box-shadow: 0 0 0 3px var(--gold), 0 4px 20px rgba(201,151,58,0.45), inset 0 0 20px rgba(201,151,58,0.1) !important; }
 .seat.nom-unavailable .seat-inner { opacity: 0.32; filter: grayscale(0.7); }
@@ -952,6 +993,14 @@ body.hide-role .pli-role        { display: none; }
 .no-hint { font-size: 14px; color: var(--text-primary); opacity: 0.92; line-height: 1.5; margin-top: 2px; }
 .no-reminder-icon { display: inline-flex; align-items: center; justify-content: center; width: 15px; height: 15px; margin: 0 2px; border-radius: 50%; background: rgba(230,184,90,0.22); color: #e6b85a; font-size: 10px; font-weight: 800; font-style: normal; line-height: 1; vertical-align: middle; }
 .no-cond-tag { font-size: 10px; color: #9b6dca; background: rgba(155,109,202,0.15); border-radius: 999px; padding: 1px 6px; align-self: flex-start; font-weight: 600; }
+.no-tokens { display: flex; flex-direction: column; gap: 4px; flex-shrink: 0; align-self: center; margin-left: auto; }
+.no-token-badge {
+  width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+  background: rgba(20,14,8,0.92); border: 1.5px solid var(--gold); box-shadow: 0 1px 4px rgba(0,0,0,0.6);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700; color: var(--gold-light);
+}
+.no-token-badge img { width: 20px; height: 20px; object-fit: contain; }
 
 /* ── Roles PDF viewer ─────────────────────────────────── */
 #pdf-sheet { position: fixed; inset: 0; display: flex; flex-direction: column; background: var(--chrome-surface); z-index: 200; }

@@ -484,7 +484,7 @@ export class BotcEditModal extends LitElement {
             </div>
 
             <div class="field-grid full">
-              <botc-role-field id="field-role" .script="${this.script}" .writable=${false} .multi=${true} label="Role claimed" placeholder="Washerwoman…"></botc-role-field>
+              <botc-role-field id="field-role" .script="${this.script}" .writable=${false} .multi=${true} .showTravelers=${false} label="Role claimed" placeholder="Washerwoman…"></botc-role-field>
             </div>
 
             <div class="field-grid full">

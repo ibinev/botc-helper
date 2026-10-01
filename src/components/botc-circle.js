@@ -28,6 +28,7 @@ import { esc, defaultPos, isPoisoned } from '../utils.js';
  *   nom-click        – { detail: { idx } }            seat tapped (nom mode)
  *   seat-drag-end    – { detail: { idx, x, y } }      seat dragged to new position
  *   seat-insert      – { detail: { idx } }            insert a blank seat before this one (remove/rearrange mode)
+ *   seat-reminder-remove – { detail: { idx, id } }    tapped a reminder token to remove it from that seat
  */
 export class BotcCircle extends LitElement {
   static properties = {
@@ -112,6 +113,15 @@ export class BotcCircle extends LitElement {
     // Use stored _w/_h (updated by rAF + ResizeObserver).
     // When they change, Lit re-renders and seats move to correct positions.
     return defaultPos(i, this.seats.length, this._w, this._h);
+  }
+
+  // Reminders keep working even when they're displayed on a different
+  // (alive) seat than the role they belong to, so check the OWNING role's
+  // own seat for death, not just the seat the token is currently sitting on.
+  _isRoleDead(roleName) {
+    if (!roleName) return false;
+    const seat = this.seats.find(s => s.trueRole === roleName);
+    return !!seat?.dead;
   }
 
   _seatClass(s, i) {
@@ -317,6 +327,21 @@ export class BotcCircle extends LitElement {
         ${isPoisonedNow
           ? html`<div class="seat-poison-badge" title="Poisoned"><img src="${ROLE_ICONS['Poisoner']}" alt="Poisoned"></div>`
           : nothing}
+        ${Array.isArray(s.reminders) && s.reminders.length ? html`
+          <div class="seat-reminder-strip">
+            ${s.reminders.map(r => html`
+              <button type="button" class="seat-reminder-token ${this._isRoleDead(r.role) ? 'seat-reminder-token--source-dead' : ''}" title="${r.text}${r.role ? ' (' + r.role + ')' : ''} — tap to remove"
+                @click="${e => {
+                  e.stopPropagation();
+                  this.dispatchEvent(new CustomEvent('seat-reminder-remove', {
+                    detail: { idx: i, id: r.id }, bubbles: true, composed: true
+                  }));
+                }}">
+                ${ROLE_ICONS[r.role] ? html`<img src="${ROLE_ICONS[r.role]}" alt="">` : html`<span>${(r.text || '?').charAt(0)}</span>`}
+              </button>
+            `)}
+          </div>
+        ` : nothing}
         <span class="seat-num">${i + 1}</span>
         <div class="seat-inner">
           ${s.name

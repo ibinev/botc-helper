@@ -34,9 +34,12 @@ const SNV_ROLE_ORDER = {
  *   open       {Boolean}
  *   seats      {Array}
  *   seatCount  {Number}
+ *   script     {String}
  *   phase      {String}
  *   round      {Number}
- *   initialTab {String}  – 'roles' | 'nightorder' | 'charcount'
+ *   initialTab {String}  – 'roles' | 'nightorder' | 'charcount', used only as the very first default
+ *                          before any tab has ever been picked (see _tab/_noTab localStorage persistence)
+ *   storyView  {Boolean} – Storyteller mode: Night Order tabs only show characters currently assigned as a seat's True role
  *
  * Fires:
  *   modal-close – (no detail)
@@ -50,6 +53,7 @@ export class BotcReferenceModal extends LitElement {
     phase:      { type: String  },
     round:      { type: Number  },
     initialTab: { type: String  },
+    storyView:  { type: Boolean },
     _tab:       { state: true   },
     _noTab:     { state: true   },
     _done:      { state: true   },
@@ -66,17 +70,27 @@ export class BotcReferenceModal extends LitElement {
     this.phase      = 'day';
     this.round      = 1;
     this.initialTab = 'roles';
-    this._tab       = 'roles';
-    this._noTab     = 'first';
+    // Remembers which tab/sub-tab the sheet was last closed on, so reopening
+    // (even the button that always just sets `.open=true`) resumes in place
+    // instead of jumping back to Roles every time.
+    this._tab       = localStorage.getItem('botc_reference_tab') || this.initialTab || 'roles';
+    this._noTab     = localStorage.getItem('botc_reference_notab') || 'first';
     this._done      = new Set();
+    this.storyView  = false;
+  }
+
+  _setTab(tab) {
+    this._tab = tab;
+    localStorage.setItem('botc_reference_tab', tab);
+  }
+
+  _setNoTab(noTab) {
+    this._noTab = noTab;
+    this._done  = new Set();
+    localStorage.setItem('botc_reference_notab', noTab);
   }
 
   updated(changed) {
-    if (changed.has('open') && this.open) {
-      this._tab   = this.initialTab || 'roles';
-      this._noTab = (this.phase === 'night' && this.round === 1) ? 'first' : 'other';
-      this._done  = new Set();
-    }
     if (changed.has('open')) {
       this.querySelector('#modal-reference')?.classList.toggle('visible', this.open);
     }
@@ -339,9 +353,23 @@ export class BotcReferenceModal extends LitElement {
   _noRow(entry, idx) {
     const key        = this._noTab + '-' + idx;
     const done       = this._done.has(key);
+    // Reminder tokens currently sitting on THIS character's seat (e.g. a
+    // "Drunk" token dragged onto the Monk tells the Storyteller to give the
+    // Monk bad info) — shown on the right using the token's own role icon.
+    const placedTokens = this.storyView
+      ? this.seats.filter(s => s.trueRole === entry.name).flatMap(s => s.reminders || [])
+      : [];
     const inPlay     = this._inPlayMap();
     const players    = entry.st ? [] : (inPlay[entry.name] || []);
     const hasPlayers = players.length > 0;
+    // A dead player's character has nothing left to do at night — treat the
+    // row as already checked off, same as if it were manually marked done.
+    const isDead     = hasPlayers && players.every(p => this.seats[p.idx]?.dead);
+    // Once-per-game "Used" tokens (e.g. Damsel's "Guess Used", Puzzlemaster's
+    // "Guess Used") placed on the character's own seat mean the ability has
+    // already been spent — gray the row out the same as a dead/done row.
+    const isUsed     = placedTokens.some(t => t.role === entry.name && /used/i.test(t.text || ''));
+    const checked    = done || isDead || isUsed;
     const iconSrc    = ROLE_ICONS[entry.name] || null;
     const roles = getRoles(this.script);
     const roleData   = roles.find(r => r.name === entry.name);
@@ -352,9 +380,9 @@ export class BotcReferenceModal extends LitElement {
       this._done = next;
     };
     return html`
-      <div class="no-row ${done ? 'no-row--done' : ''} ${entry.st ? 'no-row--st' : ''} ${hasPlayers ? 'no-row--active' : ''} ${entry.cond ? 'no-row--cond' : ''}"
+      <div class="no-row ${checked ? 'no-row--done' : ''} ${entry.st ? 'no-row--st' : ''} ${hasPlayers ? 'no-row--active' : ''} ${entry.cond ? 'no-row--cond' : ''}"
         @click="${toggle}">
-        <span class="no-check">${done ? '✓' : ''}</span>
+        <span class="no-check">${checked ? '✓' : ''}</span>
         ${iconSrc
           ? html`<img class="no-icon" src="${iconSrc}" alt="">`
           : html`<span class="no-icon no-icon--st">🌙</span>`}
@@ -366,22 +394,41 @@ export class BotcReferenceModal extends LitElement {
           ${entry.cond ? html`<span class="no-cond-tag">conditional</span>` : nothing}
           <span class="no-hint">${this._renderHint(entry.hint)}</span>
         </div>
+        ${placedTokens.length ? html`
+          <div class="no-tokens">
+            ${placedTokens.map(t => html`
+              <span class="no-token-badge" title="${t.text}${t.role ? ' (' + t.role + ')' : ''}">
+                ${ROLE_ICONS[t.role]
+                  ? html`<img src="${ROLE_ICONS[t.role]}" alt="">`
+                  : html`${(t.role || t.text || '?')[0]}`}
+              </span>
+            `)}
+          </div>
+        ` : nothing}
       </div>
     `;
   }
 
   _renderNightOrder() {
     const playerCount = this.seatCount || this.seats.length || 0;
-    const order = (getNightOrder(this.script)[this._noTab] || [])
+    let order = (getNightOrder(this.script)[this._noTab] || [])
       .filter(entry => !entry.minPlayers || playerCount >= entry.minPlayers);
+    if (this.storyView) {
+      const roles = getRoles(this.script);
+      // Storyteller-mode: hide characters that aren't currently assigned as
+      // a seat's True role. Generic bookkeeping rows (Minion info/Demon
+      // info/Dawn) aren't tied to a character, so they always stay visible.
+      const trueRoles = new Set(this.seats.map(s => s.trueRole).filter(Boolean));
+      order = order.filter(entry => !roles.find(r => r.name === entry.name) || trueRoles.has(entry.name));
+    }
     const doneCount = [...this._done].filter(k => k.startsWith(this._noTab + '-')).length;
     return html`
       <div class="ref-body">
         <div class="no-sub-tabs">
           <button class="no-tab ${this._noTab === 'first' ? 'no-tab--active' : ''}"
-            @click="${() => { this._noTab = 'first'; this._done = new Set(); }}">First Night</button>
+            @click="${() => this._setNoTab('first')}">First Night</button>
           <button class="no-tab ${this._noTab === 'other' ? 'no-tab--active' : ''}"
-            @click="${() => { this._noTab = 'other'; this._done = new Set(); }}">Other Nights</button>
+            @click="${() => this._setNoTab('other')}">Other Nights</button>
           <span class="no-progress">${doneCount}/${order.length}</span>
         </div>
         <div class="no-list">${order.length
@@ -473,11 +520,11 @@ export class BotcReferenceModal extends LitElement {
             <div class="ref-toolbar-top">
               <div class="ref-main-tabs">
                 <button class="ref-tab ${this._tab === 'roles'      ? 'ref-tab--active' : ''}"
-                  @click="${() => this._tab = 'roles'}">📖 Roles</button>
+                  @click="${() => this._setTab('roles')}">📖 Roles</button>
                 <button class="ref-tab ${this._tab === 'nightorder' ? 'ref-tab--active' : ''}"
-                  @click="${() => this._tab = 'nightorder'}">🌙 Night</button>
+                  @click="${() => this._setTab('nightorder')}">🌙 Night</button>
                 <button class="ref-tab ${this._tab === 'charcount'  ? 'ref-tab--active' : ''}"
-                  @click="${() => this._tab = 'charcount'}">📊 Count</button>
+                  @click="${() => this._setTab('charcount')}">📊 Count</button>
               </div>
               <button class="btn btn-toolbar-close" @click="${this._onClose}">✕</button>
             </div>

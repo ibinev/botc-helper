@@ -17,7 +17,7 @@ export function blankSeat() {
     notes: '', dead: false, usedVote: false, suspicious: false,
     drunk: false, diedAt: null, killedBy: '',
     poisonedAt: null,
-    roleClaims: [], changeLog: [], poisonLog: []
+    roleClaims: [], changeLog: [], poisonLog: [], reminders: []
   };
 }
 
