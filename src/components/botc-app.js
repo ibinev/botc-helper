@@ -1081,7 +1081,11 @@ export class BotcApp extends LitElement {
     const [moved] = seats.splice(from, 1);
     seats.splice(to, 0, moved);
     this.seats = seats;
-    this.seatPositions = Array.from({ length: this.seatCount }, () => null);
+
+    const positions = this.seatPositions.slice();
+    const [movedPos] = positions.splice(from, 1);
+    positions.splice(to, 0, movedPos ?? null);
+    this.seatPositions = positions;
 
     const remap = idx => {
       if (idx === null || idx === undefined) return idx;
