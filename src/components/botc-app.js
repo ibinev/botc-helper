@@ -12,6 +12,8 @@ import './botc-settings-modal.js';
 import './botc-charcount-modal.js';
 import './botc-pdf-modal.js';
 import './botc-reference-modal.js';
+import './botc-nightguide-modal.js';
+import './botc-sign-modal.js';
 import './botc-readme-modal.js';
 import './botc-role-picker-popup.js';
 import './botc-endgame-modal.js';
@@ -74,6 +76,13 @@ export class BotcApp extends LitElement {
     _killedByPopupValue: { state: true },
     _endGameOpen:        { state: true },
     _reminderTrayOpen:   { state: true },
+    _pendingReminderRole: { state: true },
+    _bluffPickerOpen:    { state: true },
+    _nightGuideOpen:     { state: true },
+    _signModalOpen:      { state: true },
+    townReminders:       { type: Array },
+    demonBluffs:         { type: Array },
+    customSigns:         { type: Array },
   };
 
   createRenderRoot() { return this; }
@@ -133,6 +142,13 @@ export class BotcApp extends LitElement {
     this._killedByPopupValue = '';
     this._endGameOpen        = false;
     this._reminderTrayOpen   = false;
+    this._pendingReminderRole = null;
+    this._bluffPickerOpen    = false;
+    this._nightGuideOpen     = false;
+    this._signModalOpen      = false;
+    this.townReminders       = [];
+    this.demonBluffs         = [];
+    this.customSigns         = [];
   }
 
   // ── Lifecycle ────────────────────────────────────────────────────────
@@ -179,6 +195,16 @@ export class BotcApp extends LitElement {
     if (h && h !== this._topbarH) {
       this._topbarH = h;
       this.style.setProperty('--topbar-h', h + 'px');
+    }
+    // The selected seat's glow has an infinite box-shadow animation, which
+    // sits directly behind the edit modal's backdrop-filter blur — an
+    // animated box-shadow forces the blur to be recomputed every frame for
+    // as long as the modal is open, which is heavy GPU work (the GPU
+    // process is shared across all browser tabs/windows, so this was
+    // visibly slowing down other tabs too). Pause it while hidden behind
+    // the modal; see the matching CSS rule in style.css.
+    if (changed.has('_editOpen')) {
+      document.body.classList.toggle('seat-edit-open', this._editOpen);
     }
   }
 
@@ -272,6 +298,7 @@ export class BotcApp extends LitElement {
     this._loadBgFog();
     this._loadScript();
     this._loadPlayerPool();
+    this._loadCustomSigns();
     const restored = this._loadState();
     if (!restored) {
       this._initSeats(this.seatCount);
@@ -308,6 +335,8 @@ export class BotcApp extends LitElement {
         seatPositions: this.seatPositions,
         gameEnded:     this.gameEnded,
         gameEndInfo:   this.gameEndInfo,
+        townReminders: this.townReminders,
+        demonBluffs:   this.demonBluffs,
       }));
     } catch(e) {}
   }
@@ -330,6 +359,8 @@ export class BotcApp extends LitElement {
       );
       this.gameEnded   = !!s.gameEnded;
       this.gameEndInfo = s.gameEndInfo || null;
+      this.townReminders = Array.isArray(s.townReminders) ? s.townReminders : [];
+      this.demonBluffs   = Array.isArray(s.demonBluffs) ? s.demonBluffs.slice(0, 3) : [];
       // Backfill endedStep for saves made before forward-navigation-to-end-day was supported
       if (this.gameEnded && this.gameEndInfo && this.gameEndInfo.endedStep == null) {
         this.gameEndInfo = { ...this.gameEndInfo, endedStep: phaseRoundToStep(this.phase, this.round) };
@@ -459,6 +490,21 @@ export class BotcApp extends LitElement {
     try {
       const r = localStorage.getItem('botc_player_pool');
       if (r) this.playerPool = JSON.parse(r);
+    } catch(e) {}
+  }
+
+  // Saved custom "sign" texts for <botc-sign-modal> — persists across games,
+  // independent of the per-game state blob (like botc_player_pool above).
+  _loadCustomSigns() {
+    try {
+      const r = localStorage.getItem('botc_custom_signs');
+      if (r) this.customSigns = JSON.parse(r);
+    } catch(e) {}
+  }
+
+  _saveCustomSigns() {
+    try {
+      localStorage.setItem('botc_custom_signs', JSON.stringify(this.customSigns));
     } catch(e) {}
   }
 
@@ -1129,6 +1175,9 @@ export class BotcApp extends LitElement {
     this._saveState();
     if (this.phase === 'night') {
       if (this.nomMode) this._cancelNomMode();
+    } else {
+      this._reminderTrayOpen = false;
+      this._pendingReminderRole = null;
     }
     this.requestUpdate();
   }
@@ -1449,6 +1498,7 @@ export class BotcApp extends LitElement {
     const roles = getRoles(this.script);
     const placedKeys = new Set();
     this.seats.forEach(seat => (seat.reminders || []).forEach(r => { if (r.sourceKey) placedKeys.add(r.sourceKey); }));
+    this.townReminders.forEach(r => { if (r.sourceKey) placedKeys.add(r.sourceKey); });
     const chips = [];
     this.seats.forEach((seat, idx) => {
       if (!seat.trueRole) return;
@@ -1470,6 +1520,7 @@ export class BotcApp extends LitElement {
     const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
     seats[idx] = { ...seat, reminders: [...(seat.reminders || []), { id, text: chip.text, role: chip.role, sourceKey: chip.key }] };
     this.seats = seats;
+    if (chip.role === this._pendingReminderRole) this._pendingReminderRole = null;
     this._saveState();
     this.requestUpdate();
   }
@@ -1481,6 +1532,58 @@ export class BotcApp extends LitElement {
     seats[idx] = { ...seat, reminders: (seat.reminders || []).filter(r => r.id !== id) };
     this.seats = seats;
     this._saveState();
+    this.requestUpdate();
+  }
+
+  // Some reminder tokens represent game-wide state rather than belonging to
+  // a particular player (e.g. Poppy Grower's "Evil Wakes") — these can be
+  // dropped on the town-square zone in the middle of the circle instead.
+  _addReminderToTown(chip) {
+    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    this.townReminders = [...this.townReminders, { id, text: chip.text, role: chip.role, sourceKey: chip.key }];
+    if (chip.role === this._pendingReminderRole) this._pendingReminderRole = null;
+    this._saveState();
+    this.requestUpdate();
+  }
+
+  _removeReminderFromTown({ id }) {
+    this.townReminders = this.townReminders.filter(r => r.id !== id);
+    this._saveState();
+    this.requestUpdate();
+  }
+
+  // Jumps from the Night Guide wizard back to the circle with the reminder
+  // tray open and the needed token highlighted, so it's ready to drag.
+  _onGotoGrimoire(role) {
+    this._nightGuideOpen = false;
+    this._reminderTrayOpen = true;
+    this._pendingReminderRole = role || null;
+    this.requestUpdate();
+  }
+
+  // Opens the standalone Night Guide wizard popup, for the grimoire banner
+  // button (storyteller mode, night only).
+  _openNightGuide() {
+    this._nightGuideOpen = true;
+    this.requestUpdate();
+  }
+
+  _setDemonBluffs(values) {
+    this.demonBluffs = Array.isArray(values) ? values.slice(0, 3) : [];
+    this._bluffPickerOpen = false;
+    this._saveState();
+    this.requestUpdate();
+  }
+
+  _addCustomSign(label, text) {
+    this.customSigns = [...this.customSigns, { id: Date.now() + '-' + Math.random().toString(36).slice(2), label, text }];
+    this._saveCustomSigns();
+    this.requestUpdate();
+  }
+
+  _deleteCustomSign(id) {
+    this.customSigns = this.customSigns.filter(s => s.id !== id);
+    this._saveCustomSigns();
     this.requestUpdate();
   }
 
@@ -1496,15 +1599,20 @@ export class BotcApp extends LitElement {
     document.body.appendChild(ghost);
 
     let overSeatEl = null;
+    let overTownEl = null;
 
     const move = (cx, cy) => {
       ghost.style.left = `${cx}px`;
       ghost.style.top  = `${cy}px`;
       const el = document.elementFromPoint(cx, cy);
       const seatEl = el ? el.closest('.seat') : null;
+      const townEl = (!seatEl && el) ? el.closest('.town-dropzone') : null;
       if (overSeatEl && overSeatEl !== seatEl) overSeatEl.classList.remove('reminder-drop-target');
+      if (overTownEl && overTownEl !== townEl) overTownEl.classList.remove('reminder-drop-target');
       if (seatEl) seatEl.classList.add('reminder-drop-target');
+      if (townEl) townEl.classList.add('reminder-drop-target');
       overSeatEl = seatEl;
+      overTownEl = townEl;
     };
 
     const onMove = (ev) => {
@@ -1524,6 +1632,9 @@ export class BotcApp extends LitElement {
         overSeatEl.classList.remove('reminder-drop-target');
         const idx = parseInt(overSeatEl.dataset.idx, 10);
         if (!Number.isNaN(idx)) this._addReminderToSeat(idx, chip);
+      } else if (overTownEl) {
+        overTownEl.classList.remove('reminder-drop-target');
+        this._addReminderToTown(chip);
       }
     };
 
@@ -1710,14 +1821,18 @@ export class BotcApp extends LitElement {
             @click="${() => { this._statsOpen = true; this.requestUpdate(); }}">📈</button>
           <button class="topbar-icon-btn" title="Reference"
             @click="${() => { this._referenceOpen = true; this.requestUpdate(); }}">📖</button>
-          ${this.storyView ? html`
+          ${this.storyView && this.phase === 'night' ? html`
             <button class="topbar-icon-btn ${this._reminderTrayOpen ? 'active' : ''}" title="Reminder tokens"
-              @click="${() => { this._reminderTrayOpen = !this._reminderTrayOpen; this.requestUpdate(); }}">🔖</button>
+              @click="${() => { this._reminderTrayOpen = !this._reminderTrayOpen; if (!this._reminderTrayOpen) this._pendingReminderRole = null; this.requestUpdate(); }}">🔖</button>
           ` : nothing}
           <button class="topbar-icon-btn" title="Settings"
             @click="${() => { this._settingsOpen = true; this.requestUpdate(); }}">⚙️</button>
         </div>
       </div>
+
+      ${this.storyView && this.phase === 'night' ? html`
+        <button id="night-guide-banner" @click="${this._openNightGuide}">▶ Guide Me Through Tonight</button>
+      ` : nothing}
 
       <!-- Circle -->
       <div id="circle-wrap">
@@ -1738,6 +1853,7 @@ export class BotcApp extends LitElement {
           .nomVoteCursor="${this.nomVoteCursor}"
           .round="${this.round}"
           .phase="${this.phase}"
+          .townReminders="${this.townReminders}"
           .showGameEnd="${this.gameEnded && this.gameEndInfo?.endedStep === phaseRoundToStep(this.phase, this.round)}"
           .winningAlignment="${this.gameEndInfo?.alignment || ''}"
           @seat-click="${e => this._openSeat(e.detail.idx)}"
@@ -1746,21 +1862,22 @@ export class BotcApp extends LitElement {
           @seat-insert="${e => this._insertSeatAt(e.detail.idx)}"
           @seat-drag-end="${e => this._onSeatDragEnd(e.detail)}"
           @seat-reminder-remove="${e => this._removeReminderFromSeat(e.detail)}"
+          @town-reminder-remove="${e => this._removeReminderFromTown(e.detail)}"
         ></botc-circle>
 
         <!-- Nomination step bar -->
         <div id="nom-step-bar" class="${nomBarText ? 'visible' : ''} ${thresholdReached ? 'threshold-reached' : ''}">${nomBarText}</div>
 
-        <!-- Reminder token tray (Storyteller mode) -->
-        ${this.storyView && this._reminderTrayOpen ? html`
+        <!-- Reminder token tray (Storyteller mode, night only) -->
+        ${this.storyView && this.phase === 'night' && this._reminderTrayOpen ? html`
           <div id="reminder-tray">
             <div class="reminder-tray-header">
-              <span>🔖 Drag a token onto a seat</span>
-              <button class="reminder-tray-close" @click="${() => { this._reminderTrayOpen = false; this.requestUpdate(); }}">✕</button>
+              <span>${this._pendingReminderRole ? html`🎯 Prepare <strong>${this._pendingReminderRole}</strong>'s token` : '🔖 Drag a token onto a seat'}</span>
+              <button class="reminder-tray-close" @click="${() => { this._reminderTrayOpen = false; this._pendingReminderRole = null; this.requestUpdate(); }}">✕</button>
             </div>
             <div class="reminder-tray-chips">
               ${reminderChips.length ? reminderChips.map(c => html`
-                <div class="reminder-chip ${c.dead ? 'reminder-chip--dead' : ''}"
+                <div class="reminder-chip ${c.dead ? 'reminder-chip--dead' : ''} ${c.role === this._pendingReminderRole ? 'reminder-chip--target' : ''}"
                   @mousedown="${e => this._onReminderChipPointerDown(e, c)}"
                   @touchstart="${e => this._onReminderChipPointerDown(e, c)}">
                   ${ROLE_ICONS[c.role] ? html`<img class="reminder-chip-icon" src="${ROLE_ICONS[c.role]}" alt="${c.role}">` : nothing}
@@ -2126,6 +2243,53 @@ export class BotcApp extends LitElement {
           this.requestUpdate();
         }}"
       ></botc-reference-modal>
+
+      <!-- Standalone Night Guide wizard popup (grimoire banner, storyteller mode, night only) -->
+      <botc-nightguide-modal
+        .open="${this._nightGuideOpen}"
+        .script="${this.script}"
+        .seats="${this.seats}"
+        .seatCount="${this.seatCount}"
+        .phase="${this.phase}"
+        .round="${this.round}"
+        .storyView="${this.storyView}"
+        .demonBluffs="${this.demonBluffs}"
+        @goto-grimoire="${e => this._onGotoGrimoire(e.detail.role)}"
+        @pick-bluffs="${() => { this._bluffPickerOpen = true; this.requestUpdate(); }}"
+        @show-sign="${() => { this._signModalOpen = true; this.requestUpdate(); }}"
+        @modal-close="${() => {
+          this._nightGuideOpen = false;
+          this.requestUpdate();
+        }}"
+      ></botc-nightguide-modal>
+
+      <!-- Standalone "show a big sign to a player" popup (role presets + saved custom text) -->
+      <botc-sign-modal
+        .open="${this._signModalOpen}"
+        .script="${this.script}"
+        .seats="${this.seats}"
+        .customSigns="${this.customSigns}"
+        @add-sign="${e => this._addCustomSign(e.detail.label, e.detail.text)}"
+        @delete-sign="${e => this._deleteCustomSign(e.detail.id)}"
+        @modal-close="${() => {
+          this._signModalOpen = false;
+          this.requestUpdate();
+        }}"
+      ></botc-sign-modal>
+
+      <!-- Demon bluffs popup (pick 3 roles not in play, to show the Demon) -->
+      <botc-role-picker-popup
+        .open="${this._bluffPickerOpen}"
+        .script="${this.script}"
+        .title="${'Choose 3 Demon Bluffs'}"
+        .multi="${true}"
+        .maxSelect="${3}"
+        .value="${this.demonBluffs}"
+        .disabledRoles="${this.seats.map(s => s.trueRole).filter(Boolean)}"
+        .showTravelers="${false}"
+        @role-picker-change="${e => this._setDemonBluffs(e.detail.values)}"
+        @role-picker-dismiss="${() => { this._bluffPickerOpen = false; this.requestUpdate(); }}"
+      ></botc-role-picker-popup>
 
       <!-- In-app guide (README) -->
       <botc-readme-modal

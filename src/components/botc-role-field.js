@@ -1,5 +1,5 @@
 import { LitElement, html, nothing, render as litRender } from 'lit';
-import { ROLE_ICONS, CAT_LABELS, getAllRoles, getRoleHint } from '../data.js';
+import { ROLE_ICONS, getAllRoles, getRoleHint } from '../data.js';
 import './botc-combo.js';
 import './botc-role-picker-popup.js';
 
@@ -288,43 +288,27 @@ export class BotcRoleField extends LitElement {
       ` : nothing)}
 
       ${infoRoles.length ? html`
-        <div class="role-info-modal-backdrop"
+        <div class="bluff-reveal-backdrop"
           @click="${e => { if (e.target === e.currentTarget) this._closeInfo(); }}">
-          <div class="role-info-modal-card" role="dialog" aria-modal="true" aria-label="Role details">
-            <div class="role-info-modal-header">
-              <div class="role-info-modal-title-wrap">
-                <div class="role-info-modal-title">${infoRoles.length > 1 ? `${infoRoles.length} roles` : infoRoles[0].name}</div>
-              </div>
-              <button class="btn btn-close-sm" type="button" @click="${() => this._closeInfo()}">✕</button>
-            </div>
-            <div class="role-info-modal-body role-info-modal-body--list">
-              ${infoRoles.map(role => html`
-                <div class="role-info-entry">
-                  <div class="role-info-entry-header">
-                    ${ROLE_ICONS[role.name]
-                      ? html`<img class="role-info-modal-icon" src="${ROLE_ICONS[role.name]}" alt="" loading="lazy" decoding="async">`
-                      : nothing}
-                    <div>
-                      <div class="role-info-modal-title">${role.name}</div>
-                      <div class="role-info-modal-tags">
-                        <span class="role-info-modal-tag cat-${role.cat}">${CAT_LABELS[role.cat] || 'Role'}</span>
-                        <span class="role-info-modal-tag align-${role.align || 'unknown'}">${role.align ? role.align[0].toUpperCase() + role.align.slice(1) : 'Unknown'}</span>
-                      </div>
-                    </div>
+          <div class="bluff-reveal-card bluff-reveal-card--info" role="dialog" aria-modal="true" aria-label="Role details">
+            ${infoRoles.map(role => html`
+              <div class="bluff-reveal-item">
+                ${ROLE_ICONS[role.name]
+                  ? html`<img class="bluff-reveal-icon" src="${ROLE_ICONS[role.name]}" alt="" loading="lazy" decoding="async">`
+                  : nothing}
+                <div class="bluff-reveal-name">${role.name}</div>
+                <div class="bluff-reveal-ability">${role.ability || 'No description available.'}</div>
+                ${getRoleHint(role.id) ? html`
+                  <div class="collapsible-header role-hint-header" @click="${() => this._toggleHint(role.name)}">
+                    <span class="role-hint-label">💡 Player tips</span>
+                    <span class="collapsible-chevron ${this._hintsOpen.has(role.name) ? '' : 'collapsible-chevron--collapsed'}">▾</span>
                   </div>
-                  <div class="role-info-entry-ability">${role.ability || 'No description available.'}</div>
-                  ${getRoleHint(role.id) ? html`
-                    <div class="collapsible-header role-hint-header" @click="${() => this._toggleHint(role.name)}">
-                      <span class="role-hint-label">💡 Player tips</span>
-                      <span class="collapsible-chevron ${this._hintsOpen.has(role.name) ? '' : 'collapsible-chevron--collapsed'}">▾</span>
-                    </div>
-                    <div class="collapsible-body role-hint-body ${this._hintsOpen.has(role.name) ? '' : 'collapsed'}">
-                      ${getRoleHint(role.id).split(/\n\n+/).map(p => html`<p>${this._boldify(p)}</p>`)}
-                    </div>
-                  ` : nothing}
-                </div>
-              `)}
-            </div>
+                  <div class="collapsible-body role-hint-body ${this._hintsOpen.has(role.name) ? '' : 'collapsed'}">
+                    ${getRoleHint(role.id).split(/\n\n+/).map(p => html`<p>${this._boldify(p)}</p>`)}
+                  </div>
+                ` : nothing}
+              </div>
+            `)}
           </div>
         </div>
       ` : nothing}

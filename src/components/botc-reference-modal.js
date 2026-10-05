@@ -350,7 +350,8 @@ export class BotcReferenceModal extends LitElement {
     return out;
   }
 
-  _noRow(entry, idx) {
+  // Shared per-row derived state, used by the Night Order checklist row.
+  _noRowState(entry, idx) {
     const key        = this._noTab + '-' + idx;
     const done       = this._done.has(key);
     // Reminder tokens currently sitting on THIS character's seat (e.g. a
@@ -371,32 +372,37 @@ export class BotcReferenceModal extends LitElement {
     const isUsed     = placedTokens.some(t => t.role === entry.name && /used/i.test(t.text || ''));
     const checked    = done || isDead || isUsed;
     const iconSrc    = ROLE_ICONS[entry.name] || null;
-    const roles = getRoles(this.script);
+    const roles      = getRoles(this.script);
     const roleData   = roles.find(r => r.name === entry.name);
     const catClass   = roleData ? 'no-cat-' + roleData.cat : '';
-    const toggle     = () => {
+    return { key, done, placedTokens, players, hasPlayers, isDead, isUsed, checked, iconSrc, catClass };
+  }
+
+  _noRow(entry, idx) {
+    const st = this._noRowState(entry, idx);
+    const toggle = () => {
       const next = new Set(this._done);
-      next.has(key) ? next.delete(key) : next.add(key);
+      next.has(st.key) ? next.delete(st.key) : next.add(st.key);
       this._done = next;
     };
     return html`
-      <div class="no-row ${checked ? 'no-row--done' : ''} ${entry.st ? 'no-row--st' : ''} ${hasPlayers ? 'no-row--active' : ''} ${entry.cond ? 'no-row--cond' : ''}"
+      <div class="no-row ${st.checked ? 'no-row--done' : ''} ${entry.st ? 'no-row--st' : ''} ${st.hasPlayers ? 'no-row--active' : ''} ${entry.cond ? 'no-row--cond' : ''}"
         @click="${toggle}">
-        <span class="no-check">${checked ? '✓' : ''}</span>
-        ${iconSrc
-          ? html`<img class="no-icon" src="${iconSrc}" alt="">`
+        <span class="no-check">${st.checked ? '✓' : ''}</span>
+        ${st.iconSrc
+          ? html`<img class="no-icon" src="${st.iconSrc}" alt="">`
           : html`<span class="no-icon no-icon--st">🌙</span>`}
         <div class="no-info">
           <div class="no-name-row">
-            <span class="no-name ${catClass} ${entry.st ? 'no-name--st' : ''}">${entry.name}</span>
-            ${hasPlayers ? html`<span class="no-player-inline">- ${players.map(p => p.name).join(', ')}</span>` : nothing}
+            <span class="no-name ${st.catClass} ${entry.st ? 'no-name--st' : ''}">${entry.name}</span>
+            ${st.hasPlayers ? html`<span class="no-player-inline">- ${st.players.map(p => p.name).join(', ')}</span>` : nothing}
           </div>
           ${entry.cond ? html`<span class="no-cond-tag">conditional</span>` : nothing}
           <span class="no-hint">${this._renderHint(entry.hint)}</span>
         </div>
-        ${placedTokens.length ? html`
+        ${st.placedTokens.length ? html`
           <div class="no-tokens">
-            ${placedTokens.map(t => html`
+            ${st.placedTokens.map(t => html`
               <span class="no-token-badge" title="${t.text}${t.role ? ' (' + t.role + ')' : ''}">
                 ${ROLE_ICONS[t.role]
                   ? html`<img src="${ROLE_ICONS[t.role]}" alt="">`
@@ -409,7 +415,7 @@ export class BotcReferenceModal extends LitElement {
     `;
   }
 
-  _renderNightOrder() {
+  _noOrder() {
     const playerCount = this.seatCount || this.seats.length || 0;
     let order = (getNightOrder(this.script)[this._noTab] || [])
       .filter(entry => !entry.minPlayers || playerCount >= entry.minPlayers);
@@ -421,6 +427,11 @@ export class BotcReferenceModal extends LitElement {
       const trueRoles = new Set(this.seats.map(s => s.trueRole).filter(Boolean));
       order = order.filter(entry => !roles.find(r => r.name === entry.name) || trueRoles.has(entry.name));
     }
+    return order;
+  }
+
+  _renderNightOrder() {
+    const order = this._noOrder();
     const doneCount = [...this._done].filter(k => k.startsWith(this._noTab + '-')).length;
     return html`
       <div class="ref-body">

@@ -50,6 +50,7 @@ export class BotcCircle extends LitElement {
     script:        { type: String  },
     showGameEnd:      { type: Boolean },
     winningAlignment: { type: String  },
+    townReminders:    { type: Array   },
     _w:            { state: true   },
     _h:            { state: true   },
   };
@@ -76,6 +77,7 @@ export class BotcCircle extends LitElement {
     this.script        = 'tb';
     this.showGameEnd      = false;
     this.winningAlignment = '';
+    this.townReminders    = [];
     this._w            = 400;
     this._h            = 400;
     this._ro           = null;
@@ -408,9 +410,24 @@ export class BotcCircle extends LitElement {
               </div>
             </div>
           ` : nothing}
-          <div class="center-label">
+          <div class="center-label town-dropzone">
             <div class="phase-icon">${this.phase === 'day' ? '☀️' : '🌙'}</div>
             <div class="round-label">${this.phase === 'day' ? 'Day' : 'Night'} ${this.round}</div>
+            ${this.storyView && this.townReminders.length ? html`
+              <div class="town-reminder-strip">
+                ${this.townReminders.map(r => html`
+                  <button type="button" class="seat-reminder-token ${this._isRoleDead(r.role) ? 'seat-reminder-token--source-dead' : ''}" title="${r.text}${r.role ? ' (' + r.role + ')' : ''} — tap to remove"
+                    @click="${e => {
+                      e.stopPropagation();
+                      this.dispatchEvent(new CustomEvent('town-reminder-remove', {
+                        detail: { id: r.id }, bubbles: true, composed: true
+                      }));
+                    }}">
+                    ${ROLE_ICONS[r.role] ? html`<img src="${ROLE_ICONS[r.role]}" alt="">` : html`<span>${(r.text || '?').charAt(0)}</span>`}
+                  </button>
+                `)}
+              </div>
+            ` : nothing}
           </div>
           <div id="seats-container">
             ${this.seats.map((s, i) => this._renderSeat(s, i, ctx))}

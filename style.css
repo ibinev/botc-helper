@@ -289,6 +289,39 @@ body.no-bg-fog.night-cycle botc-app::before, body.no-bg-fog.night-cycle #app::be
 @media (hover: hover) and (pointer: fine) { .topbar-icon-btn:hover { background: rgba(201,151,58,0.12); border-color: var(--gold); } }
 .topbar-icon-btn:active { background: rgba(201,151,58,0.12); border-color: var(--gold); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05), 0 0 0 1px rgba(201,151,58,0.22); }
 
+#night-guide-banner {
+  position: absolute; top: calc(var(--topbar-h, 56px) + 8px); left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  width: auto; max-width: calc(100% - 24px); box-sizing: border-box;
+  padding: 8px 18px; margin: 0; border: 0.5px solid var(--border-strong); border-radius: var(--radius-lg);
+  background: linear-gradient(180deg, rgba(201,151,58,0.3) 0%, rgba(201,151,58,0.14) 100%);
+  box-shadow: var(--shadow-xl);
+  color: var(--gold-light); font-family: var(--font-sans); font-size: 13px; font-weight: 700;
+  white-space: nowrap; text-align: center; cursor: pointer; -webkit-tap-highlight-color: transparent;
+  transition: background var(--duration-fast) var(--ease-standard);
+}
+@media (hover: hover) and (pointer: fine) { #night-guide-banner:hover { background: linear-gradient(180deg, rgba(201,151,58,0.38) 0%, rgba(201,151,58,0.18) 100%); } }
+#night-guide-banner:active { background: linear-gradient(180deg, rgba(201,151,58,0.44) 0%, rgba(201,151,58,0.2) 100%); }
+
+/* ── Night Guide popup (standalone, not the full reference sheet) ───── */
+.nightguide-backdrop {
+  position: fixed; inset: 0; z-index: 110;
+  background: rgba(var(--scrim-rgb), 0.75); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
+  display: flex; align-items: center; justify-content: center; padding: 16px;
+}
+.nightguide-card {
+  width: min(460px, 100%); max-height: min(88dvh, 720px); display: flex; flex-direction: column;
+  border-radius: 16px; border: 0.5px solid var(--chrome-border); background: var(--chrome-surface);
+  box-shadow: var(--shadow-xl); overflow: hidden;
+}
+.nightguide-header {
+  flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+  padding: 14px 16px; border-bottom: 0.5px solid var(--border);
+}
+.nightguide-title { font-size: 14px; font-weight: 700; color: var(--gold-light); font-family: var(--font-serif); }
+.nightguide-body { flex: 1; overflow-y: auto; padding: 20px 16px 24px; box-sizing: border-box; }
+
 /* ── Circle ─────────────────────────────────────────── */
 #circle-wrap { flex: 1 1 0; min-height: 0; position: relative; overflow: hidden; }
 botc-circle { display: block; position: absolute; inset: 0; }
@@ -297,7 +330,7 @@ botc-circle { display: block; position: absolute; inset: 0; }
 #circle-inner.story-view { transform: rotate(180deg); }
 #circle-inner.story-view .seat { transform: translate(-50%, -50%) rotate(180deg); }
 #circle-inner.story-view .center-label { transform: translate(-50%, -50%) rotate(180deg); }
-.center-label { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; pointer-events: none; z-index: 0; user-select: none; }
+.center-label { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; pointer-events: auto; z-index: 0; user-select: none; }
 .center-label .phase-icon { font-size: 42px; opacity: 1; filter: drop-shadow(0 0 10px rgba(201,151,58,0.7)) drop-shadow(0 2px 6px rgba(0,0,0,0.9)); line-height: 1; }
 .center-label .round-label { font-size: 13px; font-weight: 700; color: var(--gold-light); letter-spacing: 0.14em; text-transform: uppercase; margin-top: 5px; text-shadow: 0 0 12px rgba(201,151,58,0.8), 0 1px 4px rgba(0,0,0,1), 0 2px 8px rgba(0,0,0,0.9); }
 .game-end-banner-wrap { position: absolute; top: 25%; left: 50%; transform: translate(-50%, -50%); z-index: 15; pointer-events: none; user-select: none; }
@@ -316,7 +349,7 @@ botc-circle { display: block; position: absolute; inset: 0; }
   10%, 30%, 50%, 70% { transform: scale(1.16); }
   20%, 40%, 60%, 80% { transform: scale(1); }
 }
-#seats-container { position: absolute; inset: 0; }
+#seats-container { position: absolute; inset: 0; pointer-events: none; }
 
 /* ── Floating buttons ───────────────────────────────── */
 #btn-list {
@@ -350,7 +383,7 @@ botc-circle { display: block; position: absolute; inset: 0; }
 }
 
 /* ── Seat ───────────────────────────────────────────── */
-.seat { position: absolute; transform: translate(-50%, -50%); cursor: pointer; z-index: 2; width: var(--seat-size); height: var(--seat-size); user-select: none; -webkit-tap-highlight-color: transparent; overflow: visible; }
+.seat { position: absolute; transform: translate(-50%, -50%); cursor: pointer; z-index: 2; width: var(--seat-size); height: var(--seat-size); user-select: none; -webkit-tap-highlight-color: transparent; overflow: visible; pointer-events: auto; }
 .seat-inner {
   width: 100%; height: 100%; border-radius: 50%; background: var(--bg-card);
   border: 2px solid rgba(255,255,255,0.4);
@@ -368,6 +401,9 @@ botc-circle { display: block; position: absolute; inset: 0; }
   0%, 100% { box-shadow: 0 0 0 3px var(--gold-light), 0 4px 20px rgba(201,151,58,0.3), inset 0 0 20px rgba(201,151,58,0.08); }
   50%      { box-shadow: 0 0 0 3px var(--gold-light), 0 4px 26px rgba(201,151,58,0.5), inset 0 0 26px rgba(201,151,58,0.14); }
 }
+/* Seat is hidden behind the edit modal's blur while it's open — pause the
+   glow so the backdrop-filter isn't forced to re-blur every single frame. */
+body.seat-edit-open .seat.selected .seat-inner { animation-play-state: paused; }
 .seat.dead .seat-inner { background: rgba(26,18,10,0.7); border: 2px dashed var(--blood-light); box-shadow: 0 2px 8px rgba(0,0,0,0.4); opacity: 0.68; }
 .seat.dead:active .seat-inner { opacity: 0.85; }
 @media (hover: hover) and (pointer: fine) { .seat.dead:hover .seat-inner { opacity: 0.85; } }
@@ -563,6 +599,9 @@ body.hide-role .pli-role        { display: none; }
 .seat-reminder-token--source-dead { opacity: 0.45; filter: grayscale(0.85); }
 .seat.reminder-drop-target .seat-inner { box-shadow: 0 0 0 4px var(--gold), 0 4px 24px rgba(201,151,58,0.6) !important; }
 body.hide-role .seat-reminder-strip { display: none; }
+.town-dropzone.reminder-drop-target { box-shadow: 0 0 0 4px var(--gold), 0 4px 24px rgba(201,151,58,0.6); border-radius: 50%; }
+.town-reminder-strip { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; max-width: 150px; margin-top: 10px; pointer-events: auto; }
+body.hide-role .town-reminder-strip { display: none; }
 
 #reminder-tray {
   position: absolute; left: 0; right: 0; bottom: 0; z-index: 25;
@@ -587,6 +626,11 @@ body.hide-role .seat-reminder-strip { display: none; }
   opacity: 0.9; box-shadow: 0 6px 20px rgba(0,0,0,0.6);
 }
 .reminder-chip--dead { opacity: 0.45; filter: grayscale(0.85); }
+.reminder-chip--target { border-color: var(--gold); box-shadow: 0 0 0 2px var(--gold), 0 0 14px rgba(201,151,58,0.7); animation: reminder-chip-pulse 1.4s ease-in-out infinite; }
+@keyframes reminder-chip-pulse {
+  0%, 100% { box-shadow: 0 0 0 2px var(--gold), 0 0 14px rgba(201,151,58,0.7); }
+  50%      { box-shadow: 0 0 0 2px var(--gold), 0 0 22px rgba(201,151,58,1); }
+}
 .nom-mode .seat .seat-inner { border-color: rgba(201,151,58,0.35); }
 .seat.nom-from .seat-inner { border-color: var(--gold-light) !important; box-shadow: 0 0 0 3px var(--gold), 0 4px 20px rgba(201,151,58,0.45), inset 0 0 20px rgba(201,151,58,0.1) !important; }
 .seat.nom-unavailable .seat-inner { opacity: 0.32; filter: grayscale(0.7); }
@@ -864,11 +908,13 @@ body.hide-role .seat-reminder-strip { display: none; }
 @media (hover: hover) and (pointer: fine) { .role-field-chip-x:hover { color: var(--evil-text); } }
 .role-field-chip-placeholder { color: var(--text-muted); font-size: 14px; }
 
-/* ── Multi-role info popup (shared with single-role info popup) ─── */
-.role-info-modal-body--list { display: flex; flex-direction: column; gap: var(--space-3); }
-.role-info-entry + .role-info-entry { padding-top: var(--space-3); border-top: 0.5px solid var(--border); }
-.role-info-entry-header { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 6px; }
-.role-info-entry-ability { font-size: 14px; line-height: 1.6; color: var(--text-primary); }
+/* ── Multi-role info popup (shared with single-role info popup) ───
+   Reuses the <botc-sign-modal> "show sign" reveal card look-and-feel
+   (.bluff-reveal-*) for visual consistency; the only thing it adds on
+   top is the collapsible player-tips section below the ability text. */
+.bluff-reveal-card.bluff-reveal-card--info { max-height: min(80dvh, 640px); overflow-x: hidden; overflow-y: auto; }
+.bluff-reveal-item .role-hint-header.collapsible-header,
+.bluff-reveal-item .role-hint-body { align-self: stretch; text-align: left; }
 
 /* Collapsible player-strategy tips, tucked under the role's ability text */
 .role-hint-header.collapsible-header { margin-top: 10px; padding: 6px 10px; border-radius: 10px; background: rgba(201,151,58,0.1); border: 0.5px solid rgba(201,151,58,0.3); }
@@ -1025,6 +1071,80 @@ body.hide-role .seat-reminder-strip { display: none; }
 .no-sub-tabs { display: flex; gap: 6px; margin-bottom: 14px; align-items: center; }
 .no-sub-tabs .no-tab { flex: 1; }
 .no-sub-tabs .no-progress { margin-left: auto; font-size: 12px; color: var(--text-secondary); background: rgba(201,151,58,0.15); border-radius: 999px; padding: 3px 10px; font-weight: 600; white-space: nowrap; }
+.no-wizard-start { width: 100%; margin-bottom: 14px; font-size: 14px; font-weight: 700; }
+
+/* ── Night Guide wizard (step-by-step, one character at a time) ── */
+.wizard-progress { font-size: 12px; color: var(--text-secondary); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+.wizard-card { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10px; background: var(--bg-card); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 28px 20px; max-width: 420px; width: 100%; box-shadow: 0 6px 24px rgba(0,0,0,0.35); box-sizing: border-box; }
+.wizard-card--st { border-color: rgba(201,151,58,0.4); }
+.wizard-icon { width: 96px; height: 96px; object-fit: contain; filter: drop-shadow(0 2px 8px rgba(0,0,0,0.7)); }
+.wizard-icon--st { display: inline-flex; align-items: center; justify-content: center; font-size: 56px; width: 96px; height: 96px; }
+.wizard-name { font-size: 22px; font-weight: 800; color: var(--text); }
+.wizard-players { font-size: 14px; font-weight: 700; color: var(--gold-light); }
+.wizard-hint { font-size: 16px; line-height: 1.55; color: var(--text-primary); opacity: 0.95; margin-top: 4px; }
+.wizard-tokens { display: flex; gap: 6px; margin-top: 6px; }
+/* The seated player for this step is dead — role/instructions/token are moot, dim them (same opacity+grayscale recipe as a dead seat's reminder token). */
+.wizard-card--dead .wizard-icon,
+.wizard-card--dead .wizard-name,
+.wizard-card--dead .wizard-players,
+.wizard-card--dead .wizard-hint,
+.wizard-card--dead .wizard-tokens { opacity: 0.45; filter: grayscale(0.85); }
+.wizard-controls { display: flex; gap: 10px; width: 100%; max-width: 420px; }
+.wizard-controls .btn { flex: 1; }
+.wizard-exit { margin-top: 4px; background: transparent; border-color: transparent; color: var(--text-secondary); }
+.wizard-done { display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; }
+.wizard-done-icon { font-size: 64px; }
+.wizard-done-title { font-size: 20px; font-weight: 800; color: var(--gold-light); }
+.wizard-done-sub { font-size: 14px; color: var(--text-secondary); margin: 0; }
+.btn-wizard-action { width: 100%; max-width: 420px; background: rgba(201,151,58,0.12); border-color: var(--gold); color: var(--gold-light); font-weight: 700; }
+/* These buttons sit on top of a blurred backdrop (.nightguide-backdrop) — the
+   base .btn:hover's background/border-color swap forces that backdrop-filter
+   to re-sample on every hover transition frame, which read as laggy. Keep
+   hover visually identical to the resting state here (cheap: nothing to
+   repaint) instead of removing :active/:focus-visible feedback too. */
+@media (hover: hover) and (pointer: fine) {
+  .btn-wizard-action:hover { background: rgba(201,151,58,0.12); border-color: var(--gold); }
+}
+.wizard-bluffs { display: flex; flex-direction: column; align-items: center; gap: 8px; width: 100%; max-width: 420px; background: var(--bg-card); border: 0.5px dashed var(--border-strong); border-radius: var(--radius-md); padding: 12px 14px; box-sizing: border-box; }
+.wizard-bluffs-label { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-secondary); }
+.wizard-bluffs-chips { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+.wizard-bluff-chip { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; color: var(--gold-light); background: rgba(201,151,58,0.14); border: 0.5px solid var(--gold); border-radius: 999px; padding: 4px 10px; }
+.wizard-bluff-chip img { width: 20px; height: 20px; object-fit: contain; border-radius: 50%; }
+.wizard-bluffs-empty { font-size: 12px; color: var(--text-muted); }
+
+/* ── Demon bluffs "show big" reveal (easy-to-read fullscreen card) ─── */
+.bluff-reveal-backdrop { position: fixed; inset: 0; z-index: 340; background: rgba(var(--scrim-rgb), 0.9); display: flex; align-items: center; justify-content: center; padding: 20px; }
+.bluff-reveal-card { --bluff-scale: 1; position: relative; width: min(420px, 100%); max-height: min(90dvh, 760px); overflow: hidden; display: flex; flex-direction: column; align-items: stretch; justify-content: center; border-radius: 18px; border: 1px solid var(--gold); background: var(--chrome-surface); box-shadow: var(--shadow-xl); padding: 24px 24px 16px; box-sizing: border-box; }
+.bluff-reveal-item { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: calc(6px * var(--bluff-scale)); text-align: center; padding: calc(10px * var(--bluff-scale)) 8px; }
+.bluff-reveal-item + .bluff-reveal-item { border-top: 0.5px solid var(--border); }
+.bluff-reveal-icon { width: calc(90px * var(--bluff-scale)); height: calc(90px * var(--bluff-scale)); object-fit: contain; border-radius: 50%; border: 2px solid var(--gold); background: rgba(0,0,0,0.2); flex-shrink: 0; }
+.bluff-reveal-name { font-family: var(--font-serif); font-size: calc(22px * var(--bluff-scale)); font-weight: 800; color: var(--gold-light); }
+.bluff-reveal-team { font-size: calc(11px * var(--bluff-scale)); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-secondary); }
+.bluff-reveal-ability { font-size: calc(15px * var(--bluff-scale)); line-height: 1.35; color: var(--text-primary); }
+.sign-custom-text { font-size: calc(26px * var(--bluff-scale)); line-height: 1.4; font-weight: 600; }
+/* Override for <botc-sign-modal>'s phrase-before-the-name signs ("You Are",
+   "Demon Is", "Selected You"…) — the base .bluff-reveal-team size (11px) is
+   meant for a small all-caps team tag, too small/easy to miss as the lead-in
+   line of a sign meant to be read at a glance. */
+.sign-reveal-phrase { font-size: calc(20px * var(--bluff-scale)); letter-spacing: 0.04em; color: var(--gold-light); }
+
+/* ── <botc-sign-modal> — "Show Sign" presets + custom sign library ──── */
+.sign-presets { display: flex; flex-direction: column; gap: 8px; width: 100%; max-width: 420px; }
+.sign-divider { width: 100%; max-width: 420px; height: 0; border-top: 0.5px solid var(--border); margin: 6px 0; }
+.sign-saved-list { display: flex; flex-direction: column; gap: 6px; width: 100%; max-width: 420px; }
+.sign-saved-item { display: flex; align-items: center; gap: 6px; }
+.sign-saved-btn { flex: 1; min-width: 0; text-align: left; padding: 8px 12px; background: var(--bg-card); border: 0.5px solid var(--border-strong); border-radius: var(--radius-sm); color: var(--text-primary); font-family: var(--font-sans); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sign-del-btn { flex-shrink: 0; width: 32px; height: 32px; border-radius: 50%; border: 0.5px solid var(--border); background: var(--bg-surface); color: var(--text-secondary); }
+.sign-role-label { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 2px; }
+.sign-role-list { width: 100%; max-width: 420px; max-height: 50dvh; overflow-y: auto; display: flex; flex-direction: column; border: 0.5px solid var(--border); border-radius: var(--radius-md); }
+.sign-role-item { display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: none; border: none; border-bottom: 0.5px solid var(--border); text-align: left; font-family: var(--font-sans); font-size: 14px; color: var(--text-primary); cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.sign-role-item:last-child { border-bottom: none; }
+.sign-role-item:active { background: rgba(201,151,58,0.1); color: var(--gold-light); }
+.sign-role-item img { width: 24px; height: 24px; object-fit: contain; border-radius: 50%; flex-shrink: 0; }
+.sign-role-item--checked { background: rgba(201,151,58,0.14); color: var(--gold-light); }
+.sign-role-check { flex-shrink: 0; font-size: 16px; }
+.sign-custom-textarea { min-height: 120px; width: 100%; max-width: 420px; }
+.sign-custom-label { width: 100%; max-width: 420px; box-sizing: border-box; }
 
 /* ── Role reference sheet ─────────────────────────────── */
 .rc-section-header { display: flex; align-items: center; gap: 10px; margin: 22px 0 12px; }
@@ -2007,26 +2127,3 @@ botc-combo .combo-text { border-radius: 0; border: 0; }
 .combo-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 .combo-no-results { padding: 10px 12px; font-size: 13px; color: var(--text-muted); font-style: italic; }
 
-/* ── Role info popup ─────────────────────────────────── */
-.role-info-modal-backdrop { position: fixed; inset: 0; z-index: 260; background: rgba(var(--scrim-rgb), 0.72); display: flex; align-items: center; justify-content: center; padding: 16px; }
-.role-info-modal-card { width: min(460px, 100%); max-height: min(72dvh, 560px); overflow: auto; border-radius: 16px; border: 0.5px solid var(--chrome-border); background: linear-gradient(180deg, rgba(201,151,58,0.12) 0%, rgba(0,0,0,0) 36%), var(--chrome-surface); box-shadow: var(--shadow-xl); }
-.role-info-modal-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; padding: var(--space-3) var(--space-3) var(--space-2); border-bottom: 0.5px solid var(--border); }
-.role-info-modal-title-wrap { display: flex; align-items: flex-start; gap: 10px; min-width: 0; }
-.role-info-modal-icon { width: 54px; height: 54px; object-fit: contain; flex-shrink: 0; }
-.role-info-modal-title { font-size: 17px; color: var(--gold-light); font-family: var(--font-serif); line-height: 1.1; }
-.role-info-modal-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
-.role-info-modal-tag { display: inline-flex; align-items: center; border-radius: 999px; border: 0.5px solid rgba(255,255,255,0.18); padding: 2px 8px; font-size: 10px; color: var(--text-secondary); background: rgba(0,0,0,0.24); text-transform: uppercase; letter-spacing: 0.07em; }
-.role-info-modal-tag.cat-townsfolk { color: #8fca4b; border-color: rgba(90,158,47,0.45); background: rgba(90,158,47,0.18); }
-.role-info-modal-tag.cat-outsider  { color: #7ab8f5; border-color: rgba(58,127,193,0.45); background: rgba(58,127,193,0.2); }
-.role-info-modal-tag.cat-minion    { color: #e06060; border-color: rgba(192,57,43,0.45); background: rgba(192,57,43,0.2); }
-.role-info-modal-tag.cat-demon     { color: #ff8a78; border-color: rgba(192,57,43,0.6); background: rgba(139,26,26,0.3); }
-.role-info-modal-tag.cat-traveler  { color: #e6b85a; border-color: rgba(201,151,58,0.5); background: rgba(201,151,58,0.18); }
-.role-info-modal-tag.cat-loric,
-.role-info-modal-tag.cat-fabled,
-.role-info-modal-tag.cat-unknown   { color: var(--text-secondary); border-color: var(--border); background: rgba(0,0,0,0.22); }
-.role-info-modal-tag.align-good       { color: var(--good-text); border-color: rgba(74,124,138,0.45); background: rgba(74,124,138,0.25); }
-.role-info-modal-tag.align-evil       { color: var(--evil-text); border-color: rgba(192,57,43,0.5); background: rgba(139,26,26,0.3); }
-.role-info-modal-tag.align-suspicious { color: #d08ef0; border-color: rgba(155,77,202,0.5); background: rgba(155,77,202,0.2); }
-.role-info-modal-tag.align-either     { color: #e6b85a; border-color: rgba(201,151,58,0.5); background: rgba(201,151,58,0.18); }
-.role-info-modal-tag.align-unknown    { color: var(--text-secondary); border-color: var(--border); background: rgba(0,0,0,0.22); }
-.role-info-modal-body { padding: var(--space-3) var(--space-3) var(--space-3); color: var(--text-primary); font-size: 14px; line-height: 1.6; }

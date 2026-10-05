@@ -225,8 +225,6 @@ export class BotcEditModal extends LitElement {
   _onSave() {
     this._poolOpen = false;
     this._poolManageOpen = false;
-    this._roleInfoOpen = '';
-    this._roleInfoRole = '';
     this._alignOpen = false;
     const roleField     = this.querySelector('#field-role');
     const trueCombo     = this.querySelector('#field-true-role');
@@ -261,8 +259,6 @@ export class BotcEditModal extends LitElement {
   _onClear() {
     this._poolOpen = false;
     this._poolManageOpen = false;
-    this._roleInfoOpen = '';
-    this._roleInfoRole = '';
     this._alignOpen = false;
     this.dispatchEvent(new CustomEvent('seat-clear', {
       detail: { idx: this.seatIdx }, bubbles: true, composed: true

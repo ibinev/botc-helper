@@ -18,6 +18,7 @@ import { getRoles, ROLE_ICONS, CAT_LABELS, CAT_ORDER } from '../data.js';
  *   disabledRoles {Array}          – role names shown greyed-out/unselectable
  *   clearable     {Boolean}        – show a "Clear" header action (single mode only)
  *   showTravelers {Boolean}        – include the Travelers group (default: true)
+ *   maxSelect     {Number}         – multi mode only: once reached, unselected roles grey out (default: 0 = unlimited)
  *
  * Fires:
  *   role-picker-select  – { detail: { value } }   single mode, fires immediately ('' = cleared)
@@ -34,6 +35,7 @@ export class BotcRolePickerPopup extends LitElement {
     disabledRoles: { type: Array   },
     clearable:     { type: Boolean },
     showTravelers: { type: Boolean },
+    maxSelect:     { type: Number  },
     _working:      { state: true   },
   };
 
@@ -49,6 +51,7 @@ export class BotcRolePickerPopup extends LitElement {
     this.disabledRoles = [];
     this.clearable     = false;
     this.showTravelers = true;
+    this.maxSelect     = 0;
     this._working       = [];
   }
 
@@ -64,7 +67,9 @@ export class BotcRolePickerPopup extends LitElement {
   }
 
   _isDisabled(name) {
-    return (this.disabledRoles || []).includes(name) && !this._isSelected(name);
+    if (this._isSelected(name)) return false;
+    if ((this.disabledRoles || []).includes(name)) return true;
+    return this.multi && !!this.maxSelect && this._working.length >= this.maxSelect;
   }
 
   _onTapRole(name) {
@@ -151,7 +156,7 @@ export class BotcRolePickerPopup extends LitElement {
           </div>
           ${this.multi ? html`
             <div class="role-pick-actions">
-              <button class="btn btn-primary" type="button" @click="${this._onDone}">Done${this._working.length ? ` (${this._working.length})` : ''}</button>
+              <button class="btn btn-primary" type="button" @click="${this._onDone}">Done${this.maxSelect ? ` (${this._working.length}/${this.maxSelect})` : (this._working.length ? ` (${this._working.length})` : '')}</button>
             </div>
           ` : nothing}
         </div>
