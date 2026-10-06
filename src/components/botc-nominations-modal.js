@@ -138,11 +138,7 @@ export class BotcNominationsModal extends LitElement {
   _onNewNom() {
     this.dispatchEvent(new CustomEvent('new-nom', { bubbles: true, composed: true }));
   }
-
-  _onOpenAnalysis() {
-    this.dispatchEvent(new CustomEvent('open-voting-analysis', { bubbles: true, composed: true }));
-  }
-
+  
   _notVotedForDay(key) {
     const dayNoms = this.nominations[key] || [];
     // Only show if at least one nomination has votes recorded
@@ -192,8 +188,6 @@ export class BotcNominationsModal extends LitElement {
             <div class="nom-modal-header">
               <div class="modal-title">⚖️ Nominations</div>
               <div class="nom-modal-header-actions">
-                <button class="btn btn-primary--sm" title="Voting pattern analysis"
-                  @click="${this._onOpenAnalysis}">📊 Analysis</button>
                 ${this.phase !== 'night' ? html`
                   <button class="btn btn-primary btn-primary--sm"
                     @click="${this._onNewNom}">➕ New</button>

@@ -163,10 +163,35 @@ export class BotcRoleField extends LitElement {
     this._infoOpen = false;
   }
 
-  _toggleHint(name) {
+  // Shrinks --bluff-scale on the info card until its (collapsed-tips) content
+  // has no overflow — lets 3 stacked roles fit without scrolling by default.
+  // Only called when the popup first opens (see updated()); toggling a hint
+  // open afterwards intentionally does NOT re-fit, so the card scrolls
+  // instead of shrinking the tip text down to illegibility.
+  _fitInfoCard() {
+    const card = this._portal.querySelector('.bluff-reveal-card--info');
+    if (!card) return;
+    let scale = 1;
+    card.style.setProperty('--bluff-scale', scale);
+    while (card.scrollHeight > card.clientHeight + 1 && scale > 0.4) {
+      scale = Math.round((scale - 0.05) * 100) / 100;
+      card.style.setProperty('--bluff-scale', scale);
+    }
+  }
+
+  async _toggleHint(name) {
+    const opening = !this._hintsOpen.has(name);
     const next = new Set(this._hintsOpen);
     if (next.has(name)) next.delete(name); else next.add(name);
     this._hintsOpen = next;
+    if (!opening) return;
+    // Wait for the portal's re-render (the body goes from collapsed to its
+    // full height) then bring the newly-revealed tips into view — with
+    // several roles stacked in one scrollable card, the item can otherwise
+    // end up out of view with nothing scrolling it into frame.
+    await this.updateComplete;
+    const item = this._portal.querySelector(`[data-role-item="${name}"]`);
+    item?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 
   _roleMeta(name) {
@@ -292,7 +317,7 @@ export class BotcRoleField extends LitElement {
           @click="${e => { if (e.target === e.currentTarget) this._closeInfo(); }}">
           <div class="bluff-reveal-card bluff-reveal-card--info" role="dialog" aria-modal="true" aria-label="Role details">
             ${infoRoles.map(role => html`
-              <div class="bluff-reveal-item">
+              <div class="bluff-reveal-item" data-role-item="${role.name}">
                 ${ROLE_ICONS[role.name]
                   ? html`<img class="bluff-reveal-icon" src="${ROLE_ICONS[role.name]}" alt="" loading="lazy" decoding="async">`
                   : nothing}
@@ -313,6 +338,10 @@ export class BotcRoleField extends LitElement {
         </div>
       ` : nothing}
     `, this._portal);
+
+    if (changed.has('_infoOpen') && this._infoOpen) {
+      requestAnimationFrame(() => this._fitInfoCard());
+    }
   }
 }
 

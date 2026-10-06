@@ -54,7 +54,7 @@ export class BotcSettingsModal extends LitElement {
     allRoles:   { type: Array },
     selectedCustomScript: { type: Object },
     storyView:  { type: Boolean },
-    compactMode:{ type: Boolean },
+    seatSizePct:{ type: Number  },
     fastVoting: { type: Boolean },
     hasBgImage: { type: Boolean },
     bgFog:      { type: Boolean },
@@ -85,7 +85,7 @@ export class BotcSettingsModal extends LitElement {
     this.allRoles   = [];
     this.selectedCustomScript = null;
     this.storyView  = false;
-    this.compactMode= false;
+    this.seatSizePct= 100;
     this.fastVoting = false;
     this.hasBgImage = false;
     this.bgFog      = true;
@@ -614,13 +614,15 @@ export class BotcSettingsModal extends LitElement {
 
             <div class="settings-row">
               <div>
-                <div class="settings-label">Compact mode</div>
-                <div class="settings-sub">Shrink seats ~40% - hides role text</div>
+                <div class="settings-label">Seat size</div>
+                <div class="settings-sub">Adjust how big player seats appear on the circle</div>
               </div>
-              <div class="settings-control">
-                <button class="btn btn-sm btn-hints ${this.compactMode ? 'active' : ''}"
-                  @click="${() => this._fire('compact-mode-toggle', {})}"
-                >${this.compactMode ? 'On' : 'Off'}</button>
+              <div class="settings-control settings-control--seatsize">
+                <input type="range" class="seatsize-slider" min="55" max="200" step="5"
+                  .value="${String(this.seatSizePct)}"
+                  @input="${e => this._fire('seat-size-change', { pct: Number(e.target.value) })}"
+                />
+                <span class="seatsize-value">${this.seatSizePct}%</span>
               </div>
             </div>
 

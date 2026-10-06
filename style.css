@@ -26,7 +26,16 @@
   --charcount-outsider-sticky: #1d2733;
   --charcount-minion-sticky: #34201d;
   --charcount-demon-sticky: #3b221f;
-  --seat-size:      90px;
+  --seat-size-base: 99px;
+  --seat-scale:     1;
+  --seat-size:      calc(var(--seat-size-base) * var(--seat-scale));
+  /* When a seat is enlarged beyond its default size, grow the name/role
+     text box (max-width, tied to --seat-size directly) faster than the
+     font itself (tied to --seat-text-size) — extra space is spent first
+     on un-truncating long names/roles, only then on bigger lettering.
+     Shrinking below default is unaffected (excess stays clamped at 0). */
+  --seat-size-excess: max(0px, calc(var(--seat-size) - var(--seat-size-base)));
+  --seat-text-size: calc(var(--seat-size) - (var(--seat-size-excess) * 0.5));
   --font-serif:     'Cormorant Garamond', Georgia, 'Times New Roman', serif;
   --font-sans:      'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --radius-sm:      6px;
@@ -227,6 +236,8 @@ body.no-bg-fog.night-cycle botc-app::before, body.no-bg-fog.night-cycle #app::be
   z-index: 10;
 }
 .bar-title { font-family: var(--font-serif); font-size: 16px; color: var(--gold-light); letter-spacing: 0.03em; margin-right: 4px; }
+.bar-title-clickable { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.bar-title-clickable:active { opacity: 0.7; }
 .cycle-controls { display: flex; align-items: center; gap: 2px; background: var(--bg-surface); border: 1px solid var(--gold); border-radius: var(--radius-md); overflow: hidden; box-shadow: 0 0 10px rgba(201,151,58,0.25), inset 0 0 0 1px rgba(255,255,255,0.04); }
 .cycle-btn { width: 44px; height: 34px; display: flex; align-items: center; justify-content: center; background: none; border: none; cursor: pointer; color: var(--gold-light); font-size: 24px; font-weight: 700; -webkit-tap-highlight-color: transparent; transition: background var(--duration-fast) var(--ease-standard), color var(--duration-fast) var(--ease-standard); flex-shrink: 0; }
 .cycle-btn:focus { outline: none; background: none; }
@@ -289,20 +300,39 @@ body.no-bg-fog.night-cycle botc-app::before, body.no-bg-fog.night-cycle #app::be
 @media (hover: hover) and (pointer: fine) { .topbar-icon-btn:hover { background: rgba(201,151,58,0.12); border-color: var(--gold); } }
 .topbar-icon-btn:active { background: rgba(201,151,58,0.12); border-color: var(--gold); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05), 0 0 0 1px rgba(201,151,58,0.22); }
 
-#night-guide-banner {
-  position: absolute; top: calc(var(--topbar-h, 56px) + 8px); left: 50%;
-  transform: translateX(-50%);
-  z-index: 10;
-  width: auto; max-width: calc(100% - 24px); box-sizing: border-box;
-  padding: 8px 18px; margin: 0; border: 0.5px solid var(--border-strong); border-radius: var(--radius-lg);
-  background: linear-gradient(180deg, rgba(201,151,58,0.3) 0%, rgba(201,151,58,0.14) 100%);
-  box-shadow: var(--shadow-xl);
-  color: var(--gold-light); font-family: var(--font-sans); font-size: 13px; font-weight: 700;
-  white-space: nowrap; text-align: center; cursor: pointer; -webkit-tap-highlight-color: transparent;
-  transition: background var(--duration-fast) var(--ease-standard);
+/* ── Side menu (left edge, hidden until opened) ──────────────────────── */
+#side-menu-handle {
+  position: fixed; top: 50%; left: 0; transform: translateY(-50%);
+  width: 22px; height: 56px; border: 1px solid rgba(201,151,58,0.48); border-left: none;
+  border-radius: 0 10px 10px 0; background: var(--bg-surface); color: var(--gold-light);
+  font-size: 16px; line-height: 1; display: flex; align-items: center; justify-content: center;
+  cursor: pointer; z-index: 90; box-shadow: 2px 0 8px rgba(0,0,0,0.4);
+  -webkit-tap-highlight-color: transparent; transition: left var(--duration-base) var(--ease-standard);
 }
-@media (hover: hover) and (pointer: fine) { #night-guide-banner:hover { background: linear-gradient(180deg, rgba(201,151,58,0.38) 0%, rgba(201,151,58,0.18) 100%); } }
-#night-guide-banner:active { background: linear-gradient(180deg, rgba(201,151,58,0.44) 0%, rgba(201,151,58,0.2) 100%); }
+#side-menu-handle.side-menu-handle--open { left: 220px; }
+@media (max-width: 300px) { #side-menu-handle.side-menu-handle--open { left: 80vw; } }
+#side-menu-backdrop {
+  position: fixed; inset: 0; z-index: 88; background: rgba(var(--scrim-rgb), 0.55);
+  opacity: 0; pointer-events: none; transition: opacity var(--duration-base) var(--ease-standard);
+}
+#side-menu-backdrop.visible { opacity: 1; pointer-events: all; }
+#side-menu {
+  position: fixed; top: 0; bottom: 0; left: 0; width: 220px; max-width: 80vw; z-index: 89;
+  background: var(--chrome-surface); border-right: 1px solid var(--chrome-border);
+  box-shadow: var(--shadow-xl); display: flex; flex-direction: column;
+  transform: translateX(-100%); transition: transform 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+  padding-top: max(10px, env(safe-area-inset-top, 10px));
+  padding-bottom: max(10px, env(safe-area-inset-bottom, 10px));
+}
+#side-menu.open { transform: translateX(0); }
+.side-menu-header { display: flex; align-items: center; justify-content: space-between; padding: 6px 14px 14px; border-bottom: 1px solid var(--border); margin-bottom: 6px; }
+.side-menu-header-clickable { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.side-menu-header-clickable:active { opacity: 0.7; }
+.side-menu-title { font-family: var(--font-serif); font-size: 16px; color: var(--gold-light); font-weight: 600; }
+.side-menu-item { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 16px; background: none; border: none; color: var(--text-primary); font-family: var(--font-sans); font-size: 14px; cursor: pointer; text-align: left; -webkit-tap-highlight-color: transparent; }
+.side-menu-item:active { background: rgba(201,151,58,0.12); }
+@media (hover: hover) and (pointer: fine) { .side-menu-item:hover { background: rgba(201,151,58,0.08); } }
+.side-menu-item-icon { font-size: 18px; width: 22px; text-align: center; flex-shrink: 0; }
 
 /* ── Night Guide popup (standalone, not the full reference sheet) ───── */
 .nightguide-backdrop {
@@ -316,10 +346,12 @@ body.no-bg-fog.night-cycle botc-app::before, body.no-bg-fog.night-cycle #app::be
   box-shadow: var(--shadow-xl); overflow: hidden;
 }
 .nightguide-header {
-  flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; gap: 10px;
   padding: 14px 16px; border-bottom: 0.5px solid var(--border);
 }
 .nightguide-title { font-size: 14px; font-weight: 700; color: var(--gold-light); font-family: var(--font-serif); }
+.nightguide-header-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; margin-left: auto; }
+.nightguide-header-actions .btn-toolbar-close { margin-left: 0; }
 .nightguide-body { flex: 1; overflow-y: auto; padding: 20px 16px 24px; box-sizing: border-box; }
 
 /* ── Circle ─────────────────────────────────────────── */
@@ -333,6 +365,13 @@ botc-circle { display: block; position: absolute; inset: 0; }
 .center-label { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; pointer-events: auto; z-index: 0; user-select: none; }
 .center-label .phase-icon { font-size: 42px; opacity: 1; filter: drop-shadow(0 0 10px rgba(201,151,58,0.7)) drop-shadow(0 2px 6px rgba(0,0,0,0.9)); line-height: 1; }
 .center-label .round-label { font-size: 13px; font-weight: 700; color: var(--gold-light); letter-spacing: 0.14em; text-transform: uppercase; margin-top: 5px; text-shadow: 0 0 12px rgba(201,151,58,0.8), 0 1px 4px rgba(0,0,0,1), 0 2px 8px rgba(0,0,0,0.9); }
+/* Tappable to open the Night Guide wizard (storyteller mode, night only) */
+.center-label--guide { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.center-label--guide .phase-icon { transition: filter var(--duration-fast) var(--ease-standard), transform var(--duration-fast) var(--ease-standard); }
+@media (hover: hover) and (pointer: fine) {
+  .center-label--guide:hover .phase-icon { filter: drop-shadow(0 0 16px rgba(201,151,58,0.95)) drop-shadow(0 2px 6px rgba(0,0,0,0.9)); transform: scale(1.08); }
+}
+.center-label--guide:active .phase-icon { transform: scale(0.96); }
 .game-end-banner-wrap { position: absolute; top: 25%; left: 50%; transform: translate(-50%, -50%); z-index: 15; pointer-events: none; user-select: none; }
 #circle-inner.story-view .game-end-banner-wrap { transform: translate(-50%, -50%) rotate(180deg); }
 .game-end-banner { display: flex; align-items: center; justify-content: center; gap: clamp(8px, 2.5vw, 16px); white-space: nowrap; animation: game-end-fadein 0.4s ease-out both, game-end-zoom 2.6s ease-in-out 0.4s 1 both; }
@@ -385,9 +424,12 @@ botc-circle { display: block; position: absolute; inset: 0; }
 /* ── Seat ───────────────────────────────────────────── */
 .seat { position: absolute; transform: translate(-50%, -50%); cursor: pointer; z-index: 2; width: var(--seat-size); height: var(--seat-size); user-select: none; -webkit-tap-highlight-color: transparent; overflow: visible; pointer-events: auto; }
 .seat-inner {
-  width: 100%; height: 100%; border-radius: 50%; background: var(--bg-card);
-  border: 2px solid rgba(255,255,255,0.4);
-  box-shadow: 0 0 0 1.5px rgba(238, 232, 220, 0.65), 0 3px 12px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08);
+  width: 100%; height: 100%; border-radius: 50%;
+  /* Parchment token artwork (assets/token.webp) already has its own carved ring/border baked in. */
+  background-image: url('assets/token.webp');
+  background-size: cover; background-position: center;
+  border: 2px solid #000000;
+  box-shadow: 0 3px 12px rgba(0,0,0,0.5);
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   transition: border-color var(--duration-fast) var(--ease-standard), transform var(--duration-fast) var(--ease-standard), box-shadow var(--duration-fast) var(--ease-standard);
   position: relative; overflow: hidden;
@@ -407,6 +449,10 @@ body.seat-edit-open .seat.selected .seat-inner { animation-play-state: paused; }
 .seat.dead .seat-inner { background: rgba(26,18,10,0.7); border: 2px dashed var(--blood-light); box-shadow: 0 2px 8px rgba(0,0,0,0.4); opacity: 0.68; }
 .seat.dead:active .seat-inner { opacity: 0.85; }
 @media (hover: hover) and (pointer: fine) { .seat.dead:hover .seat-inner { opacity: 0.85; } }
+/* Dead seats keep their original dark background, so their text needs the old light ink back. */
+.seat.dead .seat-name { color: #ffffff; text-shadow: 0 1px 3px rgba(0,0,0,0.9); }
+.seat.dead .seat-name.empty { color: var(--text-muted); }
+.seat.dead .seat-role { color: #e0c880; text-shadow: 0 1px 2px rgba(0,0,0,0.9); }
 
 body.hide-dead .seat.dead { display: none; }
 /* Dead players must still be reachable to cast a vote, so reveal them during
@@ -437,38 +483,44 @@ body.hide-dead #circle-inner.nom-votes-mode .seat.dead { display: block; }
 .seat-num {
   position: absolute; top: 0; left: 50%; transform: translate(-50%, -50%); z-index: 3;
   display: flex; align-items: center; justify-content: center; pointer-events: none;
-  min-width: 16px; height: 16px; padding: 0 3px; border-radius: 999px;
+  min-width: calc(var(--seat-size) * 0.1616); height: calc(var(--seat-size) * 0.1616); padding: 0 calc(var(--seat-size) * 0.0303); border-radius: 999px;
   background: rgba(20,14,8,0.92); border: 1px solid rgba(255,255,255,0.4);
-  font-size: 9px; font-weight: 600; color: #e0c880; letter-spacing: 0.02em; text-shadow: none;
+  font-size: calc(var(--seat-size) * 0.0909); font-weight: 600; color: #e0c880; letter-spacing: 0.02em; text-shadow: none;
 }
-.seat-name { font-size: 13px; font-weight: 600; color: #ffffff; max-width: 78px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; text-align: center; text-shadow: 0 1px 3px rgba(0,0,0,0.9); }
-.seat-name.empty { color: var(--text-muted); font-weight: 400; font-style: italic; }
-.seat-role { font-size: 11px; color: #e0c880; max-width: 78px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; text-align: center; text-shadow: 0 1px 2px rgba(0,0,0,0.9); }
+.seat-name { font-size: calc(var(--seat-text-size) * 0.1313); font-weight: 600; color: #000000; max-width: calc(var(--seat-size) * 0.7879); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; text-align: center; text-shadow: 0 1px 0 rgba(255,255,255,0.5); }
+.seat-name.empty { color: rgba(0,0,0,0.55); font-weight: 400; font-style: italic; }
+.seat-role { font-size: calc(var(--seat-text-size) * 0.1111); color: #000000; max-width: calc(var(--seat-size) * 0.7879); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; text-align: center; text-shadow: 0 1px 0 rgba(255,255,255,0.5); }
 
-.seat-dot { position: absolute; bottom: 10px; right: 10px; width: 7px; height: 7px; border-radius: 50%; background: #5a9e2f; border: 1.5px solid var(--bg-card); display: none; }
+.seat-dot { position: absolute; bottom: calc(var(--seat-size) * 0.101); right: calc(var(--seat-size) * 0.101); width: calc(var(--seat-size) * 0.0707); height: calc(var(--seat-size) * 0.0707); border-radius: 50%; background: #5a9e2f; border: 1.5px solid var(--bg-card); display: none; }
 .seat.dead .seat-dot { background: var(--blood-light); }
 
 .seat-status-strip { position: absolute; bottom: 7px; left: 50%; transform: translateX(-50%); display: flex; gap: 3px; align-items: center; pointer-events: none; }
-.seat-status-icon { font-size: 9px; line-height: 1; }
+.seat-status-icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: calc(var(--seat-size) * 0.1616); height: calc(var(--seat-size) * 0.1616);
+  font-size: calc(var(--seat-size) * 0.0909); line-height: 1;
+  background: rgba(20,14,8,0.88); border: 1px solid rgba(255,255,255,0.35);
+  border-radius: 999px; box-shadow: 0 1px 3px rgba(0,0,0,0.5);
+}
 
 .seat-drunk-badge {
-  position: absolute; bottom: -6px; left: -6px; z-index: 4;
-  width: 24px; height: 24px; border-radius: 50%;
+  position: absolute; bottom: calc(var(--seat-size) * -0.0606); left: calc(var(--seat-size) * -0.0606); z-index: 4;
+  width: calc(var(--seat-size) * 0.2424); height: calc(var(--seat-size) * 0.2424); border-radius: 50%;
   background: rgba(20,14,8,0.92); border: 1.5px solid rgba(255,255,255,0.4);
   display: flex; align-items: center; justify-content: center;
   box-shadow: 0 1px 4px rgba(0,0,0,0.6); pointer-events: none;
 }
-.seat-drunk-badge img { width: 16px; height: 16px; object-fit: contain; }
+.seat-drunk-badge img { width: calc(var(--seat-size) * 0.1616); height: calc(var(--seat-size) * 0.1616); object-fit: contain; }
 .seat-poison-badge {
-  position: absolute; bottom: -6px; right: -6px; z-index: 4;
-  width: 24px; height: 24px; border-radius: 50%;
+  position: absolute; bottom: calc(var(--seat-size) * -0.0606); right: calc(var(--seat-size) * -0.0606); z-index: 4;
+  width: calc(var(--seat-size) * 0.2424); height: calc(var(--seat-size) * 0.2424); border-radius: 50%;
   background: rgba(20,14,8,0.92); border: 1.5px solid rgba(255,255,255,0.4);
   display: flex; align-items: center; justify-content: center;
   box-shadow: 0 1px 4px rgba(0,0,0,0.6); pointer-events: none;
 }
-.seat-poison-badge img { width: 16px; height: 16px; object-fit: contain; }
-.seat-true-icon  { position: absolute; top: -14px; right: -14px; width: 55px; height: 55px; object-fit: contain; pointer-events: none; filter: drop-shadow(0 1px 4px rgba(0,0,0,0.9)); z-index: 3; }
-.seat-role-icon, .seat-role-icon-stack { position: absolute; top: -14px; left:  -14px; width: 55px; height: 55px; pointer-events: none; z-index: 3; }
+.seat-poison-badge img { width: calc(var(--seat-size) * 0.1616); height: calc(var(--seat-size) * 0.1616); object-fit: contain; }
+.seat-true-icon  { position: absolute; top: calc(var(--seat-size) * -0.1414); right: calc(var(--seat-size) * -0.1414); width: calc(var(--seat-size) * 0.5556); height: calc(var(--seat-size) * 0.5556); object-fit: contain; pointer-events: none; filter: drop-shadow(0 1px 4px rgba(0,0,0,0.9)); z-index: 3; }
+.seat-role-icon, .seat-role-icon-stack { position: absolute; top: calc(var(--seat-size) * -0.1414); left: calc(var(--seat-size) * -0.1414); width: calc(var(--seat-size) * 0.5556); height: calc(var(--seat-size) * 0.5556); pointer-events: none; z-index: 3; }
 .seat-role-icon { object-fit: contain; filter: drop-shadow(0 1px 4px rgba(0,0,0,0.9)); }
 .seat-role-icon--stacked {
   position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain;
@@ -507,62 +559,18 @@ body.hide-dead #circle-inner.nom-votes-mode .seat.dead { display: block; }
 .bluff-mark { color: #ffffff; font-weight: 700; font-style: normal; margin-right: 1px; }
 
 @media (max-width: 479px) {
-  :root { --seat-size: 68px; }
-  .seat-name { font-size: 10px; }
-  .seat-role { font-size: 9px; }
-  .seat-num  { font-size: 8px; min-width: 13px; height: 13px; }
-  .seat-status-icon { font-size: 7px; padding: 1px 2px; }
-  .seat-true-icon  { width: 45px; height: 45px; top: -13px; right: -13px; }
-  .seat-role-icon, .seat-role-icon-stack { width: 45px; height: 45px; top: -13px; left:  -13px; }
-  .seat-dot { bottom: 6px; right: 6px; }
+  :root { --seat-size-base: 75px; }
 }
 @media (min-width: 520px) {
-  :root { --seat-size: 96px; }
-  .seat-name { font-size: 14px; }
-  .seat-role { font-size: 12px; }
-  .seat-true-icon  { width: 60px; height: 60px; top: -16px; right: -16px; }
-  .seat-role-icon, .seat-role-icon-stack { width: 60px; height: 60px; top: -16px; left:  -16px; }
-  .seat-dot { bottom: 11px; right: 11px; }
+  :root { --seat-size-base: 106px; }
 }
 
-/* ── Compact mode ─────────────────────────────────── */
-body.compact-mode { --seat-size: 54px; }
-@media (max-width: 479px) { body.compact-mode { --seat-size: 41px; } }
-@media (min-width: 520px) { body.compact-mode { --seat-size: 58px; } }
+/* ── Seat size: a continuous --seat-scale multiplier (user-adjustable via
+   the "Seat size" slider in Settings, default 1 = 100%, range 0.55–2.0)
+   replaces the old binary "Compact mode" toggle. Every seat sub-element
+   above is already sized as calc(var(--seat-size) * ratio), so it scales
+   smoothly with --seat-size without any extra per-size overrides here. ── */
 
-body.compact-mode .seat-role { display: none; }
-body.compact-mode .seat-name { font-size: 9px; max-width: 44px; }
-body.compact-mode .seat-num  { font-size: 7px; min-width: 12px; height: 12px; }
-body.compact-mode .seat-status-icon { font-size: 7px; }
-body.compact-mode .seat-status-strip { bottom: 4px; }
-body.compact-mode .seat-role-icon, body.compact-mode .seat-role-icon-stack { width: 32px; height: 32px; top: -8px; left:  -8px; }
-body.compact-mode .seat-drunk-badge { width: 18px; height: 18px; bottom: -4px; left: -4px; }
-body.compact-mode .seat-drunk-badge img { width: 12px; height: 12px; }
-body.compact-mode .seat-poison-badge { width: 18px; height: 18px; bottom: -4px; right: -4px; }
-body.compact-mode .seat-poison-badge img { width: 12px; height: 12px; }
-body.compact-mode .seat-true-icon  { width: 32px; height: 32px; top: -8px; right: -8px; }
-
-@media (max-width: 479px) {
-  body.compact-mode .seat-name { font-size: 7px; max-width: 33px; }
-  body.compact-mode .seat-num  { font-size: 6px; min-width: 10px; height: 10px; }
-  body.compact-mode .seat-role-icon, body.compact-mode .seat-role-icon-stack { width: 24px; height: 24px; top: -6px; left:  -6px; }
-  body.compact-mode .seat-drunk-badge { width: 15px; height: 15px; bottom: -3px; left: -3px; }
-  body.compact-mode .seat-drunk-badge img { width: 10px; height: 10px; }
-  body.compact-mode .seat-poison-badge { width: 15px; height: 15px; bottom: -3px; right: -3px; }
-  body.compact-mode .seat-poison-badge img { width: 10px; height: 10px; }
-  body.compact-mode .seat-true-icon  { width: 24px; height: 24px; top: -6px; right: -6px; }
-}
-@media (min-width: 520px) {
-  body.compact-mode .seat-name { font-size: 10px; max-width: 48px; }
-  body.compact-mode .seat-role-icon, body.compact-mode .seat-role-icon-stack { width: 34px; height: 34px; top: -9px; left:  -9px; }
-  body.compact-mode .seat-drunk-badge { width: 20px; height: 20px; bottom: -5px; left: -5px; }
-  body.compact-mode .seat-drunk-badge img { width: 13px; height: 13px; }
-  body.compact-mode .seat-poison-badge { width: 20px; height: 20px; bottom: -5px; right: -5px; }
-  body.compact-mode .seat-poison-badge img { width: 13px; height: 13px; }
-  body.compact-mode .seat-true-icon  { width: 34px; height: 34px; top: -9px; right: -9px; }
-}
-
-/* ── Hide role ────────────────────────────────────── */
 body.hide-role .seat-role-icon  { display: none; }
 body.hide-role .seat-role-icon-stack { display: none; }
 body.hide-role .seat-drunk-badge { display: none; }
@@ -584,10 +592,17 @@ body.hide-role .pli-role        { display: none; }
 #btn-nom.threshold-reached { border-color: #5a9e2f; color: #8fca4b; background: rgba(90,158,47,0.18); }
 
 /* ── Reminder tokens (Storyteller mode) ─────────────── */
+/* Base strip is unanchored — one of the directional modifiers below (chosen
+   per-seat in JS based on which side of the circle the seat sits on) pins it
+   toward the center "sun/moon", not off the outer edge of the town square. */
 .seat-reminder-strip {
-  position: absolute; top: calc(100% + 8px); left: 50%; transform: translateX(-50%); z-index: 4;
-  display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; width: 198px; pointer-events: auto;
+  position: absolute; z-index: 4;
+  display: flex; flex-wrap: wrap; gap: 4px; pointer-events: auto;
 }
+.seat-reminder-strip--bottom { top: calc(100% + 8px); left: 50%; transform: translateX(-50%); width: 198px; justify-content: center; }
+.seat-reminder-strip--top    { bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); width: 198px; justify-content: center; }
+.seat-reminder-strip--left   { right: calc(100% + 8px); top: 50%; transform: translateY(-50%); flex-direction: column; max-height: 170px; align-content: flex-start; }
+.seat-reminder-strip--right  { left: calc(100% + 8px); top: 50%; transform: translateY(-50%); flex-direction: column; max-height: 170px; align-content: flex-start; }
 .seat-reminder-token {
   width: 36px; height: 36px; border-radius: 50%; padding: 0; flex-shrink: 0;
   background: rgba(20,14,8,0.92); border: 1.5px solid var(--gold); cursor: pointer;
@@ -597,6 +612,7 @@ body.hide-role .pli-role        { display: none; }
 .seat-reminder-token img { width: 25px; height: 25px; object-fit: contain; }
 .seat.dead .seat-reminder-token { opacity: 0.45; filter: grayscale(0.85); }
 .seat-reminder-token--source-dead { opacity: 0.45; filter: grayscale(0.85); }
+.seat-reminder-token--wrong { border-color: var(--blood-light); }
 .seat.reminder-drop-target .seat-inner { box-shadow: 0 0 0 4px var(--gold), 0 4px 24px rgba(201,151,58,0.6) !important; }
 body.hide-role .seat-reminder-strip { display: none; }
 .town-dropzone.reminder-drop-target { box-shadow: 0 0 0 4px var(--gold), 0 4px 24px rgba(201,151,58,0.6); border-radius: 50%; }
@@ -614,24 +630,32 @@ body.hide-role .town-reminder-strip { display: none; }
 .reminder-tray-chips { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; }
 .reminder-tray-empty { font-size: 12px; color: var(--text-muted); font-style: italic; padding: 6px 2px; }
 .reminder-chip {
-  flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 2px;
-  width: 64px; padding: 6px 4px; border-radius: var(--radius-sm); background: var(--bg-surface);
-  border: 1px solid var(--border); cursor: grab; touch-action: none; user-select: none; -webkit-tap-highlight-color: transparent;
+  flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 4px;
+  width: 76px; cursor: grab; touch-action: none; user-select: none; -webkit-tap-highlight-color: transparent;
 }
-.reminder-chip-icon { width: 24px; height: 24px; object-fit: contain; }
+.reminder-chip-circle {
+  width: 56px; height: 56px; border-radius: 50%; flex-shrink: 0;
+  background: rgba(20,14,8,0.92); border: 1.5px solid var(--gold); box-shadow: 0 1px 4px rgba(0,0,0,0.6);
+  display: flex; align-items: center; justify-content: center;
+}
+/* -webkit-user-drag:none stops the browser's native image-drag gesture from
+   fighting our custom pointer-drag (was the main source of residual jank). */
+.reminder-chip-icon { width: 40px; height: 40px; object-fit: contain; -webkit-user-drag: none; pointer-events: none; }
 .reminder-chip-text { font-size: 10px; font-weight: 600; color: var(--text-primary); text-align: center; line-height: 1.2; }
-.reminder-chip-sub { font-size: 9px; color: var(--text-muted); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 60px; }
+.reminder-chip-sub { font-size: 9px; color: var(--text-muted); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 72px; }
 .reminder-chip-ghost {
   position: fixed; transform: translate(-50%, -50%); z-index: 500; pointer-events: none;
-  opacity: 0.9; box-shadow: 0 6px 20px rgba(0,0,0,0.6);
+  opacity: 0.9; will-change: transform;
 }
+.reminder-chip-ghost .reminder-chip-circle { box-shadow: 0 6px 20px rgba(0,0,0,0.6); }
 .reminder-chip--dead { opacity: 0.45; filter: grayscale(0.85); }
-.reminder-chip--target { border-color: var(--gold); box-shadow: 0 0 0 2px var(--gold), 0 0 14px rgba(201,151,58,0.7); animation: reminder-chip-pulse 1.4s ease-in-out infinite; }
+.reminder-chip--wrong .reminder-chip-circle { border-color: var(--blood-light); }
+.reminder-chip--target .reminder-chip-circle { border-color: var(--gold); box-shadow: 0 0 0 2px var(--gold), 0 0 14px rgba(201,151,58,0.7); animation: reminder-chip-pulse 1.4s ease-in-out infinite; }
 @keyframes reminder-chip-pulse {
   0%, 100% { box-shadow: 0 0 0 2px var(--gold), 0 0 14px rgba(201,151,58,0.7); }
   50%      { box-shadow: 0 0 0 2px var(--gold), 0 0 22px rgba(201,151,58,1); }
 }
-.nom-mode .seat .seat-inner { border-color: rgba(201,151,58,0.35); }
+.nom-mode .seat .seat-inner { border-color: #000000; }
 .seat.nom-from .seat-inner { border-color: var(--gold-light) !important; box-shadow: 0 0 0 3px var(--gold), 0 4px 20px rgba(201,151,58,0.45), inset 0 0 20px rgba(201,151,58,0.1) !important; }
 .seat.nom-unavailable .seat-inner { opacity: 0.32; filter: grayscale(0.7); }
 .seat.nom-unavailable { cursor: not-allowed; }
@@ -912,14 +936,21 @@ body.hide-role .town-reminder-strip { display: none; }
    Reuses the <botc-sign-modal> "show sign" reveal card look-and-feel
    (.bluff-reveal-*) for visual consistency; the only thing it adds on
    top is the collapsible player-tips section below the ability text. */
-.bluff-reveal-card.bluff-reveal-card--info { max-height: min(80dvh, 640px); overflow-x: hidden; overflow-y: auto; }
+/* justify-content:flex-start overrides the base card's center alignment —
+   with multiple stacked roles the content can overflow/grow (tips toggled
+   open), and centering an overflowing scrollable flex container clips
+   content above scrollTop:0 and makes items jump as they expand/collapse. */
+.bluff-reveal-card.bluff-reveal-card--info { max-height: min(80dvh, 640px); overflow-x: hidden; overflow-y: auto; justify-content: flex-start; }
 .bluff-reveal-item .role-hint-header.collapsible-header,
 .bluff-reveal-item .role-hint-body { align-self: stretch; text-align: left; }
 
-/* Collapsible player-strategy tips, tucked under the role's ability text */
-.role-hint-header.collapsible-header { margin-top: 10px; padding: 6px 10px; border-radius: 10px; background: rgba(201,151,58,0.1); border: 0.5px solid rgba(201,151,58,0.3); }
+/* Collapsible player-strategy tips, tucked under the role's ability text —
+   sized with --bluff-scale (collapsed header height) so the fit-to-3-roles
+   shrink-to-fit pass (see _fitInfoCard) accounts for it; the body text itself
+   is left unscaled below a floor so expanded tips stay readable. */
+.role-hint-header.collapsible-header { margin-top: calc(10px * var(--bluff-scale)); padding: calc(6px * var(--bluff-scale)) calc(10px * var(--bluff-scale)); border-radius: 10px; background: rgba(201,151,58,0.1); border: 0.5px solid rgba(201,151,58,0.3); }
 .role-hint-header.collapsible-header:hover { background: rgba(201,151,58,0.16); }
-.role-hint-label { font-size: 12px; font-weight: 600; color: var(--gold-light); letter-spacing: 0.02em; }
+.role-hint-label { font-size: calc(12px * max(var(--bluff-scale), 0.85)); font-weight: 600; color: var(--gold-light); letter-spacing: 0.02em; }
 .role-hint-body { font-size: 13px; line-height: 1.6; color: var(--text-secondary); padding: 8px 2px 0; }
 .role-hint-body p { margin: 0 0 10px; }
 .role-hint-body p:last-child { margin-bottom: 0; }
@@ -1040,6 +1071,8 @@ body.hide-role .town-reminder-strip { display: none; }
 .no-reminder-icon { display: inline-flex; align-items: center; justify-content: center; width: 15px; height: 15px; margin: 0 2px; border-radius: 50%; background: rgba(230,184,90,0.22); color: #e6b85a; font-size: 10px; font-weight: 800; font-style: normal; line-height: 1; vertical-align: middle; }
 .no-cond-tag { font-size: 10px; color: #9b6dca; background: rgba(155,109,202,0.15); border-radius: 999px; padding: 1px 6px; align-self: flex-start; font-weight: 600; }
 .no-tokens { display: flex; flex-direction: column; gap: 4px; flex-shrink: 0; align-self: center; margin-left: auto; }
+.no-token { display: flex; align-items: center; gap: 5px; }
+.no-token-name { font-size: 11px; font-weight: 600; color: var(--text-secondary); max-width: 72px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .no-token-badge {
   width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
   background: rgba(20,14,8,0.92); border: 1.5px solid var(--gold); box-shadow: 0 1px 4px rgba(0,0,0,0.6);
@@ -1047,6 +1080,7 @@ body.hide-role .town-reminder-strip { display: none; }
   font-size: 12px; font-weight: 700; color: var(--gold-light);
 }
 .no-token-badge img { width: 20px; height: 20px; object-fit: contain; }
+.no-token-badge--wrong { border-color: var(--blood-light); }
 
 /* ── Roles PDF viewer ─────────────────────────────────── */
 #pdf-sheet { position: fixed; inset: 0; display: flex; flex-direction: column; background: var(--chrome-surface); z-index: 200; }
@@ -1082,7 +1116,9 @@ body.hide-role .town-reminder-strip { display: none; }
 .wizard-name { font-size: 22px; font-weight: 800; color: var(--text); }
 .wizard-players { font-size: 14px; font-weight: 700; color: var(--gold-light); }
 .wizard-hint { font-size: 16px; line-height: 1.55; color: var(--text-primary); opacity: 0.95; margin-top: 4px; }
-.wizard-tokens { display: flex; gap: 6px; margin-top: 6px; }
+.wizard-tokens { display: flex; gap: 10px; margin-top: 6px; flex-wrap: wrap; justify-content: center; }
+.wizard-token { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.wizard-token-name { font-size: 11px; font-weight: 600; color: var(--text-secondary); max-width: 72px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* The seated player for this step is dead — role/instructions/token are moot, dim them (same opacity+grayscale recipe as a dead seat's reminder token). */
 .wizard-card--dead .wizard-icon,
 .wizard-card--dead .wizard-name,
@@ -1091,7 +1127,6 @@ body.hide-role .town-reminder-strip { display: none; }
 .wizard-card--dead .wizard-tokens { opacity: 0.45; filter: grayscale(0.85); }
 .wizard-controls { display: flex; gap: 10px; width: 100%; max-width: 420px; }
 .wizard-controls .btn { flex: 1; }
-.wizard-exit { margin-top: 4px; background: transparent; border-color: transparent; color: var(--text-secondary); }
 .wizard-done { display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; }
 .wizard-done-icon { font-size: 64px; }
 .wizard-done-title { font-size: 20px; font-weight: 800; color: var(--gold-light); }
@@ -1104,6 +1139,11 @@ body.hide-role .town-reminder-strip { display: none; }
    repaint) instead of removing :active/:focus-visible feedback too. */
 @media (hover: hover) and (pointer: fine) {
   .btn-wizard-action:hover { background: rgba(201,151,58,0.12); border-color: var(--gold); }
+}
+/* Same backdrop-filter re-sample lag risk as .btn-wizard-action above — these
+   header buttons also sit on the blurred .nightguide-backdrop. */
+@media (hover: hover) and (pointer: fine) {
+  .nightguide-header-actions .btn-toolbar-close:hover { background: var(--bg-input); border-color: var(--border); }
 }
 .wizard-bluffs { display: flex; flex-direction: column; align-items: center; gap: 8px; width: 100%; max-width: 420px; background: var(--bg-card); border: 0.5px dashed var(--border-strong); border-radius: var(--radius-md); padding: 12px 14px; box-sizing: border-box; }
 .wizard-bluffs-label { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-secondary); }
@@ -1435,6 +1475,9 @@ body.hide-role .town-reminder-strip { display: none; }
   gap: 6px;
 }
 .settings-control--bg { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.settings-control--seatsize { gap: 10px; }
+.seatsize-slider { width: 120px; accent-color: var(--gold); cursor: pointer; }
+.seatsize-value { font-size: 12px; font-weight: 700; color: var(--gold-light); min-width: 34px; text-align: right; }
 .settings-bg-upload-btn {
   display: inline-flex; align-items: center; justify-content: center;
   cursor: pointer; font-size: 13px; padding: 7px 14px;

@@ -28,6 +28,12 @@ export function isPoisoned(seat, round) {
   return !!(seat && seat.poisonedAt && seat.poisonedAt.round === round);
 }
 
+// Reminder tokens literally named "Wrong" (Librarian/Investigator/Washerwoman's
+// 2nd token) mark the decoy player — flagged red everywhere a token badge is shown.
+export function isWrongReminder(text) {
+  return /^wrong$/i.test((text || '').trim());
+}
+
 /** Tiny haptic-style buzz for toggle/button feedback — silently no-ops where unsupported. */
 export function hapticTick(ms = 10) {
   try { navigator.vibrate?.(ms); } catch (e) {}
@@ -40,11 +46,13 @@ export function hapticTick(ms = 10) {
  * Layout uses a U-shape (left side, bottom side, right side),
  * leaving the top side empty for the storyteller.
  */
-export function defaultPos(i, n, W, H) {
+export function defaultPos(i, n, W, H, seatScale = 1) {
   const count = Math.max(1, n || 1);
 
-  // Approximate rendered seat diameter from responsive CSS breakpoints.
-  const seatW = W <= 479 ? 68 : (W >= 520 ? 96 : 90);
+  // Approximate rendered seat diameter from responsive CSS breakpoints
+  // (kept in sync with --seat-size-base in style.css), scaled by the
+  // user's seat-size preference (botc-app.js's seatSizePct / 100).
+  const seatW = (W <= 479 ? 75 : (W >= 520 ? 106 : 99)) * seatScale;
   const halfSeat = seatW * 0.5;
 
   // Side icons overhang outside the circular seat; reserve that space too.

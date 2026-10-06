@@ -11,7 +11,7 @@ Use this when running a live game and you need a fast reminder.
 
 1. ⚙️ Setup
 - Open Settings (⚙️) -> set Players and Script
-- Optional: enable Compact mode or Storyteller mode
+- Optional: adjust Seat size or enable Storyteller mode
 
 2. 👥 Assign players
 - Tap seat -> set Name, Role claimed, True role (if needed)
@@ -282,8 +282,8 @@ Custom script builder:
 
 ### Appearance
 
-### Compact mode
-- Shrinks seat visuals and reduces clutter
+### Seat size
+- Slider to shrink or enlarge seat visuals (55%-200%, default 100%)
 
 ### Storyteller mode
 - Rotates board perspective by 180 degrees
@@ -366,7 +366,7 @@ The layout also respects safe-area insets for notch devices.
 If something looks stale or mismatched:
 1. Hard refresh browser tab.
 2. Verify script selection in Settings.
-3. Check if compact mode / storyteller mode / hide roles is active.
+3. Check if seat size / storyteller mode / hide roles is active.
 4. If needed, use Clear table or Reset everything depending on desired scope.
 
 If running locally fails:

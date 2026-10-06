@@ -1,6 +1,6 @@
 import { LitElement, html, nothing } from 'lit';
 import { getRoles, getAllRoles, getNightOrder, getCharacterCount, ROLE_ICONS, getScriptRoleLayout, getScriptMeta, isExperimentalRole, getScriptJinxes, getRoleById } from '../data.js';
-import { CHARCOUNT_COLS } from '../utils.js';
+import { CHARCOUNT_COLS, isWrongReminder } from '../utils.js';
 
 const BMR_ROLE_ORDER = {
   townsfolk: [
@@ -354,11 +354,14 @@ export class BotcReferenceModal extends LitElement {
   _noRowState(entry, idx) {
     const key        = this._noTab + '-' + idx;
     const done       = this._done.has(key);
-    // Reminder tokens currently sitting on THIS character's seat (e.g. a
-    // "Drunk" token dragged onto the Monk tells the Storyteller to give the
-    // Monk bad info) — shown on the right using the token's own role icon.
+    // Scans EVERY seat (not just the role's own seat) for reminder tokens
+    // tagged with this role — tokens are usually placed on the TARGET
+    // player(s), e.g. the Librarian's 2 "Outsider" tokens go on the two
+    // candidate seats, not on the Librarian's own seat.
     const placedTokens = this.storyView
-      ? this.seats.filter(s => s.trueRole === entry.name).flatMap(s => s.reminders || [])
+      ? this.seats.flatMap((s, i) => (s.reminders || [])
+          .filter(r => r.role === entry.name)
+          .map(r => ({ ...r, seatName: s.name || ('Seat ' + (i + 1)) })))
       : [];
     const inPlay     = this._inPlayMap();
     const players    = entry.st ? [] : (inPlay[entry.name] || []);
@@ -403,10 +406,13 @@ export class BotcReferenceModal extends LitElement {
         ${st.placedTokens.length ? html`
           <div class="no-tokens">
             ${st.placedTokens.map(t => html`
-              <span class="no-token-badge" title="${t.text}${t.role ? ' (' + t.role + ')' : ''}">
-                ${ROLE_ICONS[t.role]
-                  ? html`<img src="${ROLE_ICONS[t.role]}" alt="">`
-                  : html`${(t.role || t.text || '?')[0]}`}
+              <span class="no-token" title="${t.text}${t.role ? ' (' + t.role + ')' : ''}">
+                <span class="no-token-badge ${isWrongReminder(t.text) ? 'no-token-badge--wrong' : ''}">
+                  ${ROLE_ICONS[t.role]
+                    ? html`<img src="${ROLE_ICONS[t.role]}" alt="">`
+                    : html`${(t.role || t.text || '?')[0]}`}
+                </span>
+                ${t.seatName ? html`<span class="no-token-name">${t.seatName}</span>` : nothing}
               </span>
             `)}
           </div>

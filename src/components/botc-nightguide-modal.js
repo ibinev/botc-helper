@@ -1,5 +1,6 @@
 import { LitElement, html, nothing } from 'lit';
 import { getRoles, getNightOrder, ROLE_ICONS, CAT_LABELS } from '../data.js';
+import { isWrongReminder } from '../utils.js';
 
 /**
  * <botc-nightguide-modal>
@@ -21,10 +22,13 @@ import { getRoles, getNightOrder, ROLE_ICONS, CAT_LABELS } from '../data.js';
  *   demonBluffs {Array}
  *
  * Fires:
- *   modal-close   – (no detail)
- *   goto-grimoire – { detail: { role } }
- *   pick-bluffs   – (no detail)
- *   show-sign     – (no detail) – opens the <botc-sign-modal> on top
+ *   modal-close     – (no detail)
+ *   goto-grimoire   – { detail: { role } }
+ *   pick-bluffs     – (no detail)
+ *   show-sign       – (no detail) – opens the <botc-sign-modal> on top
+ *   randomize-setup – (no detail) – first-night only: randomly assign script
+ *                      roles to all non-traveler seats per the official
+ *                      townsfolk/outsider/minion/demon distribution
  */
 export class BotcNightguideModal extends LitElement {
   static properties = {
@@ -91,6 +95,10 @@ export class BotcNightguideModal extends LitElement {
     this.dispatchEvent(new CustomEvent('modal-close', { bubbles: true, composed: true }));
   }
 
+  _onRandomizeClick() {
+    this.dispatchEvent(new CustomEvent('randomize-setup', { bubbles: true, composed: true }));
+  }
+
   // ── Night order helpers (mirrors botc-reference-modal.js's checklist) ──
   _inPlayMap() {
     const map = {};
@@ -132,8 +140,14 @@ export class BotcNightguideModal extends LitElement {
   _noRowState(entry, idx) {
     const key        = this._noTab + '-' + idx;
     const done       = this._done.has(key);
+    // Scans EVERY seat (not just the role's own seat) for reminder tokens
+    // tagged with this role — tokens are usually placed on the TARGET
+    // player(s), e.g. the Librarian's 2 "Outsider" tokens go on the two
+    // candidate seats, not on the Librarian's own seat.
     const placedTokens = this.storyView
-      ? this.seats.filter(s => s.trueRole === entry.name).flatMap(s => s.reminders || [])
+      ? this.seats.flatMap((s, i) => (s.reminders || [])
+          .filter(r => r.role === entry.name)
+          .map(r => ({ ...r, seatName: s.name || ('Seat ' + (i + 1)) })))
       : [];
     const inPlay     = this._inPlayMap();
     const players    = entry.st ? [] : (inPlay[entry.name] || []);
@@ -203,10 +217,13 @@ export class BotcNightguideModal extends LitElement {
         ${st.placedTokens.length ? html`
           <div class="wizard-tokens">
             ${st.placedTokens.map(t => html`
-              <span class="no-token-badge" title="${t.text}${t.role ? ' (' + t.role + ')' : ''}">
-                ${ROLE_ICONS[t.role]
-                  ? html`<img src="${ROLE_ICONS[t.role]}" alt="">`
-                  : html`${(t.role || t.text || '?')[0]}`}
+              <span class="wizard-token" title="${t.text}${t.role ? ' (' + t.role + ')' : ''}">
+                <span class="no-token-badge ${isWrongReminder(t.text) ? 'no-token-badge--wrong' : ''}">
+                  ${ROLE_ICONS[t.role]
+                    ? html`<img src="${ROLE_ICONS[t.role]}" alt="">`
+                    : html`${(t.role || t.text || '?')[0]}`}
+                </span>
+                ${t.seatName ? html`<span class="wizard-token-name">${t.seatName}</span>` : nothing}
               </span>
             `)}
           </div>
@@ -219,16 +236,11 @@ export class BotcNightguideModal extends LitElement {
         </button>
       ` : nothing}
       ${entry.name === 'Demon info' ? this._renderBluffsSection() : nothing}
-      <button class="btn btn-wizard-action"
-        @click="${() => this.dispatchEvent(new CustomEvent('show-sign', { bubbles: true, composed: true }))}">
-        🪧 Show Sign
-      </button>
       <div class="wizard-controls">
         <button class="btn" @click="${this._wizardBack}" ?disabled="${idx === 0}">◀ Back</button>
         <button class="btn" @click="${this._wizardSkip}">Skip</button>
         <button class="btn btn-primary" @click="${this._wizardNext}">${st.checked ? 'Next ▶' : '✓ Done'}</button>
       </div>
-      <button class="btn wizard-exit" @click="${this._dismiss}">✕ Close Guide</button>
     `;
   }
 
@@ -290,6 +302,13 @@ export class BotcNightguideModal extends LitElement {
         <div class="nightguide-card">
           <div class="nightguide-header">
             <span class="nightguide-title">🌙 Night Guide — ${this._noTab === 'first' ? 'First Night' : 'Other Night'}</span>
+            <div class="nightguide-header-actions">
+              ${this._noTab === 'first' && this.storyView ? html`
+                <button class="btn btn-toolbar-close" @click="${this._onRandomizeClick}">🎲</button>
+              ` : nothing}
+              <button class="btn btn-toolbar-close" @click="${() => this.dispatchEvent(new CustomEvent('show-sign', { bubbles: true, composed: true }))}">🪧</button>
+              <button class="btn btn-toolbar-close" @click="${this._dismiss}">✕</button>
+            </div>
           </div>
           <div class="nightguide-body ref-body--center">
             ${idx >= order.length ? html`

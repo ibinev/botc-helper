@@ -1,6 +1,6 @@
 import { LitElement, html, nothing } from 'lit';
 import { getRoles, ROLE_ICONS } from '../data.js';
-import { esc, defaultPos, isPoisoned } from '../utils.js';
+import { esc, defaultPos, isPoisoned, isWrongReminder } from '../utils.js';
 
 /**
  * <botc-circle>
@@ -48,6 +48,7 @@ export class BotcCircle extends LitElement {
     phase:         { type: String  },
     storyView:     { type: Boolean },
     script:        { type: String  },
+    seatScale:     { type: Number  },
     showGameEnd:      { type: Boolean },
     winningAlignment: { type: String  },
     townReminders:    { type: Array   },
@@ -75,12 +76,15 @@ export class BotcCircle extends LitElement {
     this.phase         = 'day';
     this.storyView     = false;
     this.script        = 'tb';
+    this.seatScale     = 1;
     this.showGameEnd      = false;
     this.winningAlignment = '';
     this.townReminders    = [];
     this._w            = 400;
     this._h            = 400;
     this._ro           = null;
+    this._draggingIdx  = null;
+    this._frozenPos    = null;
   }
 
   firstUpdated() {
@@ -111,10 +115,34 @@ export class BotcCircle extends LitElement {
   }
 
   _pos(i) {
+    // While a seat with no saved position yet is being dragged, freeze its
+    // base position against mid-drag re-renders (e.g. a ResizeObserver firing
+    // from a mobile browser's toolbar show/hide) — otherwise defaultPos()
+    // below would recompute a new base point from the changed _w/_h, silently
+    // invalidating the drag's start reference and causing the seat to land
+    // somewhere other than where it was released.
+    if (this._draggingIdx === i && this._frozenPos) return this._frozenPos;
     if (this.seatPositions[i]) return this.seatPositions[i];
     // Use stored _w/_h (updated by rAF + ResizeObserver).
     // When they change, Lit re-renders and seats move to correct positions.
-    return defaultPos(i, this.seats.length, this._w, this._h);
+    return defaultPos(i, this.seats.length, this._w, this._h, this.seatScale);
+  }
+
+  // Which side of the seat should its reminder-token strip hug so the tokens
+  // sit toward the circle's center (sun/moon) rather than hanging off the
+  // outer edge of the town square. Seats are U-shaped around the container
+  // (left side / bottom row / right side, top left open) and are never
+  // individually rotated, so "inward" is simply whichever axis (x or y)
+  // deviates from the container's center the most. In story view the whole
+  // ring is flipped 180° (while each seat's own content counter-rotates back
+  // upright, net 0°), so the position used to pick a side must be flipped too.
+  _seatSide(pos) {
+    const cx = this._w / 2, cy = this._h / 2;
+    const sign = this.storyView ? -1 : 1;
+    const dx = (pos.x - cx) * sign;
+    const dy = (pos.y - cy) * sign;
+    if (Math.abs(dx) > Math.abs(dy)) return dx > 0 ? 'left' : 'right';
+    return dy > 0 ? 'top' : 'bottom';
   }
 
   // Reminders keep working even when they're displayed on a different
@@ -169,7 +197,12 @@ export class BotcCircle extends LitElement {
 
     const applyFrame = () => {
       rafId = null;
-      el.style.transform = `translate(-50%, -50%) translate3d(${curDx}px, ${curDy}px, 0)`;
+      // In story view the seat's own content is counter-rotated 180° (undoing
+      // the ancestor ring's 180° flip) via CSS; that rotate must stay part of
+      // the transform during the drag too, or the inline style here fully
+      // replaces the CSS rule and the seat's content flips upside down mid-drag.
+      const rot = this.storyView ? ' rotate(180deg)' : '';
+      el.style.transform = `translate(-50%, -50%) translate3d(${curDx}px, ${curDy}px, 0)${rot}`;
     };
 
     const onStart = (e) => {
@@ -186,6 +219,8 @@ export class BotcCircle extends LitElement {
       startPy = clientY;
       startEx = parseFloat(el.style.left);
       startEy = parseFloat(el.style.top);
+      this._draggingIdx = idx;
+      this._frozenPos   = { x: startEx, y: startEy };
       el.classList.add('dragging');
       el.style.zIndex = 10;
 
@@ -205,6 +240,8 @@ export class BotcCircle extends LitElement {
         el.classList.remove('dragging');
         el.style.zIndex = '';
         el.style.transform = '';
+        this._draggingIdx = null;
+        this._frozenPos   = null;
         document.removeEventListener('mousemove', onMove);
         document.removeEventListener('mouseup',   onEnd);
         document.removeEventListener('touchmove', onMove);
@@ -330,9 +367,9 @@ export class BotcCircle extends LitElement {
           ? html`<div class="seat-poison-badge" title="Poisoned"><img src="${ROLE_ICONS['Poisoner']}" alt="Poisoned"></div>`
           : nothing}
         ${Array.isArray(s.reminders) && s.reminders.length ? html`
-          <div class="seat-reminder-strip">
+          <div class="seat-reminder-strip seat-reminder-strip--${this._seatSide(pos)}">
             ${s.reminders.map(r => html`
-              <button type="button" class="seat-reminder-token ${this._isRoleDead(r.role) ? 'seat-reminder-token--source-dead' : ''}" title="${r.text}${r.role ? ' (' + r.role + ')' : ''} — tap to remove"
+              <button type="button" class="seat-reminder-token ${this._isRoleDead(r.role) ? 'seat-reminder-token--source-dead' : ''} ${isWrongReminder(r.text) ? 'seat-reminder-token--wrong' : ''}" title="${r.text}${r.role ? ' (' + r.role + ')' : ''} — tap to remove"
                 @click="${e => {
                   e.stopPropagation();
                   this.dispatchEvent(new CustomEvent('seat-reminder-remove', {
@@ -410,13 +447,18 @@ export class BotcCircle extends LitElement {
               </div>
             </div>
           ` : nothing}
-          <div class="center-label town-dropzone">
+          <div class="center-label town-dropzone ${this.storyView && this.phase === 'night' ? 'center-label--guide' : ''}"
+            @click="${() => {
+              if (this.storyView && this.phase === 'night') {
+                this.dispatchEvent(new CustomEvent('guide-me-click', { bubbles: true, composed: true }));
+              }
+            }}">
             <div class="phase-icon">${this.phase === 'day' ? '☀️' : '🌙'}</div>
             <div class="round-label">${this.phase === 'day' ? 'Day' : 'Night'} ${this.round}</div>
             ${this.storyView && this.townReminders.length ? html`
               <div class="town-reminder-strip">
                 ${this.townReminders.map(r => html`
-                  <button type="button" class="seat-reminder-token ${this._isRoleDead(r.role) ? 'seat-reminder-token--source-dead' : ''}" title="${r.text}${r.role ? ' (' + r.role + ')' : ''} — tap to remove"
+                  <button type="button" class="seat-reminder-token ${this._isRoleDead(r.role) ? 'seat-reminder-token--source-dead' : ''} ${isWrongReminder(r.text) ? 'seat-reminder-token--wrong' : ''}" title="${r.text}${r.role ? ' (' + r.role + ')' : ''} — tap to remove"
                     @click="${e => {
                       e.stopPropagation();
                       this.dispatchEvent(new CustomEvent('town-reminder-remove', {

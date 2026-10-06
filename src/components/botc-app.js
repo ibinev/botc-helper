@@ -1,6 +1,6 @@
 import { LitElement, html, nothing } from 'lit';
-import { ROLES_IMG_URL, normalizeScript, setCustomScripts, getScriptOptions, getAllRoles, getRoles, getScriptRoleLayout, loadBundledScripts, ROLE_ICONS } from '../data.js';
-import { blankSeat, MIN, MAX, MAX_STEP, phaseRoundToStep, stepToPhaseRound, playVoteYesSound, playVoteNoSound, parseBackupXml, isPoisoned, hapticTick } from '../utils.js';
+import { ROLES_IMG_URL, normalizeScript, setCustomScripts, getScriptOptions, getAllRoles, getRoles, getCharacterCount, getScriptRoleLayout, loadBundledScripts, ROLE_ICONS } from '../data.js';
+import { blankSeat, MIN, MAX, MAX_STEP, CHARCOUNT_COLS, phaseRoundToStep, stepToPhaseRound, playVoteYesSound, playVoteNoSound, parseBackupXml, isPoisoned, hapticTick, isWrongReminder } from '../utils.js';
 import './botc-circle.js';
 import './botc-edit-modal.js';
 import './botc-stats-modal.js';
@@ -39,7 +39,7 @@ export class BotcApp extends LitElement {
     nominations:       { type: Object  },
     gameNotes:         { type: Object  },
     storyView:         { type: Boolean },
-    compactMode:       { type: Boolean },
+    seatSizePct:       { type: Number  },
     fastVoting:        { type: Boolean },
     hideRole:          { type: Boolean },
     hideDeadPlayers:   { type: Boolean },
@@ -80,6 +80,7 @@ export class BotcApp extends LitElement {
     _bluffPickerOpen:    { state: true },
     _nightGuideOpen:     { state: true },
     _signModalOpen:      { state: true },
+    _sideMenuOpen:       { state: true },
     townReminders:       { type: Array },
     demonBluffs:         { type: Array },
     customSigns:         { type: Array },
@@ -106,7 +107,7 @@ export class BotcApp extends LitElement {
     this.nominations       = {};
     this.gameNotes         = {};
     this.storyView         = false;
-    this.compactMode       = false;
+    this.seatSizePct       = 100;
     this.fastVoting        = false;
     this.hideRole          = false;
     this.hideDeadPlayers   = false;
@@ -129,6 +130,7 @@ export class BotcApp extends LitElement {
     this._settingsOpen     = false;
     this._charcountOpen    = false;
     this._statsOpen        = false;
+    this._sideMenuOpen     = false;
     this._pdfOpen          = false;
     this._referenceOpen    = false;
     this._readmeOpen       = false;
@@ -290,7 +292,7 @@ export class BotcApp extends LitElement {
     this._loadNominations();
     this._loadCollapsePrefs();
     this._loadStoryView();
-    this._loadCompactMode();
+    this._loadSeatSizePct();
     this._loadFastVoting();
     this._loadHideRole();
     this._loadHideDeadPlayers();
@@ -306,7 +308,7 @@ export class BotcApp extends LitElement {
     while (this.seatPositions.length < this.seatCount) this.seatPositions.push(null);
     this._applyPhaseCycle();
     this._applyStoryView();
-    this._applyCompactMode();
+    this._applySeatSizePct();
     this._applyHideRole();
     this._applyHideDeadPlayers();
     this._applyBgImage();
@@ -434,8 +436,9 @@ export class BotcApp extends LitElement {
     this.storyView = localStorage.getItem('botc_story_view') === 'on';
   }
 
-  _loadCompactMode() {
-    this.compactMode = localStorage.getItem('botc_compact_mode') === 'on';
+  _loadSeatSizePct() {
+    const stored = parseInt(localStorage.getItem('botc_seat_size_pct'), 10);
+    this.seatSizePct = Number.isFinite(stored) ? Math.min(200, Math.max(55, stored)) : 100;
   }
 
   _loadFastVoting() {
@@ -613,6 +616,66 @@ export class BotcApp extends LitElement {
     this.requestUpdate();
   }
 
+  // Randomly assign unique script roles to every non-traveler seat following
+  // the official townsfolk/outsider/minion/demon distribution for the
+  // current (traveler-adjusted) player count — used by the Night 1 guide's
+  // "🎲 Randomize" button. Travelers sit outside the standard distribution so
+  // any seat already holding one is left untouched (mirrors the traveler
+  // handling in botc-charcount-modal.js's _effectivePlayerCount()).
+  _randomizeRoles() {
+    const roles = getRoles(this.script);
+    const travelerNames = new Set(roles.filter(r => r.cat === 'traveler').map(r => r.name));
+    const total = this.seatCount || this.seats.length || 0;
+    const travelerIdx = new Set();
+    this.seats.forEach((s, i) => {
+      const roleName = s?.trueRole || s?.role;
+      if (roleName && travelerNames.has(roleName)) travelerIdx.add(i);
+    });
+    const effective = Math.max(0, total - travelerIdx.size);
+    let colIdx;
+    if (effective < 5) colIdx = CHARCOUNT_COLS.indexOf(5);
+    else if (effective < 15) colIdx = CHARCOUNT_COLS.indexOf(effective);
+    else colIdx = CHARCOUNT_COLS.indexOf('15+');
+
+    const cc = getCharacterCount(this.script);
+    const needed = {
+      townsfolk: cc.rows?.[0]?.[colIdx] || 0,
+      outsider:  cc.rows?.[1]?.[colIdx] || 0,
+      minion:    cc.rows?.[2]?.[colIdx] || 0,
+      demon:     cc.rows?.[3]?.[colIdx] || 0,
+    };
+
+    const shuffle = arr => {
+      const a = [...arr];
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    };
+
+    // Pick (without replacement) the needed count from each category, then
+    // shuffle the combined picks so categories aren't seated in visible blocks.
+    const pool = [];
+    for (const cat of ['townsfolk', 'outsider', 'minion', 'demon']) {
+      const avail = shuffle(roles.filter(r => r.cat === cat).map(r => r.name));
+      pool.push(...avail.slice(0, needed[cat]));
+    }
+    const assignOrder = shuffle(pool);
+
+    const targetIdx = [];
+    for (let i = 0; i < total; i++) if (!travelerIdx.has(i)) targetIdx.push(i);
+
+    const seats = [...this.seats];
+    targetIdx.forEach((seatIdx, n) => {
+      if (n >= assignOrder.length) return;
+      seats[seatIdx] = { ...seats[seatIdx], trueRole: assignOrder[n] };
+    });
+    this.seats = seats;
+    this._saveState();
+    this.requestUpdate();
+  }
+
   async _exportScriptBackup(scriptData) {
     try {
       // Standard BotC JSON script format
@@ -730,7 +793,7 @@ export class BotcApp extends LitElement {
         changesCollapsed: this.changesCollapsed,
         poisonedCollapsed: this.poisonedCollapsed,
         storyView: this.storyView,
-        compactMode: this.compactMode,
+        seatSizePct: this.seatSizePct,
         hideRole: this.hideRole,
         hideDeadPlayers: this.hideDeadPlayers,
       },
@@ -914,7 +977,9 @@ export class BotcApp extends LitElement {
     this.changesCollapsed = !!app.changesCollapsed;
     this.poisonedCollapsed = app.poisonedCollapsed === undefined ? true : !!app.poisonedCollapsed;
     this.storyView = !!app.storyView;
-    this.compactMode = !!app.compactMode;
+    this.seatSizePct = typeof app.seatSizePct === 'number'
+      ? Math.min(200, Math.max(55, app.seatSizePct))
+      : (app.compactMode ? 55 : 100);
     this.hideRole = !!app.hideRole;
     this.hideDeadPlayers = !!app.hideDeadPlayers;
 
@@ -932,7 +997,7 @@ export class BotcApp extends LitElement {
     this._nomsOpen = false;
 
     this._applyStoryView();
-    this._applyCompactMode();
+    this._applySeatSizePct();
     this._applyHideRole();
     this._applyHideDeadPlayers();
 
@@ -972,10 +1037,10 @@ export class BotcApp extends LitElement {
     }
   }
 
-  _applyCompactMode() {
-    document.body.classList.toggle('compact-mode', this.compactMode);
+  _applySeatSizePct() {
+    document.documentElement.style.setProperty('--seat-scale', String(this.seatSizePct / 100));
     try {
-      localStorage.setItem('botc_compact_mode', this.compactMode ? 'on' : 'off');
+      localStorage.setItem('botc_seat_size_pct', String(this.seatSizePct));
     } catch(e) {}
   }
 
@@ -1561,8 +1626,8 @@ export class BotcApp extends LitElement {
     this.requestUpdate();
   }
 
-  // Opens the standalone Night Guide wizard popup, for the grimoire banner
-  // button (storyteller mode, night only).
+  // Opens the standalone Night Guide wizard popup, triggered by tapping the
+  // center moon icon on the circle (storyteller mode, night only).
   _openNightGuide() {
     this._nightGuideOpen = true;
     this.requestUpdate();
@@ -1594,17 +1659,23 @@ export class BotcApp extends LitElement {
     e.preventDefault();
     const ghost = e.currentTarget.cloneNode(true);
     ghost.classList.add('reminder-chip-ghost');
-    ghost.style.left = `${e.clientX}px`;
-    ghost.style.top  = `${e.clientY}px`;
+    const startX = e.touches ? e.touches[0].clientX : e.clientX;
+    const startY = e.touches ? e.touches[0].clientY : e.clientY;
+    ghost.style.left = `${startX}px`;
+    ghost.style.top  = `${startY}px`;
     document.body.appendChild(ghost);
 
     let overSeatEl = null;
     let overTownEl = null;
+    let curX = startX, curY = startY, rafId = null;
 
-    const move = (cx, cy) => {
-      ghost.style.left = `${cx}px`;
-      ghost.style.top  = `${cy}px`;
-      const el = document.elementFromPoint(cx, cy);
+    // Live drag position is applied via a GPU-composited transform (rAF-throttled)
+    // instead of writing left/top on every pointer event — left/top forces a
+    // layout pass per update, which is what made the drag feel laggy.
+    const applyFrame = () => {
+      rafId = null;
+      ghost.style.transform = `translate(-50%, -50%) translate3d(${curX - startX}px, ${curY - startY}px, 0)`;
+      const el = document.elementFromPoint(curX, curY);
       const seatEl = el ? el.closest('.seat') : null;
       const townEl = (!seatEl && el) ? el.closest('.town-dropzone') : null;
       if (overSeatEl && overSeatEl !== seatEl) overSeatEl.classList.remove('reminder-drop-target');
@@ -1617,12 +1688,13 @@ export class BotcApp extends LitElement {
 
     const onMove = (ev) => {
       if (ev.cancelable) ev.preventDefault();
-      const cx = ev.touches ? ev.touches[0].clientX : ev.clientX;
-      const cy = ev.touches ? ev.touches[0].clientY : ev.clientY;
-      move(cx, cy);
+      curX = ev.touches ? ev.touches[0].clientX : ev.clientX;
+      curY = ev.touches ? ev.touches[0].clientY : ev.clientY;
+      if (rafId == null) rafId = requestAnimationFrame(applyFrame);
     };
 
     const onUp = () => {
+      if (rafId != null) { cancelAnimationFrame(rafId); rafId = null; }
       document.removeEventListener('mousemove', onMove);
       document.removeEventListener('mouseup',   onUp);
       document.removeEventListener('touchmove', onMove);
@@ -1669,7 +1741,8 @@ export class BotcApp extends LitElement {
     this.nomMode       = false;
     this.nomFrom       = null;
     this.round         = 1;
-    this.phase         = 'day';
+    // Storyteller mode runs the night guide/wizard from the start of the game.
+    this.phase         = this.storyView ? 'night' : 'day';
     this.gameEnded     = false;
     this.gameEndInfo   = null;
 
@@ -1701,7 +1774,8 @@ export class BotcApp extends LitElement {
     this.selected   = null;
     this.removeMode = false;
     this.round      = 1;
-    this.phase      = 'day';
+    // Storyteller mode runs the night guide/wizard from the start of the game.
+    this.phase      = this.storyView ? 'night' : 'day';
     this.gameEnded   = false;
     this.gameEndInfo = null;
 
@@ -1784,9 +1858,33 @@ export class BotcApp extends LitElement {
     const reminderChips = (this.storyView && this._reminderTrayOpen) ? this._buildReminderChips() : [];
 
     return html`
+      <!-- Side menu: hidden off-screen, slides in from the left edge -->
+      <button id="side-menu-handle" class="${this._sideMenuOpen ? 'side-menu-handle--open' : ''}"
+        title="Menu" aria-label="Open menu"
+        @click="${() => { this._sideMenuOpen = !this._sideMenuOpen; this.requestUpdate(); }}">${this._sideMenuOpen ? '‹' : '›'}</button>
+      <div id="side-menu-backdrop" class="${this._sideMenuOpen ? 'visible' : ''}"
+        @click="${() => { this._sideMenuOpen = false; this.requestUpdate(); }}"></div>
+      <nav id="side-menu" class="${this._sideMenuOpen ? 'open' : ''}">
+        <div class="side-menu-header side-menu-header-clickable" title="Close menu"
+          @click="${() => { this._sideMenuOpen = false; this.requestUpdate(); }}">
+          <span class="side-menu-title">Menu</span>
+        </div>
+        <button class="side-menu-item" title="Game Stats"
+          @click="${() => { this._statsOpen = true; this._sideMenuOpen = false; this.requestUpdate(); }}">
+          <span class="side-menu-item-icon">📈</span>
+          <span class="side-menu-item-label">Game Stats</span>
+        </button>
+        <button class="side-menu-item" title="Voting Analysis"
+          @click="${() => { this._votingAnalysisOpen = true; this._sideMenuOpen = false; this.requestUpdate(); }}">
+          <span class="side-menu-item-icon">📊</span>
+          <span class="side-menu-item-label">Voting Analysis</span>
+        </button>
+      </nav>
+
       <!-- Top bar -->
       <div id="topbar" class="${this.nomMode === 'votes' ? 'topbar-locked' : ''}">
-        <span class="bar-title">Town Square</span>
+        <span class="bar-title bar-title-clickable" title="Menu"
+          @click="${() => { this._sideMenuOpen = !this._sideMenuOpen; this.requestUpdate(); }}">Town Square</span>
 
         <div class="cycle-controls">
           <button class="cycle-btn" ?disabled="${step === 0}"
@@ -1817,8 +1915,6 @@ export class BotcApp extends LitElement {
             @click="${() => { this._notesOpen = true; this.requestUpdate(); }}">📜</button>
           <button class="topbar-icon-btn" title="Nominations"
             @click="${() => { this._nomsOpen = true; this.requestUpdate(); }}">⚖️</button>
-          <button class="topbar-icon-btn" title="Game Stats"
-            @click="${() => { this._statsOpen = true; this.requestUpdate(); }}">📈</button>
           <button class="topbar-icon-btn" title="Reference"
             @click="${() => { this._referenceOpen = true; this.requestUpdate(); }}">📖</button>
           ${this.storyView && this.phase === 'night' ? html`
@@ -1829,10 +1925,6 @@ export class BotcApp extends LitElement {
             @click="${() => { this._settingsOpen = true; this.requestUpdate(); }}">⚙️</button>
         </div>
       </div>
-
-      ${this.storyView && this.phase === 'night' ? html`
-        <button id="night-guide-banner" @click="${this._openNightGuide}">▶ Guide Me Through Tonight</button>
-      ` : nothing}
 
       <!-- Circle -->
       <div id="circle-wrap">
@@ -1845,6 +1937,7 @@ export class BotcApp extends LitElement {
           .removeMode="${this.removeMode}"
           .atMaxSeats="${this.seatCount >= MAX}"
           .storyView="${this.storyView}"
+          .seatScale="${this.seatSizePct / 100}"
           .nomMode="${this.nomMode}"
           .nomFrom="${this.nomFrom}"
           .nominations="${this.nominations}"
@@ -1863,6 +1956,7 @@ export class BotcApp extends LitElement {
           @seat-drag-end="${e => this._onSeatDragEnd(e.detail)}"
           @seat-reminder-remove="${e => this._removeReminderFromSeat(e.detail)}"
           @town-reminder-remove="${e => this._removeReminderFromTown(e.detail)}"
+          @guide-me-click="${this._openNightGuide}"
         ></botc-circle>
 
         <!-- Nomination step bar -->
@@ -1877,10 +1971,12 @@ export class BotcApp extends LitElement {
             </div>
             <div class="reminder-tray-chips">
               ${reminderChips.length ? reminderChips.map(c => html`
-                <div class="reminder-chip ${c.dead ? 'reminder-chip--dead' : ''} ${c.role === this._pendingReminderRole ? 'reminder-chip--target' : ''}"
+                <div class="reminder-chip ${c.dead ? 'reminder-chip--dead' : ''} ${c.role === this._pendingReminderRole ? 'reminder-chip--target' : ''} ${isWrongReminder(c.text) ? 'reminder-chip--wrong' : ''}"
                   @mousedown="${e => this._onReminderChipPointerDown(e, c)}"
                   @touchstart="${e => this._onReminderChipPointerDown(e, c)}">
-                  ${ROLE_ICONS[c.role] ? html`<img class="reminder-chip-icon" src="${ROLE_ICONS[c.role]}" alt="${c.role}">` : nothing}
+                  <span class="reminder-chip-circle">
+                    ${ROLE_ICONS[c.role] ? html`<img class="reminder-chip-icon" src="${ROLE_ICONS[c.role]}" alt="${c.role}" draggable="false">` : nothing}
+                  </span>
                   <span class="reminder-chip-text">${c.text}</span>
                   <span class="reminder-chip-sub">${c.seatName}</span>
                 </div>
@@ -2068,11 +2164,6 @@ export class BotcApp extends LitElement {
           this._nomsOpen = false;
           this._startNomMode();
         }}"
-        @open-voting-analysis="${() => {
-          this._nomsOpen = false;
-          this._votingAnalysisOpen = true;
-          this.requestUpdate();
-        }}"
         @modal-close="${() => {
           this._nomsOpen = false;
           this.requestUpdate();
@@ -2102,7 +2193,7 @@ export class BotcApp extends LitElement {
         .allRoles="${getAllRoles()}"
         .selectedCustomScript="${this.customScripts.find(s => s.id === this.script) || null}"
         .storyView="${this.storyView}"
-        .compactMode="${this.compactMode}"
+        .seatSizePct="${this.seatSizePct}"
         .fastVoting="${this.fastVoting}"
         .hasBgImage="${this.hasBgImage}"
         .bgFog="${this.bgFog}"
@@ -2139,9 +2230,9 @@ export class BotcApp extends LitElement {
           this._applyStoryView();
           this.requestUpdate();
         }}"
-        @compact-mode-toggle="${() => {
-          this.compactMode = !this.compactMode;
-          this._applyCompactMode();
+        @seat-size-change="${e => {
+          this.seatSizePct = e.detail.pct;
+          this._applySeatSizePct();
           this.requestUpdate();
         }}"
         @fast-voting-toggle="${() => {
@@ -2257,6 +2348,7 @@ export class BotcApp extends LitElement {
         @goto-grimoire="${e => this._onGotoGrimoire(e.detail.role)}"
         @pick-bluffs="${() => { this._bluffPickerOpen = true; this.requestUpdate(); }}"
         @show-sign="${() => { this._signModalOpen = true; this.requestUpdate(); }}"
+        @randomize-setup="${() => this._randomizeRoles()}"
         @modal-close="${() => {
           this._nightGuideOpen = false;
           this.requestUpdate();
