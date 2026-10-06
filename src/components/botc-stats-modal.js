@@ -568,7 +568,7 @@ export class BotcStatsModal extends LitElement {
           <div id="stats-toolbar">
             <span class="toolbar-title">📈 Game Stats</span>
             <button class="btn btn-toolbar-close"
-              @click="${this._onClose}">✕ Close</button>
+              @click="${this._onClose}">✕</button>
           </div>
           <div id="stats-body">
             <input type="file" id="stats-folder-input" webkitdirectory multiple style="display:none"

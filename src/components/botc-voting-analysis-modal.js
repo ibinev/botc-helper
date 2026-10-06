@@ -403,7 +403,7 @@ export class BotcVotingAnalysisModal extends LitElement {
         <div id="va-sheet">
           <div id="va-toolbar">
             <span class="toolbar-title">📊 Voting Patterns</span>
-            <button class="btn btn-toolbar-close" @click="${this._onClose}">✕ Close</button>
+            <button class="btn btn-toolbar-close" @click="${this._onClose}">✕</button>
           </div>
           <div id="va-body">
             ${totalNoms === 0 ? html`

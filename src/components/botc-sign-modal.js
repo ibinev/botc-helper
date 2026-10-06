@@ -266,6 +266,9 @@ export class BotcSignModal extends LitElement {
         <div class="nightguide-card">
           <div class="nightguide-header">
             <span class="nightguide-title">🪧 Show Sign</span>
+            <div class="nightguide-header-actions">
+              <button class="btn btn-toolbar-close" @click="${this._dismiss}">✕</button>
+            </div>
           </div>
           <div class="nightguide-body ref-body--center">
             ${this._step === 'picker' ? this._renderPicker()

@@ -1380,7 +1380,7 @@ body.hide-role .town-reminder-strip { display: none; }
 .va-contra-item .va-name { font-weight: 700; }
 
 /* ── Topbar extras ────────────────────────────────────── */
-.btn-move-done { border-color: var(--gold); color: var(--gold-light); flex-shrink: 0; }
+.btn-move-done { border-color: var(--gold); color: var(--gold-light); flex-shrink: 0; padding: 5px 10px; font-size: 14px; font-weight: 700; }
 .btn-remove-done { border-color: rgba(192,57,43,0.8); color: #ffd8d3; flex-shrink: 0; }
 .topbar-right  { display: flex; align-items: center; gap: 8px; margin-left: auto; flex-shrink: 0; }
 

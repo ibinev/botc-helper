@@ -2029,8 +2029,8 @@ export class BotcApp extends LitElement {
         </div>
 
         ${this.moveMode ? html`
-          <button class="btn-sm btn-move-done"
-            @click="${() => { this.moveMode = false; this.removeMode = false; this.requestUpdate(); }}">✓ Done</button>
+          <button class="btn-sm btn-move-done" title="Done moving seats"
+            @click="${() => { this.moveMode = false; this.removeMode = false; this.requestUpdate(); }}">✓</button>
         ` : nothing}
 
         <div class="topbar-right">
