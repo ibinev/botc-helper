@@ -76,6 +76,7 @@ export class BotcApp extends LitElement {
     _killedByPopupValue: { state: true },
     _endGameOpen:        { state: true },
     _reminderTrayOpen:   { state: true },
+    _reminderDragging:   { state: true },
     _pendingReminderRole: { state: true },
     _bluffPickerOpen:    { state: true },
     _nightGuideOpen:     { state: true },
@@ -144,6 +145,7 @@ export class BotcApp extends LitElement {
     this._killedByPopupValue = '';
     this._endGameOpen        = false;
     this._reminderTrayOpen   = false;
+    this._reminderDragging   = false;
     this._pendingReminderRole = null;
     this._bluffPickerOpen    = false;
     this._nightGuideOpen     = false;
@@ -186,33 +188,93 @@ export class BotcApp extends LitElement {
   }
 
   // Dragging a finger rightwards starting from the screen's left edge opens
-  // the side menu, mirroring the native drawer gesture found in most mobile apps.
+  // the side menu, and dragging leftward anywhere on the open menu closes it —
+  // both track the finger 1:1 (like a native drawer) and only snap to the
+  // nearest resting state once the finger lifts, rather than jumping open
+  // the instant a fixed distance is crossed.
   _bindSideMenuEdgeSwipe() {
-    const EDGE_ZONE = 24, OPEN_THRESHOLD = 60;
-    let x0 = 0, y0 = 0, armed = false;
-    this._onEdgeTouchStart = (e) => {
-      if (this._sideMenuOpen) { armed = false; return; }
-      const t = e.touches[0];
-      armed = t.clientX <= EDGE_ZONE;
-      x0 = t.clientX; y0 = t.clientY;
+    const EDGE_ZONE = 24, DEAD_ZONE = 6;
+    let x0 = 0, y0 = 0, potential = false, dragging = false, closingDrag = false;
+    let menuEl = null, backdropEl = null, handleEl = null, menuW = 220;
+
+    // While dragging, bypass the class-driven transition and follow the
+    // finger directly via inline styles (p: 0 = fully closed, 1 = fully open).
+    const setProgress = (p) => {
+      p = Math.max(0, Math.min(1, p));
+      menuEl.style.transition = 'none';
+      menuEl.style.transform = `translateX(${(p - 1) * 100}%)`;
+      backdropEl.style.transition = 'none';
+      backdropEl.style.opacity = String(p);
+      handleEl.style.transition = 'none';
+      handleEl.style.left = `${p * menuW}px`;
     };
-    this._onEdgeTouchMove = (e) => {
-      if (!armed) return;
+
+    // Apply the committed class state directly (so the stylesheet's own
+    // transition animates from wherever the drag left off), then sync the
+    // reactive property for everything else that depends on it.
+    const settle = (open) => {
+      menuEl.classList.toggle('open', open);
+      backdropEl.classList.toggle('visible', open);
+      handleEl.classList.toggle('side-menu-handle--open', open);
+      menuEl.style.transition = '';
+      menuEl.style.transform = '';
+      backdropEl.style.transition = '';
+      backdropEl.style.opacity = '';
+      handleEl.style.transition = '';
+      handleEl.style.left = '';
+      this._sideMenuOpen = open;
+      this.requestUpdate();
+    };
+
+    this._onEdgeTouchStart = (e) => {
+      menuEl = this.querySelector('#side-menu');
+      backdropEl = this.querySelector('#side-menu-backdrop');
+      handleEl = this.querySelector('#side-menu-handle');
+      if (!menuEl || !backdropEl || !handleEl) { potential = false; return; }
+      menuW = menuEl.offsetWidth || 220;
       const t = e.touches[0];
-      const dx = t.clientX - x0, dy = t.clientY - y0;
-      // Finger drifted mostly vertical (likely a page scroll attempt) — abandon.
-      if (Math.abs(dy) > 40 && Math.abs(dy) > Math.abs(dx)) { armed = false; return; }
-      if (dx > OPEN_THRESHOLD) {
-        armed = false;
-        this._sideMenuOpen = true;
-        this.requestUpdate();
+      x0 = t.clientX; y0 = t.clientY;
+      dragging = false;
+      if (this._sideMenuOpen) {
+        // Don't arm a close-drag for taps starting on an actual nav control
+        // (the handle itself is a <button> but should still be draggable).
+        const onControl = !handleEl.contains(e.target) && e.target.closest('button, a, input, select, textarea');
+        closingDrag = !onControl && (menuEl.contains(e.target) || handleEl.contains(e.target));
+        potential = closingDrag;
+      } else {
+        closingDrag = false;
+        potential = t.clientX <= EDGE_ZONE;
       }
     };
-    this._onEdgeTouchEnd = () => { armed = false; };
+
+    this._onEdgeTouchMove = (e) => {
+      if (!potential && !dragging) return;
+      const t = e.touches[0];
+      const dx = t.clientX - x0, dy = t.clientY - y0;
+      if (!dragging) {
+        if (Math.abs(dx) < DEAD_ZONE && Math.abs(dy) < DEAD_ZONE) return;
+        // Finger drifted mostly vertical (likely a scroll attempt) — abandon.
+        if (Math.abs(dy) > Math.abs(dx)) { potential = false; return; }
+        dragging = true;
+      }
+      if (e.cancelable) e.preventDefault();
+      setProgress((closingDrag ? 1 : 0) + dx / menuW);
+    };
+
+    this._onEdgeTouchEnd = (e) => {
+      if (dragging) {
+        const t = e.changedTouches[0];
+        const dx = t.clientX - x0;
+        const p = Math.max(0, Math.min(1, (closingDrag ? 1 : 0) + dx / menuW));
+        settle(p > 0.5);
+      }
+      potential = false; dragging = false;
+    };
     document.addEventListener('touchstart', this._onEdgeTouchStart, { passive: true });
-    document.addEventListener('touchmove', this._onEdgeTouchMove, { passive: true });
+    document.addEventListener('touchmove', this._onEdgeTouchMove, { passive: false });
     document.addEventListener('touchend', this._onEdgeTouchEnd, { passive: true });
   }
+
 
   _updateAppHeight() {
     document.documentElement.style.setProperty('--app-vh', `${window.innerHeight}px`);
@@ -1689,18 +1751,20 @@ export class BotcApp extends LitElement {
   // the seat-drag gesture in botc-circle.js rather than native HTML5 DnD,
   // which doesn't work reliably on touch devices.
   _onReminderChipPointerDown(e, chip) {
-    e.preventDefault();
-    const ghost = e.currentTarget.cloneNode(true);
-    ghost.classList.add('reminder-chip-ghost');
-    const startX = e.touches ? e.touches[0].clientX : e.clientX;
-    const startY = e.touches ? e.touches[0].clientY : e.clientY;
-    ghost.style.left = `${startX}px`;
-    ghost.style.top  = `${startY}px`;
-    document.body.appendChild(ghost);
+    const isTouch = !!e.touches;
+    const chipEl = e.currentTarget; // currentTarget is nulled once this event finishes dispatching
+    const startX = isTouch ? e.touches[0].clientX : e.clientX;
+    const startY = isTouch ? e.touches[0].clientY : e.clientY;
 
+    let ghost = null;
     let overSeatEl = null;
     let overTownEl = null;
     let curX = startX, curY = startY, rafId = null;
+    // Touch only: the chip row can also be scrolled horizontally, so the
+    // first touchmove decides whether this gesture is a drag (lifting the
+    // token up, away from the tray) or a horizontal scroll — committed
+    // starts true for mouse (no scrolling ambiguity there).
+    let committed = !isTouch;
 
     // Live drag position is applied via a GPU-composited transform (rAF-throttled)
     // instead of writing left/top on every pointer event — left/top forces a
@@ -1719,20 +1783,45 @@ export class BotcApp extends LitElement {
       overTownEl = townEl;
     };
 
-    const onMove = (ev) => {
-      if (ev.cancelable) ev.preventDefault();
-      curX = ev.touches ? ev.touches[0].clientX : ev.clientX;
-      curY = ev.touches ? ev.touches[0].clientY : ev.clientY;
-      if (rafId == null) rafId = requestAnimationFrame(applyFrame);
+    // Hide the tray the moment the drag actually starts so it stops covering
+    // the seats behind/below it, and reveal the drag ghost in its place.
+    const startDrag = () => {
+      committed = true;
+      this._reminderDragging = true;
+      this.requestUpdate();
+      ghost = chipEl.cloneNode(true);
+      ghost.classList.add('reminder-chip-ghost');
+      ghost.style.left = `${startX}px`;
+      ghost.style.top  = `${startY}px`;
+      document.body.appendChild(ghost);
     };
 
-    const onUp = () => {
+    const cleanup = () => {
       if (rafId != null) { cancelAnimationFrame(rafId); rafId = null; }
       document.removeEventListener('mousemove', onMove);
       document.removeEventListener('mouseup',   onUp);
       document.removeEventListener('touchmove', onMove);
       document.removeEventListener('touchend',  onUp);
-      ghost.remove();
+      if (ghost) ghost.remove();
+    };
+
+    const onMove = (ev) => {
+      curX = ev.touches ? ev.touches[0].clientX : ev.clientX;
+      curY = ev.touches ? ev.touches[0].clientY : ev.clientY;
+      if (!committed) {
+        const dx = curX - startX, dy = curY - startY;
+        if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return;
+        if (Math.abs(dy) <= Math.abs(dx)) { cleanup(); return; } // horizontal — let the tray scroll natively
+        if (ev.cancelable) ev.preventDefault();
+        startDrag();
+      } else if (ev.cancelable) ev.preventDefault();
+      if (rafId == null) rafId = requestAnimationFrame(applyFrame);
+    };
+
+    const onUp = () => {
+      cleanup();
+      if (!committed) return;
+      this._reminderDragging = false;
       if (overSeatEl) {
         overSeatEl.classList.remove('reminder-drop-target');
         const idx = parseInt(overSeatEl.dataset.idx, 10);
@@ -1741,13 +1830,16 @@ export class BotcApp extends LitElement {
         overTownEl.classList.remove('reminder-drop-target');
         this._addReminderToTown(chip);
       }
+      this.requestUpdate();
     };
 
+    if (!isTouch) { e.preventDefault(); startDrag(); }
     document.addEventListener('mousemove', onMove);
     document.addEventListener('mouseup',   onUp);
     document.addEventListener('touchmove', onMove, { passive: false });
     document.addEventListener('touchend',  onUp);
   }
+
 
   // ── Reset ────────────────────────────────────────────────────────────
   _doReset() {
@@ -1768,6 +1860,8 @@ export class BotcApp extends LitElement {
 
     this.seats         = Array.from({ length: this.seatCount }, () => blankSeat());
     this.seatPositions = Array.from({ length: this.seatCount }, () => null);
+    this.townReminders = [];
+    this.demonBluffs   = [];
     this.selected      = null;
     this.moveMode      = false;
     this.removeMode    = false;
@@ -1790,6 +1884,8 @@ export class BotcApp extends LitElement {
 
   _doSoftReset() {
     this.seats = this.seats.map(s => Object.assign(blankSeat(), { name: s.name }));
+    this.townReminders = [];
+    this.demonBluffs   = [];
 
     this.gameNotes         = {};
     this.nominations       = {};
@@ -1997,7 +2093,7 @@ export class BotcApp extends LitElement {
 
         <!-- Reminder token tray (Storyteller mode, night only) -->
         ${this.storyView && this.phase === 'night' && this._reminderTrayOpen ? html`
-          <div id="reminder-tray">
+          <div id="reminder-tray" class="${this._reminderDragging ? 'reminder-tray--dragging' : ''}">
             <div class="reminder-tray-header">
               <span>${this._pendingReminderRole ? html`🎯 Prepare <strong>${this._pendingReminderRole}</strong>'s token` : '🔖 Drag a token onto a seat'}</span>
               <button class="reminder-tray-close" @click="${() => { this._reminderTrayOpen = false; this._pendingReminderRole = null; this.requestUpdate(); }}">✕</button>

@@ -599,10 +599,10 @@ body.hide-role .pli-role        { display: none; }
   position: absolute; z-index: 4;
   display: flex; flex-wrap: wrap; gap: 4px; pointer-events: auto;
 }
-.seat-reminder-strip--bottom { top: calc(100% + 8px); left: 50%; transform: translateX(-50%); width: 198px; justify-content: center; }
-.seat-reminder-strip--top    { bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); width: 198px; justify-content: center; }
-.seat-reminder-strip--left   { right: calc(100% + 8px); top: 50%; transform: translateY(-50%); flex-direction: column; max-height: 170px; align-content: flex-start; }
-.seat-reminder-strip--right  { left: calc(100% + 8px); top: 50%; transform: translateY(-50%); flex-direction: column; max-height: 170px; align-content: flex-start; }
+.seat-reminder-strip--bottom { top: calc(100% + 2px); left: 50%; transform: translateX(-50%); width: 198px; justify-content: center; }
+.seat-reminder-strip--top    { bottom: calc(100% + 2px); left: 50%; transform: translateX(-50%); width: 198px; justify-content: center; }
+.seat-reminder-strip--left   { right: calc(100% + 2px); top: 50%; transform: translateY(-50%); flex-direction: column; max-height: 170px; align-content: flex-start; }
+.seat-reminder-strip--right  { left: calc(100% + 2px); top: 50%; transform: translateY(-50%); flex-direction: column; max-height: 170px; align-content: flex-start; }
 .seat-reminder-token {
   width: 36px; height: 36px; border-radius: 50%; padding: 0; flex-shrink: 0;
   background: rgba(20,14,8,0.92); border: 1.5px solid var(--gold); cursor: pointer;
@@ -624,14 +624,18 @@ body.hide-role .town-reminder-strip { display: none; }
   background: rgba(var(--bg-surface-rgb), 0.92); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
   border-top: 1px solid var(--border-strong); box-shadow: 0 -4px 20px rgba(0,0,0,0.5);
   padding: 10px 12px max(10px, env(safe-area-inset-bottom, 10px));
+  transition: opacity var(--duration-fast) var(--ease-standard), transform var(--duration-fast) var(--ease-standard);
 }
+/* While a token is actively being dragged, get the whole tray out of the way
+   so seats it would otherwise cover (near the bottom edge) can be dropped on. */
+#reminder-tray.reminder-tray--dragging { opacity: 0; transform: translateY(12px); pointer-events: none; }
 .reminder-tray-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; font-size: 12px; color: var(--gold-light); font-weight: 600; }
 .reminder-tray-close { width: 24px; height: 24px; border-radius: 50%; border: 0.5px solid var(--border); background: var(--bg-surface); color: var(--text-primary); cursor: pointer; }
 .reminder-tray-chips { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; }
 .reminder-tray-empty { font-size: 12px; color: var(--text-muted); font-style: italic; padding: 6px 2px; }
 .reminder-chip {
   flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 4px;
-  width: 76px; cursor: grab; touch-action: none; user-select: none; -webkit-tap-highlight-color: transparent;
+  width: 76px; cursor: grab; touch-action: pan-x; user-select: none; -webkit-tap-highlight-color: transparent;
 }
 .reminder-chip-circle {
   width: 56px; height: 56px; border-radius: 50%; flex-shrink: 0;
