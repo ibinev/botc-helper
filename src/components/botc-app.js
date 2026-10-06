@@ -182,6 +182,36 @@ export class BotcApp extends LitElement {
       else this._updateAppHeight();
     });
     window.addEventListener('pagehide', this._onPageHide = () => this._flushPersistence());
+    this._bindSideMenuEdgeSwipe();
+  }
+
+  // Dragging a finger rightwards starting from the screen's left edge opens
+  // the side menu, mirroring the native drawer gesture found in most mobile apps.
+  _bindSideMenuEdgeSwipe() {
+    const EDGE_ZONE = 24, OPEN_THRESHOLD = 60;
+    let x0 = 0, y0 = 0, armed = false;
+    this._onEdgeTouchStart = (e) => {
+      if (this._sideMenuOpen) { armed = false; return; }
+      const t = e.touches[0];
+      armed = t.clientX <= EDGE_ZONE;
+      x0 = t.clientX; y0 = t.clientY;
+    };
+    this._onEdgeTouchMove = (e) => {
+      if (!armed) return;
+      const t = e.touches[0];
+      const dx = t.clientX - x0, dy = t.clientY - y0;
+      // Finger drifted mostly vertical (likely a page scroll attempt) — abandon.
+      if (Math.abs(dy) > 40 && Math.abs(dy) > Math.abs(dx)) { armed = false; return; }
+      if (dx > OPEN_THRESHOLD) {
+        armed = false;
+        this._sideMenuOpen = true;
+        this.requestUpdate();
+      }
+    };
+    this._onEdgeTouchEnd = () => { armed = false; };
+    document.addEventListener('touchstart', this._onEdgeTouchStart, { passive: true });
+    document.addEventListener('touchmove', this._onEdgeTouchMove, { passive: true });
+    document.addEventListener('touchend', this._onEdgeTouchEnd, { passive: true });
   }
 
   _updateAppHeight() {
@@ -216,6 +246,9 @@ export class BotcApp extends LitElement {
     window.removeEventListener('pageshow', this._onPageShow);
     document.removeEventListener('visibilitychange', this._onVisibilityChange);
     window.removeEventListener('pagehide', this._onPageHide);
+    document.removeEventListener('touchstart', this._onEdgeTouchStart);
+    document.removeEventListener('touchmove', this._onEdgeTouchMove);
+    document.removeEventListener('touchend', this._onEdgeTouchEnd);
     this._unbindVisualViewport();
   }
 
