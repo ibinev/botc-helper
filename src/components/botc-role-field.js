@@ -314,7 +314,14 @@ export class BotcRoleField extends LitElement {
 
       ${infoRoles.length ? html`
         <div class="bluff-reveal-backdrop"
-          @click="${e => { if (e.target === e.currentTarget) this._closeInfo(); }}">
+          @click="${e => {
+            // On touch devices there's little room to tap *outside* the card to
+            // dismiss (it nearly fills the screen), so any tap inside also closes
+            // it — except the "Player tips" toggle, which stops propagation to
+            // stay interactive. Desktop (mouse+hover) keeps click-outside-only.
+            const isTouch = !window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+            if (isTouch || e.target === e.currentTarget) this._closeInfo();
+          }}">
           <div class="bluff-reveal-card bluff-reveal-card--info" role="dialog" aria-modal="true" aria-label="Role details">
             ${infoRoles.map(role => html`
               <div class="bluff-reveal-item" data-role-item="${role.name}">
@@ -324,7 +331,7 @@ export class BotcRoleField extends LitElement {
                 <div class="bluff-reveal-name">${role.name}</div>
                 <div class="bluff-reveal-ability">${role.ability || 'No description available.'}</div>
                 ${getRoleHint(role.id) ? html`
-                  <div class="collapsible-header role-hint-header" @click="${() => this._toggleHint(role.name)}">
+                  <div class="collapsible-header role-hint-header" @click="${e => { e.stopPropagation(); this._toggleHint(role.name); }}">
                     <span class="role-hint-label">💡 Player tips</span>
                     <span class="collapsible-chevron ${this._hintsOpen.has(role.name) ? '' : 'collapsible-chevron--collapsed'}">▾</span>
                   </div>

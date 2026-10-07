@@ -98,12 +98,33 @@ export class BotcSignModal extends LitElement {
     this.dispatchEvent(new CustomEvent('modal-close', { bubbles: true, composed: true }));
   }
 
+  // Seat names currently assigned a trueRole in the given category ('demon'/'minion').
+  _seatsByTeam(cat) {
+    const roles = getRoles(this.script);
+    return (this.seats || [])
+      .map((s, i) => ({ name: s?.name || `Seat ${i + 1}`, roleName: s?.trueRole || s?.role }))
+      .filter(({ roleName }) => roleName && roles.find(r => r.name === roleName)?.cat === cat)
+      .map(({ name }) => name);
+  }
+
   _choosePreset(preset) {
     this._preset = preset;
     this._selectedNames = [];
     if (preset.kind === 'static') {
       this._reveal = { kind: 'custom', text: preset.text };
       this._step = 'reveal';
+    } else if (preset.key === 'demon-is') {
+      // Auto-reveal when exactly one demon is assigned; otherwise fall back to manual picking.
+      const demons = this._seatsByTeam('demon');
+      if (demons.length === 1) {
+        this._pickPlayer(demons[0]);
+      } else {
+        this._step = 'player';
+      }
+    } else if (preset.key === 'minions-are') {
+      // Pre-check the minion seats from the current role distribution; user can still adjust.
+      this._selectedNames = this._seatsByTeam('minion');
+      this._step = 'players';
     } else {
       this._step = preset.kind === 'role' ? 'role' : preset.kind === 'players' ? 'players' : 'player';
     }

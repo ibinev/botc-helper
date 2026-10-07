@@ -301,16 +301,6 @@ body.no-bg-fog.night-cycle botc-app::before, body.no-bg-fog.night-cycle #app::be
 .topbar-icon-btn:active { background: rgba(201,151,58,0.12); border-color: var(--gold); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05), 0 0 0 1px rgba(201,151,58,0.22); }
 
 /* ── Side menu (left edge, hidden until opened) ──────────────────────── */
-#side-menu-handle {
-  position: fixed; top: 50%; left: 0; transform: translateY(-50%);
-  width: 18px; height: 48px; border: 1px solid rgba(201,151,58,0.48); border-left: none;
-  border-radius: 0 10px 10px 0; background: var(--bg-surface); color: var(--gold-light);
-  font-size: 12px; line-height: 1; display: flex; align-items: center; justify-content: center;
-  cursor: pointer; z-index: 90; box-shadow: 2px 0 8px rgba(0,0,0,0.4);
-  -webkit-tap-highlight-color: transparent; transition: left var(--duration-base) var(--ease-standard);
-}
-#side-menu-handle.side-menu-handle--open { left: 220px; }
-@media (max-width: 300px) { #side-menu-handle.side-menu-handle--open { left: 80vw; } }
 #side-menu-backdrop {
   position: fixed; inset: 0; z-index: 88; background: rgba(var(--scrim-rgb), 0.55);
   opacity: 0; pointer-events: none; transition: opacity var(--duration-base) var(--ease-standard);
@@ -592,17 +582,19 @@ body.hide-role .pli-role        { display: none; }
 #btn-nom.threshold-reached { border-color: #5a9e2f; color: #8fca4b; background: rgba(90,158,47,0.18); }
 
 /* ── Reminder tokens (Storyteller mode) ─────────────── */
-/* Base strip is unanchored — one of the directional modifiers below (chosen
-   per-seat in JS based on which side of the circle the seat sits on) pins it
-   toward the center "sun/moon", not off the outer edge of the town square. */
+/* Positioned per-seat in JS (left/top inline style) along the exact vector
+   from the seat toward the circle's center "sun/moon", so it sits at the
+   right angle even for seats near a diagonal/corner of the town square —
+   not just snapped to directly above/below/left/right. The --row/--col
+   modifier only controls which way the tokens wrap (to avoid the strip
+   running off the edge of the screen near the left/right sides). */
 .seat-reminder-strip {
   position: absolute; z-index: 4;
   display: flex; flex-wrap: wrap; gap: 4px; pointer-events: auto;
+  transform: translate(-50%, -50%);
 }
-.seat-reminder-strip--bottom { top: calc(100% + 2px); left: 50%; transform: translateX(-50%); width: 198px; justify-content: center; }
-.seat-reminder-strip--top    { bottom: calc(100% + 2px); left: 50%; transform: translateX(-50%); width: 198px; justify-content: center; }
-.seat-reminder-strip--left   { right: calc(100% + 2px); top: 50%; transform: translateY(-50%); flex-direction: column; max-height: 170px; align-content: flex-start; }
-.seat-reminder-strip--right  { left: calc(100% + 2px); top: 50%; transform: translateY(-50%); flex-direction: column; max-height: 170px; align-content: flex-start; }
+.seat-reminder-strip--row { flex-direction: row; width: 148px; justify-content: center; }
+.seat-reminder-strip--col { flex-direction: column; max-height: 170px; align-content: flex-start; }
 .seat-reminder-token {
   width: 36px; height: 36px; border-radius: 50%; padding: 0; flex-shrink: 0;
   background: rgba(20,14,8,0.92); border: 1.5px solid var(--gold); cursor: pointer;
@@ -944,7 +936,7 @@ body.hide-role .town-reminder-strip { display: none; }
    with multiple stacked roles the content can overflow/grow (tips toggled
    open), and centering an overflowing scrollable flex container clips
    content above scrollTop:0 and makes items jump as they expand/collapse. */
-.bluff-reveal-card.bluff-reveal-card--info { max-height: min(80dvh, 640px); overflow-x: hidden; overflow-y: auto; justify-content: flex-start; }
+.bluff-reveal-card.bluff-reveal-card--info { max-height: min(80dvh, calc(100dvh - var(--keyboard-inset) - 40px), 640px); overflow-x: hidden; overflow-y: auto; justify-content: flex-start; }
 .bluff-reveal-item .role-hint-header.collapsible-header,
 .bluff-reveal-item .role-hint-body { align-self: stretch; text-align: left; }
 
@@ -1157,8 +1149,11 @@ body.hide-role .town-reminder-strip { display: none; }
 .wizard-bluffs-empty { font-size: 12px; color: var(--text-muted); }
 
 /* ── Demon bluffs "show big" reveal (easy-to-read fullscreen card) ─── */
-.bluff-reveal-backdrop { position: fixed; inset: 0; z-index: 340; background: rgba(var(--scrim-rgb), 0.9); display: flex; align-items: center; justify-content: center; padding: 20px; }
-.bluff-reveal-card { --bluff-scale: 1; position: relative; width: min(420px, 100%); max-height: min(90dvh, 760px); overflow: hidden; display: flex; flex-direction: column; align-items: stretch; justify-content: center; border-radius: 18px; border: 1px solid var(--gold); background: var(--chrome-surface); box-shadow: var(--shadow-xl); padding: 24px 24px 16px; box-sizing: border-box; }
+/* padding-bottom grows with --keyboard-inset so an open on-screen keyboard
+   (e.g. tapping the role info icon without blurring a focused text combo)
+   doesn't push the centered card down behind it. */
+.bluff-reveal-backdrop { position: fixed; inset: 0; z-index: 340; background: rgba(var(--scrim-rgb), 0.9); display: flex; align-items: center; justify-content: center; padding: 20px; padding-bottom: calc(20px + var(--keyboard-inset)); }
+.bluff-reveal-card { --bluff-scale: 1; position: relative; width: min(420px, 100%); max-height: min(90dvh, calc(100dvh - var(--keyboard-inset) - 40px), 760px); overflow: hidden; display: flex; flex-direction: column; align-items: stretch; justify-content: center; border-radius: 18px; border: 1px solid var(--gold); background: var(--chrome-surface); box-shadow: var(--shadow-xl); padding: 24px 24px 16px; box-sizing: border-box; }
 .bluff-reveal-item { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: calc(6px * var(--bluff-scale)); text-align: center; padding: calc(10px * var(--bluff-scale)) 8px; }
 .bluff-reveal-item + .bluff-reveal-item { border-top: 0.5px solid var(--border); }
 .bluff-reveal-icon { width: calc(90px * var(--bluff-scale)); height: calc(90px * var(--bluff-scale)); object-fit: contain; border-radius: 50%; border: 2px solid var(--gold); background: rgba(0,0,0,0.2); flex-shrink: 0; }

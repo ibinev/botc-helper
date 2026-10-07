@@ -188,14 +188,15 @@ export class BotcApp extends LitElement {
   }
 
   // Dragging a finger rightwards starting from the screen's left edge opens
-  // the side menu, and dragging leftward anywhere on the open menu closes it —
-  // both track the finger 1:1 (like a native drawer) and only snap to the
-  // nearest resting state once the finger lifts, rather than jumping open
-  // the instant a fixed distance is crossed.
+  // the side menu; closing mirrors that exactly but backwards — starting from
+  // the open drawer's free (right) edge and dragging leftward. Both track the
+  // finger 1:1 (like a native drawer) and only snap to the nearest resting
+  // state once the finger lifts, rather than jumping the instant a fixed
+  // distance is crossed.
   _bindSideMenuEdgeSwipe() {
     const EDGE_ZONE = 24, DEAD_ZONE = 6;
     let x0 = 0, y0 = 0, potential = false, dragging = false, closingDrag = false;
-    let menuEl = null, backdropEl = null, handleEl = null, menuW = 220;
+    let menuEl = null, backdropEl = null, menuW = 220;
 
     // While dragging, bypass the class-driven transition and follow the
     // finger directly via inline styles (p: 0 = fully closed, 1 = fully open).
@@ -205,8 +206,6 @@ export class BotcApp extends LitElement {
       menuEl.style.transform = `translateX(${(p - 1) * 100}%)`;
       backdropEl.style.transition = 'none';
       backdropEl.style.opacity = String(p);
-      handleEl.style.transition = 'none';
-      handleEl.style.left = `${p * menuW}px`;
     };
 
     // Apply the committed class state directly (so the stylesheet's own
@@ -215,13 +214,10 @@ export class BotcApp extends LitElement {
     const settle = (open) => {
       menuEl.classList.toggle('open', open);
       backdropEl.classList.toggle('visible', open);
-      handleEl.classList.toggle('side-menu-handle--open', open);
       menuEl.style.transition = '';
       menuEl.style.transform = '';
       backdropEl.style.transition = '';
       backdropEl.style.opacity = '';
-      handleEl.style.transition = '';
-      handleEl.style.left = '';
       this._sideMenuOpen = open;
       this.requestUpdate();
     };
@@ -229,17 +225,14 @@ export class BotcApp extends LitElement {
     this._onEdgeTouchStart = (e) => {
       menuEl = this.querySelector('#side-menu');
       backdropEl = this.querySelector('#side-menu-backdrop');
-      handleEl = this.querySelector('#side-menu-handle');
-      if (!menuEl || !backdropEl || !handleEl) { potential = false; return; }
+      if (!menuEl || !backdropEl) { potential = false; return; }
       menuW = menuEl.offsetWidth || 220;
       const t = e.touches[0];
       x0 = t.clientX; y0 = t.clientY;
       dragging = false;
       if (this._sideMenuOpen) {
-        // Don't arm a close-drag for taps starting on an actual nav control
-        // (the handle itself is a <button> but should still be draggable).
-        const onControl = !handleEl.contains(e.target) && e.target.closest('button, a, input, select, textarea');
-        closingDrag = !onControl && (menuEl.contains(e.target) || handleEl.contains(e.target));
+        // Mirror of the opening edge-zone, anchored to the drawer's free edge.
+        closingDrag = t.clientX >= menuW - EDGE_ZONE;
         potential = closingDrag;
       } else {
         closingDrag = false;
@@ -1987,10 +1980,8 @@ export class BotcApp extends LitElement {
     const reminderChips = (this.storyView && this._reminderTrayOpen) ? this._buildReminderChips() : [];
 
     return html`
-      <!-- Side menu: hidden off-screen, slides in from the left edge -->
-      <button id="side-menu-handle" class="${this._sideMenuOpen ? 'side-menu-handle--open' : ''}"
-        title="Menu" aria-label="Open menu"
-        @click="${() => { this._sideMenuOpen = !this._sideMenuOpen; this.requestUpdate(); }}">${this._sideMenuOpen ? '‹' : '›'}</button>
+      <!-- Side menu: hidden off-screen, opened via the bar-title tap or an
+           edge-swipe gesture from the screen's left edge (no visible handle). -->
       <div id="side-menu-backdrop" class="${this._sideMenuOpen ? 'visible' : ''}"
         @click="${() => { this._sideMenuOpen = false; this.requestUpdate(); }}"></div>
       <nav id="side-menu" class="${this._sideMenuOpen ? 'open' : ''}">

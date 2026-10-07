@@ -128,21 +128,19 @@ export class BotcCircle extends LitElement {
     return defaultPos(i, this.seats.length, this._w, this._h, this.seatScale);
   }
 
-  // Which side of the seat should its reminder-token strip hug so the tokens
-  // sit toward the circle's center (sun/moon) rather than hanging off the
-  // outer edge of the town square. Seats are U-shaped around the container
-  // (left side / bottom row / right side, top left open) and are never
-  // individually rotated, so "inward" is simply whichever axis (x or y)
-  // deviates from the container's center the most. In story view the whole
-  // ring is flipped 180° (while each seat's own content counter-rotates back
-  // upright, net 0°), so the position used to pick a side must be flipped too.
-  _seatSide(pos) {
+  // Exact unit vector from this seat toward the circle's center (sun/moon),
+  // used to place its reminder-token strip precisely at that angle instead
+  // of snapping to one of 4 cardinal sides (which looked wrong for seats
+  // sitting near a diagonal/corner of the town square). In story view the
+  // whole ring is flipped 180° (while each seat's own content counter-rotates
+  // back upright, net 0°), so the position used here must be flipped too.
+  _towardCenter(pos) {
     const cx = this._w / 2, cy = this._h / 2;
     const sign = this.storyView ? -1 : 1;
-    const dx = (pos.x - cx) * sign;
-    const dy = (pos.y - cy) * sign;
-    if (Math.abs(dx) > Math.abs(dy)) return dx > 0 ? 'left' : 'right';
-    return dy > 0 ? 'top' : 'bottom';
+    const dx = (cx - pos.x) * sign;
+    const dy = (cy - pos.y) * sign;
+    const len = Math.hypot(dx, dy) || 1;
+    return { ux: dx / len, uy: dy / len };
   }
 
   // Reminders keep working even when they're displayed on a different
@@ -366,8 +364,12 @@ export class BotcCircle extends LitElement {
         ${isPoisonedNow
           ? html`<div class="seat-poison-badge" title="Poisoned"><img src="${ROLE_ICONS['Poisoner']}" alt="Poisoned"></div>`
           : nothing}
-        ${Array.isArray(s.reminders) && s.reminders.length ? html`
-          <div class="seat-reminder-strip seat-reminder-strip--${this._seatSide(pos)}">
+        ${Array.isArray(s.reminders) && s.reminders.length ? (() => {
+          const { ux, uy } = this._towardCenter(pos);
+          const axis = Math.abs(ux) > Math.abs(uy) ? 'col' : 'row';
+          return html`
+          <div class="seat-reminder-strip seat-reminder-strip--${axis}"
+            style="left:calc(50% + ${(ux * 58).toFixed(2)}%);top:calc(50% + ${(uy * 58).toFixed(2)}%)">
             ${s.reminders.map(r => html`
               <button type="button" class="seat-reminder-token ${this._isRoleDead(r.role) ? 'seat-reminder-token--source-dead' : ''} ${isWrongReminder(r.text) ? 'seat-reminder-token--wrong' : ''}" title="${r.text}${r.role ? ' (' + r.role + ')' : ''} — tap to remove"
                 @click="${e => {
@@ -380,7 +382,7 @@ export class BotcCircle extends LitElement {
               </button>
             `)}
           </div>
-        ` : nothing}
+        `; })() : nothing}
         <span class="seat-num">${i + 1}</span>
         <div class="seat-inner">
           ${s.name
