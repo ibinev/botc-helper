@@ -143,6 +143,55 @@ export class BotcCircle extends LitElement {
     return { ux: dx / len, uy: dy / len };
   }
 
+  // The claimed-role icon and true-role icon are fixed badges in the seat's
+  // own (pre-rotation) local frame — upper-left and upper-right corners
+  // respectively — the same frame _towardCenter's ux/uy are already
+  // expressed in (its storyView sign-flip exists precisely so this stays
+  // true after the seat's own 180° rotation). This only ever checks the
+  // FIRST (outermost) reminder token's own circle — deliberately ignoring
+  // how many reminders there are — so that token's angle (and therefore its
+  // position) never shifts when more reminders get added later; any extra
+  // tokens just line up behind it along that same fixed angle, moving
+  // progressively closer to the circle's center.
+  _avoidIconOverlap(ux, uy, hasClaimIcon, hasTrueIcon) {
+    if (!hasClaimIcon && !hasTrueIcon) return { ux, uy };
+    // Mirrors utils.js's defaultPos() breakpoints so this matches the
+    // actual rendered --seat-size (S) for the icon-box math below.
+    const S = (this._w <= 479 ? 75 : (this._w >= 520 ? 106 : 99)) * (this.seatScale || 1);
+    const R = 0.58 * S;      // radius the first/outermost token sits at
+    const TOKEN_R = 18 + 4;  // token radius (36px dia) + a few px safety margin
+    // Icon boxes, in seat-center-relative coords (derived from the CSS
+    // top/left/right/width/height percentages of var(--seat-size)).
+    const boxes = [];
+    if (hasTrueIcon)  boxes.push({ x0: 0.0858 * S,  x1: 0.6414 * S, y0: -0.6414 * S, y1: -0.0858 * S });
+    if (hasClaimIcon) boxes.push({ x0: -0.6414 * S, x1: -0.0858 * S, y0: -0.6414 * S, y1: -0.0858 * S });
+
+    const hitsIcon = (angle) => {
+      const cx = Math.cos(angle) * R, cy = Math.sin(angle) * R;
+      return boxes.some(b => {
+        const nx = Math.max(b.x0, Math.min(cx, b.x1));
+        const ny = Math.max(b.y0, Math.min(cy, b.y1));
+        return Math.hypot(cx - nx, cy - ny) < TOKEN_R;
+      });
+    };
+
+    const angle = Math.atan2(uy, ux);
+    if (!hitsIcon(angle)) return { ux, uy };
+    // Both icon badges only ever occupy the seat's upper half, so when the
+    // starting angle can't clear them close to center-pointing, the
+    // nearest actually-clear angle may be most of the way around — prefer
+    // avoiding real overlap over staying tightly center-facing.
+    const STEP = Math.PI / 180;
+    for (let i = 1; i <= 179; i++) {
+      const a1 = angle - i * STEP;
+      if (!hitsIcon(a1)) return { ux: Math.cos(a1), uy: Math.sin(a1) };
+      const a2 = angle + i * STEP;
+      if (!hitsIcon(a2)) return { ux: Math.cos(a2), uy: Math.sin(a2) };
+    }
+    return { ux, uy };
+  }
+
+
   // Reminders keep working even when they're displayed on a different
   // (alive) seat than the role they belong to, so check the OWNING role's
   // own seat for death, not just the seat the token is currently sitting on.
@@ -365,24 +414,38 @@ export class BotcCircle extends LitElement {
           ? html`<div class="seat-poison-badge" title="Poisoned"><img src="${ROLE_ICONS['Poisoner']}" alt="Poisoned"></div>`
           : nothing}
         ${Array.isArray(s.reminders) && s.reminders.length ? (() => {
-          const { ux, uy } = this._towardCenter(pos);
-          const axis = Math.abs(ux) > Math.abs(uy) ? 'col' : 'row';
+          const toward = this._towardCenter(pos);
+          // Angle is derived from the FIRST token alone, so it never shifts
+          // just because more reminders get added later (see _avoidIconOverlap).
+          const { ux, uy } = this._avoidIconOverlap(toward.ux, toward.uy, stackIcons.length > 0, !!trueIconSrc);
+          const S  = (this._w <= 479 ? 75 : (this._w >= 520 ? 106 : 99)) * (this.seatScale || 1);
+          const R0 = 0.58 * S;
+          const STEP = 44; // token diameter (36px) + a visible gap so tokens never touch
+          // Real pixel distance from this seat to the actual circle center
+          // (the sun/moon) — extra tokens advance toward THAT point, not
+          // toward the seat's own center, capped so they don't overshoot past it.
+          const dist = Math.hypot(this._w / 2 - pos.x, this._h / 2 - pos.y);
           return html`
-          <div class="seat-reminder-strip seat-reminder-strip--${axis}"
-            style="left:calc(50% + ${(ux * 58).toFixed(2)}%);top:calc(50% + ${(uy * 58).toFixed(2)}%)">
-            ${s.reminders.map(r => html`
-              <button type="button" class="seat-reminder-token ${this._isRoleDead(r.role) ? 'seat-reminder-token--source-dead' : ''} ${isWrongReminder(r.text) ? 'seat-reminder-token--wrong' : ''}" title="${r.text}${r.role ? ' (' + r.role + ')' : ''} — tap to remove"
-                @click="${e => {
-                  e.stopPropagation();
-                  this.dispatchEvent(new CustomEvent('seat-reminder-remove', {
-                    detail: { idx: i, id: r.id }, bubbles: true, composed: true
-                  }));
-                }}">
-                ${ROLE_ICONS[r.role] ? html`<img src="${ROLE_ICONS[r.role]}" alt="">` : html`<span>${(r.text || '?').charAt(0)}</span>`}
-              </button>
-            `)}
-          </div>
-        `; })() : nothing}
+            ${s.reminders.map((r, k) => {
+              // Extra tokens line up one after another along the same fixed
+              // angle as the first, each a step closer to the circle's
+              // actual center — with enough reminders they may reach it.
+              const pct = (Math.min(dist, R0 + k * STEP) / S) * 100;
+              return html`
+                <div class="seat-reminder-strip" style="left:calc(50% + ${(ux * pct).toFixed(2)}%);top:calc(50% + ${(uy * pct).toFixed(2)}%)">
+                  <button type="button" class="seat-reminder-token ${this._isRoleDead(r.role) ? 'seat-reminder-token--source-dead' : ''} ${isWrongReminder(r.text) ? 'seat-reminder-token--wrong' : ''}" title="${r.text}${r.role ? ' (' + r.role + ')' : ''} — tap to remove"
+                    @click="${e => {
+                      e.stopPropagation();
+                      this.dispatchEvent(new CustomEvent('seat-reminder-remove', {
+                        detail: { idx: i, id: r.id }, bubbles: true, composed: true
+                      }));
+                    }}">
+                    ${ROLE_ICONS[r.role] ? html`<img src="${ROLE_ICONS[r.role]}" alt="">` : html`<span>${(r.text || '?').charAt(0)}</span>`}
+                  </button>
+                </div>
+              `;
+            })}
+          `; })() : nothing}
         <span class="seat-num">${i + 1}</span>
         <div class="seat-inner">
           ${s.name

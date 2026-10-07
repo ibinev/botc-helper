@@ -585,16 +585,14 @@ body.hide-role .pli-role        { display: none; }
 /* Positioned per-seat in JS (left/top inline style) along the exact vector
    from the seat toward the circle's center "sun/moon", so it sits at the
    right angle even for seats near a diagonal/corner of the town square —
-   not just snapped to directly above/below/left/right. The --row/--col
-   modifier only controls which way the tokens wrap (to avoid the strip
-   running off the edge of the screen near the left/right sides). */
+   not just snapped to directly above/below/left/right. Each token gets its
+   own wrapper (one per reminder), lined up one after another toward the
+   center instead of wrapping into a grid. */
 .seat-reminder-strip {
   position: absolute; z-index: 4;
-  display: flex; flex-wrap: wrap; gap: 4px; pointer-events: auto;
+  display: flex; pointer-events: auto;
   transform: translate(-50%, -50%);
 }
-.seat-reminder-strip--row { flex-direction: row; width: 148px; justify-content: center; }
-.seat-reminder-strip--col { flex-direction: column; max-height: 170px; align-content: flex-start; }
 .seat-reminder-token {
   width: 36px; height: 36px; border-radius: 50%; padding: 0; flex-shrink: 0;
   background: rgba(20,14,8,0.92); border: 1.5px solid var(--gold); cursor: pointer;

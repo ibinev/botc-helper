@@ -274,7 +274,13 @@ export class BotcNightguideModal extends LitElement {
     const bluffs = this.demonBluffs || [];
     const roles  = getRoles(this.script);
     return html`
-      <div class="bluff-reveal-backdrop" @click="${e => { if (e.target === e.currentTarget) this._revealAll = false; }}">
+      <div class="bluff-reveal-backdrop"
+        @click="${e => {
+          // On touch, there's little room to tap *outside* the card to dismiss
+          // (it nearly fills the screen), so any tap inside also closes it.
+          const isTouch = !window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+          if (isTouch || e.target === e.currentTarget) this._revealAll = false;
+        }}">
         <div class="bluff-reveal-card">
           ${bluffs.map(name => {
             const role = roles.find(r => r.name === name);

@@ -260,7 +260,13 @@ export class BotcSignModal extends LitElement {
     const r = this._reveal;
     if (!r) return nothing;
     return html`
-      <div class="bluff-reveal-backdrop" @click="${e => { if (e.target === e.currentTarget) { this._reveal = null; this._step = 'picker'; } }}">
+      <div class="bluff-reveal-backdrop"
+        @click="${e => {
+          // On touch, there's little room to tap *outside* the card to dismiss
+          // (it nearly fills the screen), so any tap inside also closes it.
+          const isTouch = !window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+          if (isTouch || e.target === e.currentTarget) { this._reveal = null; this._step = 'picker'; }
+        }}">
         <div class="bluff-reveal-card">
           <div class="bluff-reveal-item">
             ${r.kind === 'role' ? html`
