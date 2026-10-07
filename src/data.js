@@ -312,6 +312,80 @@ export function isExperimentalRole(name) {
   return EXPERIMENTAL_ROLE_NAMES.has(name);
 }
 
+// Approximates the official script-tool character sort order. Listed in the
+// canonical doc order (which doubles as the sort-group rank below); matching
+// picks the LONGEST matching prefix rather than list order, so e.g. "Each
+// night*" (literal asterisk in the real ability text) outranks the plainer
+// "Each night" prefix instead of always matching it first.
+const SCRIPT_SORT_PREFIXES = [
+  'You start knowing',
+  'At night',
+  'Each dusk*',
+  'Each night',
+  'Each night*',
+  'Each day',
+  'Once per game, at night',
+  'Once per game, at night*',
+  'Once per game, during the day',
+  'Once per game',
+  'On your 1st night',
+  'On your 1st day',
+  'You think',
+  'You are',
+  'You have',
+  'You do not know',
+  'You might',
+  'You',
+  'When you die',
+  'When you learn that you died',
+  'When',
+  'If you die',
+  'If you died',
+  'If you are “mad”',
+  'If you',
+  'If the Demon dies',
+  'If the Demon kills',
+  'If the Demon',
+  'If both',
+  'If there are 5 or more players alive',
+  'If',
+  'All players',
+  'All',
+  'The 1st time',
+  'The',
+  'Good',
+  'Evil',
+  'Players',
+  'Minions',
+];
+
+function scriptSortGroupRank(ability) {
+  const text = ability || '';
+  let rank = SCRIPT_SORT_PREFIXES.length;
+  let bestLen = -1;
+  SCRIPT_SORT_PREFIXES.forEach((prefix, i) => {
+    if (text.startsWith(prefix) && prefix.length > bestLen) {
+      bestLen = prefix.length;
+      rank = i;
+    }
+  });
+  return rank;
+}
+
+// Comparator for auto-placing a role within a script category: official
+// sort-group (by ability-text prefix) → ability length → name length → name.
+export function compareRoleNamesForScriptOrder(nameA, nameB) {
+  const abilityA = ROLE_BY_NAME.get(nameA)?.ability || '';
+  const abilityB = ROLE_BY_NAME.get(nameB)?.ability || '';
+  const ra = scriptSortGroupRank(abilityA);
+  const rb = scriptSortGroupRank(abilityB);
+  if (ra !== rb) return ra - rb;
+  if (abilityA.length !== abilityB.length) return abilityA.length - abilityB.length;
+  const na = nameA || '', nb = nameB || '';
+  if (na.length !== nb.length) return na.length - nb.length;
+  return na.localeCompare(nb);
+}
+
 export function getRoleById(id) {
   return ROLE_BY_ID.get(id) || null;
 }

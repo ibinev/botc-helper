@@ -1,17 +1,7 @@
 import { LitElement, html, nothing } from 'lit';
 import { MIN, MAX } from '../utils.js';
 import { APP_VERSION } from '../version.js';
-import { SCRIPT_OPTIONS, CAT_LABELS, CAT_ORDER, ROLE_ICONS, isExperimentalRole } from '../data.js';
-
-const SLOT_TEMPLATE_COUNTS = {
-  townsfolk: 13,
-  outsider: 4,
-  minion: 4,
-  demon: 4,
-  traveler: 4,
-  loric: 4,
-  fabled: 4,
-};
+import { SCRIPT_OPTIONS, CAT_LABELS, CAT_ORDER, ROLE_ICONS, isExperimentalRole, compareRoleNamesForScriptOrder } from '../data.js';
 
 const SLOT_TEMPLATE_ORDER = ['townsfolk', 'outsider', 'minion', 'demon', 'traveler', 'loric', 'fabled'];
 
@@ -64,10 +54,8 @@ export class BotcSettingsModal extends LitElement {
     _customQuery:{ state: true },
     _customSelected:{ state: true },
     _customLayout:{ state: true },
-    _customSlotCounts:{ state: true },
     _showExperimental:{ state: true },
     _slotTargetCat:{ state: true },
-    _slotTargetIndex:{ state: true },
     _scriptMenuOpen:{ state: true },
   };
 
@@ -95,11 +83,9 @@ export class BotcSettingsModal extends LitElement {
     this._customQuery = '';
     this._customSelected = [];
     this._customLayout = {};
-    this._customSlotCounts = {};
     this._customMode = 'create';
     this._showExperimental = true;
     this._slotTargetCat = null;
-    this._slotTargetIndex = -1;
     this._scriptMenuOpen = false;
   }
 
@@ -185,9 +171,7 @@ export class BotcSettingsModal extends LitElement {
     this._customQuery = '';
     this._customSelected = [];
     this._customLayout = {};
-    this._customSlotCounts = {};
     this._slotTargetCat = null;
-    this._slotTargetIndex = -1;
     // Close settings while opening the detached custom-script popup.
     this.dispatchEvent(new CustomEvent('modal-close', { bubbles: true, composed: true }));
     this._fire('script-picker-open', {});
@@ -231,9 +215,7 @@ export class BotcSettingsModal extends LitElement {
     this._customQuery = '';
     this._customSelected = roles;
     this._customLayout = this._buildLayoutFromRoles(roles, this.selectedScriptLayout);
-    this._customSlotCounts = {};
     this._slotTargetCat = null;
-    this._slotTargetIndex = -1;
     // Close settings while opening the detached custom-script popup.
     this.dispatchEvent(new CustomEvent('modal-close', { bubbles: true, composed: true }));
     this._fire('script-picker-open', {});
@@ -269,9 +251,7 @@ export class BotcSettingsModal extends LitElement {
     });
 
     this._customLayout = layout;
-    this._customSlotCounts = {};
     this._slotTargetCat = null;
-    this._slotTargetIndex = -1;
     // Close settings while opening the detached custom-script popup.
     this.dispatchEvent(new CustomEvent('modal-close', { bubbles: true, composed: true }));
     this._fire('script-picker-open', {});
@@ -285,59 +265,28 @@ export class BotcSettingsModal extends LitElement {
     this._customQuery = '';
     this._customSelected = [];
     this._customLayout = {};
-    this._customSlotCounts = {};
     this._slotTargetCat = null;
-    this._slotTargetIndex = -1;
   }
 
-  _slotCountForCat(cat) {
+  // Inserts the role at its official-script-order position, then re-splits the
+  // category into two columns at the midpoint — the user can't pick an exact slot.
+  _addCharacter(cat, roleName) {
     const c = this._ensureLayoutCat(cat);
-    const actual = (c.left ? c.left.filter(Boolean).length : 0) + (c.right ? c.right.filter(Boolean).length : 0);
-    const base = this._customSlotCounts[cat] ?? (SLOT_TEMPLATE_COUNTS[cat] || 0);
-    return Math.max(base, actual);
+    const names = [...c.left, ...c.right].filter(Boolean);
+    if (names.includes(roleName)) return;
+    names.push(roleName);
+    names.sort(compareRoleNamesForScriptOrder);
+    const mid = Math.ceil(names.length / 2);
+    this._customLayout = { ...this._customLayout, [cat]: { left: names.slice(0, mid), right: names.slice(mid) } };
+    this._syncSelectedFromLayout();
   }
 
-  // Extends the category by one slot, alternating which column it lands in
-  // so existing L/R row pairs stay intact (new Left row, or fill the open Right).
-  _addSlot(cat) {
-    this._customSlotCounts = { ...this._customSlotCounts, [cat]: this._slotCountForCat(cat) + 1 };
-  }
-
-  // Index of the visually-last slot: an odd count leaves an unpaired Left slot
-  // as the final row (flat index split-1), while an even count ends on the Right column (count-1).
-  _lastSlotIndexForCat(cat) {
-    const count = this._slotCountForCat(cat);
-    if (count <= 0) return -1;
-    const split = this._splitCountForCat(cat);
-    const rightCount = count - split;
-    return rightCount < split ? split - 1 : count - 1;
-  }
-
-  // Removes the trailing slot; refuses if it still holds a role (clear it first).
-  _canRemoveSlot(cat) {
-    const count = this._slotCountForCat(cat);
-    if (count <= 0) return false;
-    return !this._slotValuesForCat(cat)[this._lastSlotIndexForCat(cat)];
-  }
-
-  _removeSlot(cat) {
-    if (!this._canRemoveSlot(cat)) return;
-    this._customSlotCounts = { ...this._customSlotCounts, [cat]: this._slotCountForCat(cat) - 1 };
-  }
-
-  _splitCountForCat(cat) {
-    const total = this._slotCountForCat(cat);
-    return Math.ceil(total / 2);
-  }
-
-  _slotValuesForCat(cat) {
-    const count = this._slotCountForCat(cat);
-    const split = this._splitCountForCat(cat);
-    const rightCount = Math.max(0, count - split);
+  _removeCharacter(cat, roleName) {
     const c = this._ensureLayoutCat(cat);
-    const leftSlots = Array.from({ length: split }, (_, i) => c.left[i] ?? null);
-    const rightSlots = Array.from({ length: rightCount }, (_, i) => c.right[i] ?? null);
-    return [...leftSlots, ...rightSlots];
+    const names = [...c.left, ...c.right].filter(name => name && name !== roleName);
+    const mid = Math.ceil(names.length / 2);
+    this._customLayout = { ...this._customLayout, [cat]: { left: names.slice(0, mid), right: names.slice(mid) } };
+    this._syncSelectedFromLayout();
   }
 
   _syncSelectedFromLayout() {
@@ -349,63 +298,21 @@ export class BotcSettingsModal extends LitElement {
     this._customSelected = [...new Set(names.filter(Boolean))];
   }
 
-  _setSlotValue(cat, index, roleName) {
-    const count = this._slotCountForCat(cat);
-    if (index < 0 || index >= count) return;
-
-    // Remove role from all slot categories first, preserving slot coordinates.
-    SLOT_TEMPLATE_ORDER.forEach(k => {
-      const kSlots = this._slotValuesForCat(k).map(name => (name === roleName ? null : name));
-      const kSplit = this._splitCountForCat(k);
-      const col = this._ensureLayoutCat(k);
-      col.left = kSlots.slice(0, kSplit);
-      col.right = kSlots.slice(kSplit);
-    });
-
-    const slots = this._slotValuesForCat(cat);
-    slots[index] = roleName || null;
-
-    const split = this._splitCountForCat(cat);
-    const c = this._ensureLayoutCat(cat);
-    c.left = slots.slice(0, split);
-    c.right = slots.slice(split);
-
-    this._customLayout = { ...this._customLayout };
-    this._syncSelectedFromLayout();
-  }
-
-  _clearSlotValue(cat, index) {
-    const slots = this._slotValuesForCat(cat);
-    if (!slots[index]) return;
-    slots[index] = null;
-    const split = this._splitCountForCat(cat);
-    const c = this._ensureLayoutCat(cat);
-    c.left = slots.slice(0, split);
-    c.right = slots.slice(split);
-    this._customLayout = { ...this._customLayout };
-    this._syncSelectedFromLayout();
-  }
-
-  _slotRolePool(cat, currentName = null) {
+  _slotRolePool(cat) {
     const q = this._customQuery.trim().toLowerCase();
     const assigned = new Set();
     SLOT_TEMPLATE_ORDER.forEach(k => {
-      this._slotValuesForCat(k).forEach(name => {
-        if (name) assigned.add(name);
-      });
+      const c = this._ensureLayoutCat(k);
+      [...c.left, ...c.right].forEach(name => { if (name) assigned.add(name); });
     });
     return this.allRoles.filter(role => {
       if (role.cat !== cat) return false;
       if (q && !role.name.toLowerCase().includes(q)) return false;
-      if (assigned.has(role.name) && role.name !== currentName) return false;
+      if (assigned.has(role.name)) return false;
       const isExp = isExperimentalRole(role.name);
       if (!this._showExperimental && isExp && role.cat !== 'loric' && role.cat !== 'fabled' && !this._customSelected.includes(role.name)) return false;
       return true;
     });
-  }
-
-  _slotTemplateIsComplete() {
-    return SLOT_TEMPLATE_ORDER.every(cat => this._slotValuesForCat(cat).every(Boolean));
   }
 
   _ensureLayoutCat(cat) {
@@ -423,21 +330,13 @@ export class BotcSettingsModal extends LitElement {
     return this.allRoles.find(r => r.name === name)?.cat || null;
   }
 
-  _openSlotPicker(cat, index) {
+  _openCharacterPicker(cat) {
     this._slotTargetCat = cat;
-    this._slotTargetIndex = index;
   }
 
   _closeSlotPicker() {
     this._slotTargetCat = null;
-    this._slotTargetIndex = -1;
     this._customQuery = '';
-  }
-
-  _slotPosLabel(cat, index) {
-    const split = this._splitCountForCat(cat);
-    if (index < split) return `L${index + 1}`;
-    return `R${index - split + 1}`;
   }
 
   _submitCustomScript() {
@@ -449,20 +348,11 @@ export class BotcSettingsModal extends LitElement {
     const layout = {};
 
     CAT_ORDER.forEach(cat => {
-      if (SLOT_TEMPLATE_COUNTS[cat]) {
-        const slots = this._slotValuesForCat(cat);
-        const split = this._splitCountForCat(cat);
-        const left = slots.slice(0, split).filter(Boolean);
-        const right = slots.slice(split).filter(Boolean);
-        layout[cat] = { left, right };
-        roles.push(...left, ...right);
-      } else {
-        const c = this._ensureLayoutCat(cat);
-        const left = c.left.filter(r => this._customSelected.includes(r));
-        const right = c.right.filter(r => this._customSelected.includes(r));
-        layout[cat] = { left, right };
-        roles.push(...left, ...right);
-      }
+      const c = this._ensureLayoutCat(cat);
+      const left = c.left.filter(Boolean);
+      const right = c.right.filter(Boolean);
+      layout[cat] = { left, right };
+      roles.push(...left, ...right);
     });
     if (!roles.length) return;
 
@@ -513,9 +403,8 @@ export class BotcSettingsModal extends LitElement {
   }
 
   render() {
-    const hasSlotTarget = !!this._slotTargetCat && this._slotTargetIndex >= 0;
-    const currentSlotName = hasSlotTarget ? (this._slotValuesForCat(this._slotTargetCat)[this._slotTargetIndex] || null) : null;
-    const slotPool = hasSlotTarget ? this._slotRolePool(this._slotTargetCat, currentSlotName) : [];
+    const hasSlotTarget = !!this._slotTargetCat;
+    const slotPool = hasSlotTarget ? this._slotRolePool(this._slotTargetCat) : [];
     return html`
       <div>
       <div class="modal-overlay" id="modal-settings">
@@ -756,60 +645,37 @@ export class BotcSettingsModal extends LitElement {
 
                   <div class="settings-script-slot-list">
                       ${SLOT_TEMPLATE_ORDER.map(cat => {
-                        const slots = this._slotValuesForCat(cat);
-                        const split = this._splitCountForCat(cat);
-                        const rightCount = slots.length - split;
-                        const rows = Math.max(split, rightCount);
+                        const c = this._ensureLayoutCat(cat);
+                        const left = c.left.filter(Boolean);
+                        const right = c.right.filter(Boolean);
+                        const rows = Math.max(left.length, right.length);
                         return html`
                           <div class="settings-script-role-group">
-                            <div class="settings-script-role-group-label">${CAT_LABELS[cat]} (${this._slotCountForCat(cat)})</div>
+                            <div class="settings-script-role-group-label">${CAT_LABELS[cat]} (${left.length + right.length})</div>
                             <div class="settings-script-slot-grid">
                               ${Array.from({ length: rows }, (_, row) => {
-                                const leftIndex = row;
-                                const rightIndex = split + row;
-                                const leftName = slots[leftIndex] || null;
-                                const rightName = rightIndex < slots.length ? (slots[rightIndex] || null) : null;
-                                const leftActive = this._slotTargetCat === cat && this._slotTargetIndex === leftIndex;
-                                const rightActive = this._slotTargetCat === cat && this._slotTargetIndex === rightIndex;
+                                const leftName = left[row] || null;
+                                const rightName = right[row] || null;
 
-                                const leftButton = html`
-                                  <button class="settings-script-slot-item ${leftName ? 'is-filled' : ''} ${leftActive ? 'is-active' : ''}" type="button"
-                                    @click="${() => this._openSlotPicker(cat, leftIndex)}">
-                                    <span class="settings-script-slot-pos">L${row + 1}</span>
-                                    ${leftName && ROLE_ICONS[leftName] ? html`<img class="settings-script-slot-icon" src="${ROLE_ICONS[leftName]}" alt="" loading="lazy" decoding="async">` : nothing}
-                                    <span class="settings-script-slot-name">${leftName || 'Empty slot'}</span>
-                                    ${leftName && isExperimentalRole(leftName) ? html`<span class="settings-script-role-exp" title="Experimental role" aria-label="Experimental role">E</span>` : nothing}
-                                    ${leftName ? html`
-                                      <span class="settings-script-slot-clear" @click="${e => { e.stopPropagation(); this._clearSlotValue(cat, leftIndex); }}">✕</span>
-                                    ` : nothing}
-                                  </button>
-                                `;
-
-                                const rightButton = rightIndex < slots.length ? html`
-                                  <button class="settings-script-slot-item ${rightName ? 'is-filled' : (rows === 1 ? 'slot-right-empty' : '')} ${rightActive ? 'is-active' : ''}" type="button"
-                                    @click="${() => this._openSlotPicker(cat, rightIndex)}">
-                                    <span class="settings-script-slot-pos">R${row + 1}</span>
-                                    ${rightName && ROLE_ICONS[rightName] ? html`<img class="settings-script-slot-icon" src="${ROLE_ICONS[rightName]}" alt="" loading="lazy" decoding="async">` : nothing}
-                                    <span class="settings-script-slot-name">${rightName || 'Empty slot'}</span>
-                                    ${rightName && isExperimentalRole(rightName) ? html`<span class="settings-script-role-exp" title="Experimental role" aria-label="Experimental role">E</span>` : nothing}
-                                    ${rightName ? html`
-                                      <span class="settings-script-slot-clear" @click="${e => { e.stopPropagation(); this._clearSlotValue(cat, rightIndex); }}">✕</span>
-                                    ` : nothing}
-                                  </button>
+                                const slotButton = (name, pos) => name ? html`
+                                  <div class="settings-script-slot-item is-filled">
+                                    <span class="settings-script-slot-pos">${pos}</span>
+                                    ${ROLE_ICONS[name] ? html`<img class="settings-script-slot-icon" src="${ROLE_ICONS[name]}" alt="" loading="lazy" decoding="async">` : nothing}
+                                    <span class="settings-script-slot-name">${name}</span>
+                                    ${isExperimentalRole(name) ? html`<span class="settings-script-role-exp" title="Experimental role" aria-label="Experimental role">E</span>` : nothing}
+                                    <span class="settings-script-slot-clear" @click="${() => this._removeCharacter(cat, name)}">✕</span>
+                                  </div>
                                 ` : html`<div class="settings-script-slot-spacer" aria-hidden="true"></div>`;
 
                                 return html`
-                                  ${leftButton}
-                                  ${rightButton}
+                                  ${slotButton(leftName, `L${row + 1}`)}
+                                  ${slotButton(rightName, `R${row + 1}`)}
                                 `;
                               })}
                             </div>
                             <div class="settings-script-slot-actions">
-                              <button class="settings-script-slot-add" type="button" title="Add a slot to ${CAT_LABELS[cat]}"
-                                @click="${() => this._addSlot(cat)}">➕ Add slot</button>
-                              <button class="settings-script-slot-remove" type="button" ?disabled="${!this._canRemoveSlot(cat)}"
-                                title="${this._canRemoveSlot(cat) ? `Remove the last slot from ${CAT_LABELS[cat]}` : 'Clear the last slot before removing it'}"
-                                @click="${() => this._removeSlot(cat)}">➖ Remove slot</button>
+                              <button class="settings-script-slot-add" type="button" title="Add a character to ${CAT_LABELS[cat]}"
+                                @click="${() => this._openCharacterPicker(cat)}">➕ Add character</button>
                             </div>
                           </div>
                         `;
@@ -818,12 +684,12 @@ export class BotcSettingsModal extends LitElement {
 
                     ${hasSlotTarget ? html`
                       <div class="settings-script-slot-popup-overlay" @click="${e => { if (e.target.classList.contains('settings-script-slot-popup-overlay')) this._closeSlotPicker(); }}">
-                        <div class="settings-script-slot-popup" role="dialog" aria-modal="true" aria-label="Slot role picker">
+                        <div class="settings-script-slot-popup" role="dialog" aria-modal="true" aria-label="Choose role">
                           <div class="settings-script-slot-popup-header">
-                            <div class="settings-script-slot-popup-title">${CAT_LABELS[this._slotTargetCat]} · ${this._slotPosLabel(this._slotTargetCat, this._slotTargetIndex)}</div>
+                            <div class="settings-script-slot-popup-title">${CAT_LABELS[this._slotTargetCat]}</div>
                             <button class="btn-sm" type="button" @click="${() => this._closeSlotPicker()}">✕</button>
                           </div>
-                          <div class="settings-script-slot-picker-label">Choose a role for ${this._slotPosLabel(this._slotTargetCat, this._slotTargetIndex)}.</div>
+                          <div class="settings-script-slot-picker-label">Choose a role to add to ${CAT_LABELS[this._slotTargetCat]}.</div>
                           <div class="settings-script-form-row settings-script-search-row settings-script-slot-search-row">
                             <div class="settings-script-search-wrap">
                               <input id="custom-script-slot-search" class="settings-script-input" type="text" .value="${this._customQuery}"
@@ -835,31 +701,24 @@ export class BotcSettingsModal extends LitElement {
                             </div>
                           </div>
                           <div class="settings-script-slot-picker">
-                            ${slotPool.map(role => {
-                              const active = this._slotValuesForCat(this._slotTargetCat)[this._slotTargetIndex] === role.name;
-                              return html`
-                                <button class="settings-script-slot-role ${active ? 'is-active' : ''}" type="button"
-                                  @click="${() => {
-                                    this._setSlotValue(this._slotTargetCat, this._slotTargetIndex, role.name);
-                                    this._closeSlotPicker();
-                                  }}">
-                                  ${ROLE_ICONS[role.name] ? html`<img class="settings-script-slot-role-icon" src="${ROLE_ICONS[role.name]}" alt="" loading="lazy" decoding="async">` : nothing}
-                                  <span class="settings-script-slot-role-info">
-                                    <span class="settings-script-slot-role-name-row">
-                                      <span class="settings-script-slot-role-name">${role.name}</span>
-                                      ${isExperimentalRole(role.name) ? html`<span class="settings-script-role-exp" title="Experimental role" aria-label="Experimental role">E</span>` : nothing}
-                                    </span>
-                                    ${role.ability ? html`<span class="settings-script-slot-role-ability">${role.ability}</span>` : nothing}
+                            ${slotPool.map(role => html`
+                              <button class="settings-script-slot-role" type="button"
+                                @click="${() => {
+                                  this._addCharacter(this._slotTargetCat, role.name);
+                                  this._closeSlotPicker();
+                                }}">
+                                ${ROLE_ICONS[role.name] ? html`<img class="settings-script-slot-role-icon" src="${ROLE_ICONS[role.name]}" alt="" loading="lazy" decoding="async">` : nothing}
+                                <span class="settings-script-slot-role-info">
+                                  <span class="settings-script-slot-role-name-row">
+                                    <span class="settings-script-slot-role-name">${role.name}</span>
+                                    ${isExperimentalRole(role.name) ? html`<span class="settings-script-role-exp" title="Experimental role" aria-label="Experimental role">E</span>` : nothing}
                                   </span>
-                                </button>
-                              `;
-                            })}
+                                  ${role.ability ? html`<span class="settings-script-slot-role-ability">${role.ability}</span>` : nothing}
+                                </span>
+                              </button>
+                            `)}
                           </div>
                           <div class="settings-script-slot-popup-actions">
-                            <button class="btn" type="button" @click="${() => {
-                              this._clearSlotValue(this._slotTargetCat, this._slotTargetIndex);
-                              this._closeSlotPicker();
-                            }}">Clear slot</button>
                             <button class="btn" type="button" @click="${() => this._closeSlotPicker()}">Done</button>
                           </div>
                         </div>

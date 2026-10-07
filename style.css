@@ -1783,8 +1783,7 @@ body.hide-role .town-reminder-strip { display: none; }
   display: flex;
   gap: 6px;
 }
-.settings-script-slot-add,
-.settings-script-slot-remove {
+.settings-script-slot-add {
   flex: 1;
   margin-top: 6px;
   border: 0.5px dashed var(--border);
@@ -1799,16 +1798,10 @@ body.hide-role .town-reminder-strip { display: none; }
   transition: border-color var(--duration-fast) var(--ease-standard), color var(--duration-fast) var(--ease-standard), background var(--duration-fast) var(--ease-standard);
 }
 .settings-script-slot-add:hover,
-.settings-script-slot-add:active,
-.settings-script-slot-remove:hover:not(:disabled),
-.settings-script-slot-remove:active:not(:disabled) {
+.settings-script-slot-add:active {
   border-color: var(--gold);
   color: var(--gold-light);
   background: rgba(201,151,58,0.1);
-}
-.settings-script-slot-remove:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
 }
 .settings-script-slot-item {
   width: 100%;
@@ -1823,16 +1816,11 @@ body.hide-role .town-reminder-strip { display: none; }
   color: var(--text-secondary);
   text-align: left;
   padding: 7px 8px;
-  cursor: pointer;
 }
 .settings-script-slot-item.is-filled {
   border-style: solid;
   background: var(--bg-card);
   color: var(--text-primary);
-}
-.settings-script-slot-item.is-active {
-  border-color: var(--gold);
-  box-shadow: 0 0 0 1px rgba(201,151,58,0.2) inset;
 }
 .settings-script-slot-pos {
   min-width: 24px;
@@ -1864,6 +1852,7 @@ body.hide-role .town-reminder-strip { display: none; }
   font-size: 10px;
   color: var(--text-secondary);
   flex-shrink: 0;
+  cursor: pointer;
 }
 .settings-script-slot-picker-label {
   padding: 4px 14px 0;
@@ -1930,10 +1919,6 @@ body.hide-role .town-reminder-strip { display: none; }
   color: var(--text-secondary);
   line-height: 1.35;
 }
-.settings-script-slot-role.is-active {
-  border-color: var(--gold);
-  background: rgba(201,151,58,0.14);
-}
 .settings-script-slot-picker-hint {
   padding: 10px 14px;
   border-top: 0.5px solid var(--border);
@@ -1995,9 +1980,6 @@ body.hide-role .town-reminder-strip { display: none; }
     grid-template-columns: 1fr;
   }
   .settings-script-slot-spacer {
-    display: none;
-  }
-  .settings-script-slot-grid > .slot-right-empty {
     display: none;
   }
 }
