@@ -303,11 +303,21 @@ export class BotcSettingsModal extends LitElement {
     this._customSlotCounts = { ...this._customSlotCounts, [cat]: this._slotCountForCat(cat) + 1 };
   }
 
+  // Index of the visually-last slot: an odd count leaves an unpaired Left slot
+  // as the final row (flat index split-1), while an even count ends on the Right column (count-1).
+  _lastSlotIndexForCat(cat) {
+    const count = this._slotCountForCat(cat);
+    if (count <= 0) return -1;
+    const split = this._splitCountForCat(cat);
+    const rightCount = count - split;
+    return rightCount < split ? split - 1 : count - 1;
+  }
+
   // Removes the trailing slot; refuses if it still holds a role (clear it first).
   _canRemoveSlot(cat) {
     const count = this._slotCountForCat(cat);
     if (count <= 0) return false;
-    return !this._slotValuesForCat(cat)[count - 1];
+    return !this._slotValuesForCat(cat)[this._lastSlotIndexForCat(cat)];
   }
 
   _removeSlot(cat) {
