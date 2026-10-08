@@ -594,12 +594,18 @@ body.hide-role .pli-role        { display: none; }
   transform: translate(-50%, -50%);
 }
 .seat-reminder-token {
-  width: 36px; height: 36px; border-radius: 50%; padding: 0; flex-shrink: 0;
+  width: 36px; height: 36px; border-radius: 50%; padding: 2px; flex-shrink: 0;
   background: rgba(20,14,8,0.92); border: 1.5px solid var(--gold); cursor: pointer;
-  display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 4px rgba(0,0,0,0.6);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+  overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.6);
   font-size: 16px; font-weight: 700; color: var(--gold-light); -webkit-tap-highlight-color: transparent;
 }
-.seat-reminder-token img { width: 25px; height: 25px; object-fit: contain; }
+.seat-reminder-token img { width: 17px; height: 17px; object-fit: contain; flex-shrink: 0; }
+.seat-reminder-token-text {
+  font-size: 6.5px; font-weight: 700; line-height: 1.05; color: var(--gold-light); text-align: center;
+  max-width: 32px; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden;
+}
+.seat-reminder-token--text-only .seat-reminder-token-text { font-size: 8px; -webkit-line-clamp: 3; line-clamp: 3; }
 .seat.dead .seat-reminder-token { opacity: 0.45; filter: grayscale(0.85); }
 .seat-reminder-token--source-dead { opacity: 0.45; filter: grayscale(0.85); }
 .seat-reminder-token--wrong { border-color: var(--blood-light); }
@@ -620,8 +626,16 @@ body.hide-role .town-reminder-strip { display: none; }
    so seats it would otherwise cover (near the bottom edge) can be dropped on. */
 #reminder-tray.reminder-tray--dragging { opacity: 0; transform: translateY(12px); pointer-events: none; }
 .reminder-tray-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; font-size: 12px; color: var(--gold-light); font-weight: 600; }
+.reminder-tray-header-left { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.reminder-tray-showall {
+  flex-shrink: 0; font-size: 11px; font-weight: 600; color: var(--text-primary); cursor: pointer;
+  background: var(--bg-surface); border: 0.5px solid var(--border); border-radius: 999px; padding: 3px 10px;
+}
 .reminder-tray-close { width: 24px; height: 24px; border-radius: 50%; border: 0.5px solid var(--border); background: var(--bg-surface); color: var(--text-primary); cursor: pointer; }
-.reminder-tray-chips { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; }
+/* Extra top padding keeps the pulsing gold highlight glow around a
+   targeted chip (see .reminder-chip--target) from being clipped by this
+   row's overflow-x:auto (which also clips the Y axis per the CSS spec). */
+.reminder-tray-chips { display: flex; gap: 8px; overflow-x: auto; padding: 10px 2px 4px; }
 .reminder-tray-empty { font-size: 12px; color: var(--text-muted); font-style: italic; padding: 6px 2px; }
 .reminder-chip {
   flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 4px;

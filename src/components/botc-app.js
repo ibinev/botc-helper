@@ -78,6 +78,7 @@ export class BotcApp extends LitElement {
     _reminderTrayOpen:   { state: true },
     _reminderDragging:   { state: true },
     _pendingReminderRole: { state: true },
+    _reminderTrayFiltered: { state: true },
     _bluffPickerOpen:    { state: true },
     _nightGuideOpen:     { state: true },
     _signModalOpen:      { state: true },
@@ -147,6 +148,7 @@ export class BotcApp extends LitElement {
     this._reminderTrayOpen   = false;
     this._reminderDragging   = false;
     this._pendingReminderRole = null;
+    this._reminderTrayFiltered = false;
     this._bluffPickerOpen    = false;
     this._nightGuideOpen     = false;
     this._signModalOpen      = false;
@@ -1673,9 +1675,18 @@ export class BotcApp extends LitElement {
     const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
     seats[idx] = { ...seat, reminders: [...(seat.reminders || []), { id, text: chip.text, role: chip.role, sourceKey: chip.key }] };
     this.seats = seats;
-    if (chip.role === this._pendingReminderRole) this._pendingReminderRole = null;
+    this._clearPendingReminderIfDone(chip.role);
     this._saveState();
     this.requestUpdate();
+  }
+
+  // A role can have multiple reminder tokens (e.g. Washerwoman's "Townsfolk"
+  // + "Wrong") — only stop targeting/filtering it once ALL of its tokens
+  // have been placed, not just the first one.
+  _clearPendingReminderIfDone(role) {
+    if (role !== this._pendingReminderRole) return;
+    const stillHasChip = this._buildReminderChips().some(c => c.role === role);
+    if (!stillHasChip) this._pendingReminderRole = null;
   }
 
   _removeReminderFromSeat({ idx, id }) {
@@ -1694,7 +1705,7 @@ export class BotcApp extends LitElement {
   _addReminderToTown(chip) {
     const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
     this.townReminders = [...this.townReminders, { id, text: chip.text, role: chip.role, sourceKey: chip.key }];
-    if (chip.role === this._pendingReminderRole) this._pendingReminderRole = null;
+    this._clearPendingReminderIfDone(chip.role);
     this._saveState();
     this.requestUpdate();
   }
@@ -1707,10 +1718,13 @@ export class BotcApp extends LitElement {
 
   // Jumps from the Night Guide wizard back to the circle with the reminder
   // tray open and the needed token highlighted, so it's ready to drag.
+  // Filters the tray down to just that one token — opening the tray via the
+  // topbar icon instead always shows every token, unfiltered.
   _onGotoGrimoire(role) {
     this._nightGuideOpen = false;
     this._reminderTrayOpen = true;
     this._pendingReminderRole = role || null;
+    this._reminderTrayFiltered = true;
     this.requestUpdate();
   }
 
@@ -1977,7 +1991,12 @@ export class BotcApp extends LitElement {
     const nomActive  = !!this.nomMode;
     const thresholdReached = this._voteThresholdReached();
     const hasRolesImg = !!ROLES_IMG_URL;
-    const reminderChips = (this.storyView && this._reminderTrayOpen) ? this._buildReminderChips() : [];
+    const allReminderChips = (this.storyView && this._reminderTrayOpen) ? this._buildReminderChips() : [];
+    // "Prepare Token" from the Night Guide filters down to just that role's
+    // token(s); opening the tray via the topbar icon always shows everything.
+    const reminderChips = (this._reminderTrayFiltered && this._pendingReminderRole)
+      ? allReminderChips.filter(c => c.role === this._pendingReminderRole)
+      : allReminderChips;
 
     return html`
       <!-- Side menu: hidden off-screen, opened via the bar-title tap or an
@@ -2039,7 +2058,7 @@ export class BotcApp extends LitElement {
             @click="${() => { this._referenceOpen = true; this.requestUpdate(); }}">📖</button>
           ${this.storyView && this.phase === 'night' ? html`
             <button class="topbar-icon-btn ${this._reminderTrayOpen ? 'active' : ''}" title="Reminder tokens"
-              @click="${() => { this._reminderTrayOpen = !this._reminderTrayOpen; if (!this._reminderTrayOpen) this._pendingReminderRole = null; this.requestUpdate(); }}">🔖</button>
+              @click="${() => { this._reminderTrayOpen = !this._reminderTrayOpen; this._reminderTrayFiltered = false; if (!this._reminderTrayOpen) this._pendingReminderRole = null; this.requestUpdate(); }}">🔖</button>
           ` : nothing}
           <button class="topbar-icon-btn" title="Settings"
             @click="${() => { this._settingsOpen = true; this.requestUpdate(); }}">⚙️</button>
@@ -2086,8 +2105,13 @@ export class BotcApp extends LitElement {
         ${this.storyView && this.phase === 'night' && this._reminderTrayOpen ? html`
           <div id="reminder-tray" class="${this._reminderDragging ? 'reminder-tray--dragging' : ''}">
             <div class="reminder-tray-header">
-              <span>${this._pendingReminderRole ? html`🎯 Prepare <strong>${this._pendingReminderRole}</strong>'s token` : '🔖 Drag a token onto a seat'}</span>
-              <button class="reminder-tray-close" @click="${() => { this._reminderTrayOpen = false; this._pendingReminderRole = null; this.requestUpdate(); }}">✕</button>
+              <div class="reminder-tray-header-left">
+                <span>${this._pendingReminderRole ? html`🎯 Prepare <strong>${this._pendingReminderRole}</strong>'s token` : '🔖 Drag a token onto a seat'}</span>
+                ${this._reminderTrayFiltered && this._pendingReminderRole ? html`
+                  <button class="reminder-tray-showall" @click="${() => { this._reminderTrayFiltered = false; this.requestUpdate(); }}">Show all</button>
+                ` : nothing}
+              </div>
+              <button class="reminder-tray-close" @click="${() => { this._reminderTrayOpen = false; this._pendingReminderRole = null; this._reminderTrayFiltered = false; this.requestUpdate(); }}">✕</button>
             </div>
             <div class="reminder-tray-chips">
               ${reminderChips.length ? reminderChips.map(c => html`
@@ -2100,7 +2124,7 @@ export class BotcApp extends LitElement {
                   <span class="reminder-chip-text">${c.text}</span>
                   <span class="reminder-chip-sub">${c.seatName}</span>
                 </div>
-              `) : html`<div class="reminder-tray-empty">No True roles with reminder tokens are assigned yet.</div>`}
+              `) : html`<div class="reminder-tray-empty">${this._reminderTrayFiltered && this._pendingReminderRole ? html`<strong>${this._pendingReminderRole}</strong>'s token is already placed.` : 'No True roles with reminder tokens are assigned yet.'}</div>`}
             </div>
           </div>
         ` : nothing}
@@ -2143,9 +2167,11 @@ export class BotcApp extends LitElement {
         ` : nothing}
 
         <!-- Player list button -->
-        <button id="btn-list" @click="${() => { this._listOpen = true; this.requestUpdate(); }}">
-          👥 <span class="btn-label">Players </span><span class="list-count">${named}</span>
-        </button>
+        ${this.phase !== 'night' ? html`
+          <button id="btn-list" @click="${() => { this._listOpen = true; this.requestUpdate(); }}">
+            👥 <span class="btn-label">Players </span><span class="list-count">${named}</span>
+          </button>
+        ` : nothing}
       </div>
 
       <!-- Pool manage popup -->

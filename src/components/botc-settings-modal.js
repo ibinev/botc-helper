@@ -689,7 +689,7 @@ export class BotcSettingsModal extends LitElement {
                             <div class="settings-script-slot-popup-title">${CAT_LABELS[this._slotTargetCat]}</div>
                             <button class="btn-sm" type="button" @click="${() => this._closeSlotPicker()}">✕</button>
                           </div>
-                          <div class="settings-script-slot-picker-label">Choose a role to add to ${CAT_LABELS[this._slotTargetCat]}.</div>
+                          <div class="settings-script-slot-picker-label">Tap a role to add it to ${CAT_LABELS[this._slotTargetCat]} — keep tapping to add more, then click Done.</div>
                           <div class="settings-script-form-row settings-script-search-row settings-script-slot-search-row">
                             <div class="settings-script-search-wrap">
                               <input id="custom-script-slot-search" class="settings-script-input" type="text" .value="${this._customQuery}"
@@ -703,10 +703,7 @@ export class BotcSettingsModal extends LitElement {
                           <div class="settings-script-slot-picker">
                             ${slotPool.map(role => html`
                               <button class="settings-script-slot-role" type="button"
-                                @click="${() => {
-                                  this._addCharacter(this._slotTargetCat, role.name);
-                                  this._closeSlotPicker();
-                                }}">
+                                @click="${() => this._addCharacter(this._slotTargetCat, role.name)}">
                                 ${ROLE_ICONS[role.name] ? html`<img class="settings-script-slot-role-icon" src="${ROLE_ICONS[role.name]}" alt="" loading="lazy" decoding="async">` : nothing}
                                 <span class="settings-script-slot-role-info">
                                   <span class="settings-script-slot-role-name-row">
