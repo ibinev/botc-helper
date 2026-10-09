@@ -6,7 +6,6 @@
   },
   "investigator",
   "washerwoman",
-  "shugenja",
   "empath",
   "sailor",
   "balloonist",
@@ -14,11 +13,12 @@
   "undertaker",
   "monk",
   "slayer",
+  "amnesiac",
   "sage",
   "mayor",
   "virgin",
   "sweetheart",
-  "mutant",
+  "klutz",
   "politician",
   "damsel",
   "cerenovus",
@@ -27,5 +27,6 @@
   "xaan",
   "po",
   "legion",
-  "fanggu"
+  "fanggu",
+  "leviathan"
 ]
