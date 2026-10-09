@@ -40,10 +40,11 @@ export class BotcNightguideModal extends LitElement {
     round:       { type: Number  },
     storyView:   { type: Boolean },
     demonBluffs: { type: Array   },
-    _noTab:      { state: true   },
-    _done:       { state: true   },
-    _wizardIdx:  { state: true   },
-    _revealAll:  { state: true   },
+    _noTab:         { state: true },
+    _done:          { state: true },
+    _wizardIdx:     { state: true },
+    _revealAll:     { state: true },
+    _wizardStarted: { state: true },
   };
 
   createRenderRoot() { return this; }
@@ -58,10 +59,11 @@ export class BotcNightguideModal extends LitElement {
     this.round       = 1;
     this.storyView   = false;
     this.demonBluffs = [];
-    this._noTab      = 'first';
-    this._done       = new Set();
-    this._wizardIdx  = 0;
-    this._revealAll  = false;
+    this._noTab         = 'first';
+    this._done          = new Set();
+    this._wizardIdx     = 0;
+    this._revealAll     = false;
+    this._wizardStarted = false;
   }
 
   updated(changed) {
@@ -70,9 +72,16 @@ export class BotcNightguideModal extends LitElement {
       if (nextNoTab !== this._noTab) {
         this._noTab = nextNoTab;
         this._done  = new Set();
+        this._wizardStarted = false;
       }
       this._revealAll = false;
-      this._startWizard();
+      // Only jump to the first unfinished step on a fresh start for this
+      // night — reopening the modal (e.g. after "Go to Grimoire") should
+      // resume right where the Storyteller left off, not reset position.
+      if (!this._wizardStarted) {
+        this._startWizard();
+        this._wizardStarted = true;
+      }
     }
     if (changed.has('_revealAll') && this._revealAll) {
       requestAnimationFrame(() => this._fitBluffReveal());
@@ -135,6 +144,126 @@ export class BotcNightguideModal extends LitElement {
     if (!seat) return false;
     if (seat.dead) return true;
     return (seat.reminders || []).some(r => (r.text || '').trim().toLowerCase() === 'dead');
+  }
+
+  // ── Computed night-info (Storyteller mode) ────────────────────────────
+  // For roles whose ability is pure deterministic info derivable from the
+  // current seating/true-role assignments (no Storyteller judgment call
+  // involved, e.g. picking a decoy for Washerwoman), work out the exact
+  // answer to give instead of just the generic "Give a finger signal."
+  // hint text. Seats in clockwise order, true-role resolved, travelers
+  // excluded (they don't occupy a real circle position for these abilities).
+  _circleSeats() {
+    const roles = getRoles(this.script);
+    return this.seats
+      .map((s, i) => ({ idx: i, seat: s, role: s.trueRole ? roles.find(r => r.name === s.trueRole) : null }))
+      .filter(e => e.role && e.role.cat !== 'traveler');
+  }
+
+  _computeChef() {
+    const circle = this._circleSeats();
+    if (circle.length < 2) return null;
+    let pairs = 0;
+    for (let i = 0; i < circle.length; i++) {
+      const a = circle[i], b = circle[(i + 1) % circle.length];
+      if (a.role.align === 'evil' && b.role.align === 'evil') pairs++;
+    }
+    return pairs;
+  }
+
+  _computeOracle() {
+    const roles = getRoles(this.script);
+    let count = 0, any = false;
+    this.seats.forEach(s => {
+      if (!s.dead || !s.trueRole) return;
+      const role = roles.find(r => r.name === s.trueRole);
+      if (!role) return;
+      any = true;
+      if (role.align === 'evil') count++;
+    });
+    return any ? count : 0;
+  }
+
+  _computeClockmaker() {
+    const circle = this._circleSeats();
+    const demonIdx = circle.findIndex(e => e.role.cat === 'demon');
+    if (demonIdx === -1) return null;
+    const n = circle.length;
+    let best = null;
+    circle.forEach((e, i) => {
+      if (e.role.cat !== 'minion') return;
+      const d = Math.min(Math.abs(i - demonIdx), n - Math.abs(i - demonIdx));
+      if (best === null || d < best) best = d;
+    });
+    return best;
+  }
+
+  _computeEmpath(circle, seatIdx) {
+    const idx = circle.findIndex(e => e.idx === seatIdx);
+    const n = circle.length;
+    if (idx === -1 || n < 3) return null;
+    const neighbor = dir => {
+      for (let step = 1; step < n; step++) {
+        const cand = circle[((idx + dir * step) % n + n) % n];
+        if (!cand.seat.dead) return cand;
+      }
+      return null;
+    };
+    const left = neighbor(-1), right = neighbor(1);
+    if (!left || !right) return null;
+    return (left.role.align === 'evil' ? 1 : 0) + (right.role.align === 'evil' ? 1 : 0);
+  }
+
+  _computeShugenja(circle, seatIdx) {
+    const idx = circle.findIndex(e => e.idx === seatIdx);
+    const n = circle.length;
+    if (idx === -1 || n < 2) return null;
+    let cw = null, ccw = null;
+    for (let step = 1; step < n; step++) {
+      if (cw === null && circle[(idx + step) % n].role.align === 'evil') cw = step;
+      if (ccw === null && circle[((idx - step) % n + n) % n].role.align === 'evil') ccw = step;
+      if (cw !== null && ccw !== null) break;
+    }
+    if (cw === null && ccw === null) return null;
+    if (cw === ccw) return 'equidistant — arbitrary';
+    return cw < ccw ? 'clockwise' : 'anticlockwise';
+  }
+
+  // Returns a short string to display for this step, or null if this role
+  // has no computable info (incl. roles that need a Storyteller judgment
+  // call, like which decoy to show for Washerwoman/Librarian/Investigator).
+  _computedInfo(entry, st) {
+    if (!this.storyView || !st.hasPlayers) return null;
+    switch (entry.name) {
+      case 'Chef': {
+        const v = this._computeChef();
+        return v == null ? null : `Finger signal: ${v}`;
+      }
+      case 'Oracle': {
+        const v = this._computeOracle();
+        return v == null ? null : `Finger signal: ${v}`;
+      }
+      case 'Clockmaker': {
+        const v = this._computeClockmaker();
+        return v == null ? null : `Finger signal: ${v}`;
+      }
+      case 'Empath': {
+        const circle = this._circleSeats();
+        const parts = st.players
+          .map(p => { const v = this._computeEmpath(circle, p.idx); return v == null ? null : `${p.name}: ${v}`; })
+          .filter(Boolean);
+        return parts.length ? parts.join(' · ') : null;
+      }
+      case 'Shugenja': {
+        const circle = this._circleSeats();
+        const parts = st.players
+          .map(p => { const v = this._computeShugenja(circle, p.idx); return v == null ? null : `${p.name}: ${v}`; })
+          .filter(Boolean);
+        return parts.length ? parts.join(' · ') : null;
+      }
+      default:
+        return null;
+    }
   }
 
   _noRowState(entry, idx) {
@@ -204,6 +333,7 @@ export class BotcNightguideModal extends LitElement {
 
   _renderWizardCard(entry, idx, total) {
     const st = this._noRowState(entry, idx);
+    const computed = this._computedInfo(entry, st);
     return html`
       <div class="wizard-progress">Step ${idx + 1} / ${total}</div>
       <div class="wizard-card ${entry.st ? 'wizard-card--st' : ''} ${st.isDead ? 'wizard-card--dead' : ''}">
@@ -214,6 +344,7 @@ export class BotcNightguideModal extends LitElement {
         ${st.hasPlayers ? html`<div class="wizard-players">${st.players.map(p => p.name).join(', ')}${st.isDead ? ' 💀' : ''}</div>` : nothing}
         ${entry.cond ? html`<span class="no-cond-tag">conditional</span>` : nothing}
         <div class="wizard-hint">${this._renderHint(entry.hint)}</div>
+        ${computed ? html`<div class="wizard-computed">${computed}</div>` : nothing}
         ${st.placedTokens.length ? html`
           <div class="wizard-tokens">
             ${st.placedTokens.map(t => html`

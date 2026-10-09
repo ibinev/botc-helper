@@ -18,11 +18,14 @@ import { getRoles, ROLE_ICONS } from '../data.js';
  *   open        {Boolean}
  *   script      {String}
  *   seats       {Array}   – current game seats, [{ name, ... }], for the player pickers
- *   customSigns {Array}   – [{ id, label, text }], persisted by botc-app.js
+ *   customSigns {Array}   – [{ id, label, text, role }], persisted by botc-app.js
+ *                           `role`, if set, is a character name from the script: the sign
+ *                           is shown like a role reveal (icon + name) with `text` as the
+ *                           phrase above the name, instead of as plain free-form text.
  *
  * Fires:
  *   modal-close  – (no detail)
- *   add-sign     – { detail: { label, text } }
+ *   add-sign     – { detail: { label, text, role } }
  *   delete-sign  – { detail: { id } }
  */
 const PRESETS = [
@@ -48,6 +51,7 @@ export class BotcSignModal extends LitElement {
     _preset:       { state: true   },
     _draftText:    { state: true   },
     _draftLabel:   { state: true   },
+    _draftRole:    { state: true   },
     _reveal:       { state: true   },
     _selectedNames:{ state: true   },
   };
@@ -64,6 +68,7 @@ export class BotcSignModal extends LitElement {
     this._preset        = null;
     this._draftText     = '';
     this._draftLabel    = '';
+    this._draftRole     = null;
     this._reveal        = null;
     this._selectedNames = [];
   }
@@ -74,6 +79,7 @@ export class BotcSignModal extends LitElement {
       this._preset        = null;
       this._draftText     = '';
       this._draftLabel    = '';
+      this._draftRole     = null;
       this._reveal        = null;
       this._selectedNames = [];
     }
@@ -158,20 +164,34 @@ export class BotcSignModal extends LitElement {
     this._step = 'reveal';
   }
 
-  _showCustom(text) {
+  _roleByName(name) {
+    return getRoles(this.script).find(r => r.name === name) || null;
+  }
+
+  // `role`, if given, shows an icon + name reveal with `text` as the phrase above the name.
+  _showCustom(text, role = null) {
     const t = (text || '').trim();
-    if (!t) return;
-    this._reveal = { kind: 'custom', text: t };
+    if (!t && !role) return;
+    this._reveal = role
+      ? { kind: 'role', icon: ROLE_ICONS[role.name], name: role.name, phrase: t, ability: role.ability || '' }
+      : { kind: 'custom', text: t };
     this._step = 'reveal';
+  }
+
+  _pickDraftRole(role) {
+    this._draftRole = role;
+    this._step = 'custom';
   }
 
   _saveDraft() {
     const text = this._draftText.trim();
-    if (!text) return;
-    const label = this._draftLabel.trim() || text.slice(0, 28);
-    this.dispatchEvent(new CustomEvent('add-sign', { detail: { label, text }, bubbles: true, composed: true }));
+    if (!text && !this._draftRole) return;
+    const label = this._draftLabel.trim() || (this._draftRole ? this._draftRole.name : text.slice(0, 28));
+    const role = this._draftRole ? this._draftRole.name : null;
+    this.dispatchEvent(new CustomEvent('add-sign', { detail: { label, text, role }, bubbles: true, composed: true }));
     this._draftText  = '';
     this._draftLabel = '';
+    this._draftRole  = null;
     this._step = 'picker';
   }
 
@@ -188,7 +208,7 @@ export class BotcSignModal extends LitElement {
         <div class="sign-saved-list">
           ${this.customSigns.map(s => html`
             <div class="sign-saved-item">
-              <button class="sign-saved-btn" @click="${() => this._showCustom(s.text)}">${s.label}</button>
+              <button class="sign-saved-btn" @click="${() => this._showCustom(s.text, s.role ? this._roleByName(s.role) : null)}">${s.label}</button>
               <button class="sign-del-btn" title="Delete"
                 @click="${() => this.dispatchEvent(new CustomEvent('delete-sign', { detail: { id: s.id }, bubbles: true, composed: true }))}">🗑</button>
             </div>
@@ -199,19 +219,32 @@ export class BotcSignModal extends LitElement {
     `;
   }
 
-  _renderRolePicker() {
+  _renderRoleList(label, onPick) {
     const roles = getRoles(this.script).filter(r => !r.__spacer);
     return html`
-      <div class="sign-role-label">${this._preset.phrase} — pick a character</div>
+      <div class="sign-role-label">${label}</div>
       <div class="sign-role-list">
         ${roles.map(r => html`
-          <button class="sign-role-item" @click="${() => this._pickRole(r)}">
+          <button class="sign-role-item" @click="${() => onPick(r)}">
             ${ROLE_ICONS[r.name] ? html`<img src="${ROLE_ICONS[r.name]}" alt="">` : nothing}
             <span>${r.name}</span>
           </button>
         `)}
       </div>
+    `;
+  }
+
+  _renderRolePicker() {
+    return html`
+      ${this._renderRoleList(`${this._preset.phrase} — pick a character`, r => this._pickRole(r))}
       <button class="btn wizard-exit" @click="${() => { this._step = 'picker'; }}">◀ Back</button>
+    `;
+  }
+
+  _renderCustomRolePicker() {
+    return html`
+      ${this._renderRoleList('Attach a character — pick a character', r => this._pickDraftRole(r))}
+      <button class="btn wizard-exit" @click="${() => { this._step = 'custom'; }}">◀ Back</button>
     `;
   }
 
@@ -242,16 +275,26 @@ export class BotcSignModal extends LitElement {
 
   _renderCustomEdit() {
     return html`
-      <textarea class="notes-textarea sign-custom-textarea" placeholder="Text to show big…"
+      <textarea class="notes-textarea sign-custom-textarea"
+        placeholder="${this._draftRole ? 'Custom text above the role name (optional)…' : 'Text to show big…'}"
         .value="${this._draftText}"
         @input="${e => { this._draftText = e.target.value; }}"></textarea>
+      ${this._draftRole ? html`
+        <div class="sign-draft-role">
+          ${ROLE_ICONS[this._draftRole.name] ? html`<img src="${ROLE_ICONS[this._draftRole.name]}" alt="">` : nothing}
+          <span>${this._draftRole.name}</span>
+          <button class="sign-del-btn" title="Remove character" @click="${() => { this._draftRole = null; }}">✕</button>
+        </div>
+      ` : html`
+        <button class="btn btn-wizard-action" @click="${() => { this._step = 'custom-role'; }}">🎭 Attach A Character</button>
+      `}
       <input class="pool-add-input sign-custom-label" placeholder="Label to save as (optional)"
         .value="${this._draftLabel}"
         @input="${e => { this._draftLabel = e.target.value; }}">
       <div class="wizard-controls">
         <button class="btn" @click="${() => { this._step = 'picker'; }}">◀ Back</button>
         <button class="btn" @click="${this._saveDraft}">💾 Save</button>
-        <button class="btn btn-primary" @click="${() => this._showCustom(this._draftText)}">Show</button>
+        <button class="btn btn-primary" @click="${() => this._showCustom(this._draftText, this._draftRole)}">Show</button>
       </div>
     `;
   }
@@ -302,6 +345,7 @@ export class BotcSignModal extends LitElement {
               : this._step === 'role'   ? this._renderRolePicker()
               : (this._step === 'player' || this._step === 'players') ? this._renderPlayerPicker()
               : this._step === 'custom' ? this._renderCustomEdit()
+              : this._step === 'custom-role' ? this._renderCustomRolePicker()
               : nothing}
           </div>
         </div>

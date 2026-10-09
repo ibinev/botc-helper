@@ -1330,9 +1330,6 @@ export class BotcApp extends LitElement {
     this._saveState();
     if (this.phase === 'night') {
       if (this.nomMode) this._cancelNomMode();
-    } else {
-      this._reminderTrayOpen = false;
-      this._pendingReminderRole = null;
     }
     this.requestUpdate();
   }
@@ -1742,8 +1739,8 @@ export class BotcApp extends LitElement {
     this.requestUpdate();
   }
 
-  _addCustomSign(label, text) {
-    this.customSigns = [...this.customSigns, { id: Date.now() + '-' + Math.random().toString(36).slice(2), label, text }];
+  _addCustomSign(label, text, role) {
+    this.customSigns = [...this.customSigns, { id: Date.now() + '-' + Math.random().toString(36).slice(2), label, text, role: role || null }];
     this._saveCustomSigns();
     this.requestUpdate();
   }
@@ -2056,7 +2053,7 @@ export class BotcApp extends LitElement {
             @click="${() => { this._nomsOpen = true; this.requestUpdate(); }}">⚖️</button>
           <button class="topbar-icon-btn" title="Reference"
             @click="${() => { this._referenceOpen = true; this.requestUpdate(); }}">📖</button>
-          ${this.storyView && this.phase === 'night' ? html`
+          ${this.storyView ? html`
             <button class="topbar-icon-btn ${this._reminderTrayOpen ? 'active' : ''}" title="Reminder tokens"
               @click="${() => { this._reminderTrayOpen = !this._reminderTrayOpen; this._reminderTrayFiltered = false; if (!this._reminderTrayOpen) this._pendingReminderRole = null; this.requestUpdate(); }}">🔖</button>
           ` : nothing}
@@ -2101,8 +2098,8 @@ export class BotcApp extends LitElement {
         <!-- Nomination step bar -->
         <div id="nom-step-bar" class="${nomBarText ? 'visible' : ''} ${thresholdReached ? 'threshold-reached' : ''}">${nomBarText}</div>
 
-        <!-- Reminder token tray (Storyteller mode, night only) -->
-        ${this.storyView && this.phase === 'night' && this._reminderTrayOpen ? html`
+        <!-- Reminder token tray (Storyteller mode) -->
+        ${this.storyView && this._reminderTrayOpen ? html`
           <div id="reminder-tray" class="${this._reminderDragging ? 'reminder-tray--dragging' : ''}">
             <div class="reminder-tray-header">
               <div class="reminder-tray-header-left">
@@ -2507,7 +2504,7 @@ export class BotcApp extends LitElement {
         .script="${this.script}"
         .seats="${this.seats}"
         .customSigns="${this.customSigns}"
-        @add-sign="${e => this._addCustomSign(e.detail.label, e.detail.text)}"
+        @add-sign="${e => this._addCustomSign(e.detail.label, e.detail.text, e.detail.role)}"
         @delete-sign="${e => this._deleteCustomSign(e.detail.id)}"
         @modal-close="${() => {
           this._signModalOpen = false;

@@ -1124,6 +1124,7 @@ body.hide-role .town-reminder-strip { display: none; }
 .wizard-name { font-size: 22px; font-weight: 800; color: var(--text); }
 .wizard-players { font-size: 14px; font-weight: 700; color: var(--gold-light); }
 .wizard-hint { font-size: 16px; line-height: 1.55; color: var(--text-primary); opacity: 0.95; margin-top: 4px; }
+.wizard-computed { font-size: 15px; font-weight: 700; color: var(--gold-light); background: rgba(201,151,58,0.14); border: 0.5px solid rgba(201,151,58,0.35); border-radius: var(--radius-sm); padding: 6px 14px; margin-top: 2px; }
 .wizard-tokens { display: flex; gap: 10px; margin-top: 6px; flex-wrap: wrap; justify-content: center; }
 .wizard-token { display: flex; flex-direction: column; align-items: center; gap: 3px; }
 .wizard-token-name { font-size: 11px; font-weight: 600; color: var(--text-secondary); max-width: 72px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -1132,6 +1133,7 @@ body.hide-role .town-reminder-strip { display: none; }
 .wizard-card--dead .wizard-name,
 .wizard-card--dead .wizard-players,
 .wizard-card--dead .wizard-hint,
+.wizard-card--dead .wizard-computed,
 .wizard-card--dead .wizard-tokens { opacity: 0.45; filter: grayscale(0.85); }
 .wizard-controls { display: flex; gap: 10px; width: 100%; max-width: 420px; }
 .wizard-controls .btn { flex: 1; }
@@ -1196,6 +1198,9 @@ body.hide-role .town-reminder-strip { display: none; }
 .sign-role-check { flex-shrink: 0; font-size: 16px; }
 .sign-custom-textarea { min-height: 120px; width: 100%; max-width: 420px; }
 .sign-custom-label { width: 100%; max-width: 420px; box-sizing: border-box; }
+.sign-draft-role { display: flex; align-items: center; gap: 8px; width: 100%; max-width: 420px; padding: 6px 10px; background: var(--bg-card); border: 0.5px solid var(--border-strong); border-radius: var(--radius-sm); color: var(--text-primary); font-family: var(--font-sans); font-size: 14px; }
+.sign-draft-role img { width: 24px; height: 24px; object-fit: contain; border-radius: 50%; flex-shrink: 0; }
+.sign-draft-role span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* ── Role reference sheet ─────────────────────────────── */
 .rc-section-header { display: flex; align-items: center; gap: 10px; margin: 22px 0 12px; }
