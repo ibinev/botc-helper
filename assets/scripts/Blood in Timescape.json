@@ -4,8 +4,9 @@
     "name": "Blood in Timescape",
     "author": "Paco"
   },
+  "knight",
   "investigator",
-  "washerwoman",
+  "pixie",
   "empath",
   "sailor",
   "balloonist",
@@ -13,7 +14,6 @@
   "undertaker",
   "monk",
   "slayer",
-  "amnesiac",
   "sage",
   "mayor",
   "virgin",
@@ -25,8 +25,8 @@
   "fearmonger",
   "pithag",
   "xaan",
+  "lilmonsta",
   "po",
-  "legion",
   "fanggu",
   "leviathan"
 ]
