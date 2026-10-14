@@ -637,6 +637,7 @@ const OTHER_NIGHT_META_BY_ID = {
   ravenkeeper: { cond: true },
   undertaker: { cond: true },
   courtier: { cond: true },
+  cannibal: { cond: true },
   lunatic: { cond: true },
   zombuul: { cond: true },
   assassin: { cond: true },

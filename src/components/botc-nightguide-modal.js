@@ -45,6 +45,7 @@ export class BotcNightguideModal extends LitElement {
     _wizardIdx:     { state: true },
     _revealAll:     { state: true },
     _wizardStarted: { state: true },
+    _roleInfo:      { state: true },
   };
 
   createRenderRoot() { return this; }
@@ -64,6 +65,7 @@ export class BotcNightguideModal extends LitElement {
     this._wizardIdx     = 0;
     this._revealAll     = false;
     this._wizardStarted = false;
+    this._roleInfo      = null;
   }
 
   updated(changed) {
@@ -104,6 +106,14 @@ export class BotcNightguideModal extends LitElement {
     this.dispatchEvent(new CustomEvent('modal-close', { bubbles: true, composed: true }));
   }
 
+  // Tapping a step's icon/name opens the full role description (same card
+  // used for the demon-bluffs reveal) — Storyteller-only steps (e.g. "Demon
+  // info") have no matching role entry, so there's nothing to show.
+  _openRoleInfo(name) {
+    if (!getRoles(this.script).find(r => r.name === name)) return;
+    this._roleInfo = name;
+  }
+
   _onRandomizeClick() {
     this.dispatchEvent(new CustomEvent('randomize-setup', { bubbles: true, composed: true }));
   }
@@ -115,7 +125,7 @@ export class BotcNightguideModal extends LitElement {
       const role = s.trueRole || s.role;
       if (!role) return;
       if (!map[role]) map[role] = [];
-      map[role].push({ idx: i, name: s.name || ('Seat ' + (i + 1)) });
+      map[role].push({ idx: i, name: s.name || ('Seat ' + (i + 1)), drunk: !!s.drunk });
     });
     return map;
   }
@@ -289,7 +299,8 @@ export class BotcNightguideModal extends LitElement {
     const roleData   = roles.find(r => r.name === entry.name);
     const catClass   = roleData ? 'no-cat-' + roleData.cat : '';
     const hasReminders = !!(roleData && Array.isArray(roleData.reminders) && roleData.reminders.length);
-    return { key, placedTokens, players, hasPlayers, isDead, isUsed, checked, iconSrc, catClass, hasReminders };
+    const hasDrunk    = players.some(p => p.drunk);
+    return { key, placedTokens, players, hasPlayers, isDead, isUsed, checked, iconSrc, catClass, hasReminders, hasDrunk, hasRole: !!roleData };
   }
 
   _noOrder() {
@@ -338,12 +349,22 @@ export class BotcNightguideModal extends LitElement {
       <div class="wizard-progress">Step ${idx + 1} / ${total}</div>
       <div class="wizard-card ${entry.st ? 'wizard-card--st' : ''} ${st.isDead ? 'wizard-card--dead' : ''}">
         ${st.iconSrc
-          ? html`<img class="wizard-icon" src="${st.iconSrc}" alt="">`
+          ? html`<img class="wizard-icon ${st.hasRole ? 'wizard-icon--clickable' : ''}" src="${st.iconSrc}" alt=""
+              @click="${() => this._openRoleInfo(entry.name)}">`
           : html`<span class="wizard-icon wizard-icon--st">🌙</span>`}
-        <div class="wizard-name ${st.catClass}">${entry.name}</div>
-        ${st.hasPlayers ? html`<div class="wizard-players">${st.players.map(p => p.name).join(', ')}${st.isDead ? ' 💀' : ''}</div>` : nothing}
+        <div class="wizard-name ${st.catClass} ${st.hasRole ? 'wizard-name--clickable' : ''}"
+          @click="${() => this._openRoleInfo(entry.name)}">${entry.name}</div>
+        ${st.hasPlayers ? html`
+          <div class="wizard-players">
+            ${st.players.map((p, i) => html`${i > 0 ? ', ' : ''}${p.name}${p.drunk
+              ? html`<img class="wizard-drunk-icon" src="${ROLE_ICONS['Drunk']}" alt="Drunk" title="Secretly the Drunk">`
+              : nothing}`)}
+            ${st.isDead ? ' 💀' : nothing}
+          </div>
+        ` : nothing}
         ${entry.cond ? html`<span class="no-cond-tag">conditional</span>` : nothing}
         <div class="wizard-hint">${this._renderHint(entry.hint)}</div>
+        ${st.hasDrunk && !st.isDead ? html`<div class="wizard-drunk-warning">🍺 Secretly the Drunk — give FALSE information</div>` : nothing}
         ${computed ? html`<div class="wizard-computed">${computed}</div>` : nothing}
         ${st.placedTokens.length ? html`
           <div class="wizard-tokens">
@@ -372,6 +393,7 @@ export class BotcNightguideModal extends LitElement {
         <button class="btn" @click="${this._wizardSkip}">Skip</button>
         <button class="btn btn-primary" @click="${this._wizardNext}">${st.checked ? 'Next ▶' : '✓ Done'}</button>
       </div>
+      ${this._renderRoleInfo()}
     `;
   }
 
@@ -430,6 +452,31 @@ export class BotcNightguideModal extends LitElement {
     `;
   }
 
+  // Full-description popup for a single role, tapped from the icon/name on
+  // the current wizard step — reuses the bluff-reveal card look.
+  _renderRoleInfo() {
+    if (!this._roleInfo) return nothing;
+    const name = this._roleInfo;
+    const role = getRoles(this.script).find(r => r.name === name);
+    const icon = ROLE_ICONS[name];
+    return html`
+      <div class="bluff-reveal-backdrop"
+        @click="${e => {
+          const isTouch = !window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+          if (isTouch || e.target === e.currentTarget) this._roleInfo = null;
+        }}">
+        <div class="bluff-reveal-card">
+          <div class="bluff-reveal-item">
+            ${icon ? html`<img class="bluff-reveal-icon" src="${icon}" alt="">` : nothing}
+            <div class="bluff-reveal-name ${role ? 'no-cat-' + role.cat : ''}">${name}</div>
+            ${role ? html`<div class="bluff-reveal-team">${CAT_LABELS[role.cat] || role.cat}</div>` : nothing}
+            <div class="bluff-reveal-ability">${role?.ability || 'No description available.'}</div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
   render() {
     if (!this.open) return nothing;
     const order = this._noOrder();
@@ -453,7 +500,10 @@ export class BotcNightguideModal extends LitElement {
                 <div class="wizard-done-icon">🌅</div>
                 <div class="wizard-done-title">${this._noTab === 'first' ? 'First Night' : 'Night'} complete</div>
                 <p class="wizard-done-sub">Every step has been covered. Call for eyes open.</p>
-                <button class="btn btn-primary" @click="${this._dismiss}">Close</button>
+                <div class="wizard-controls">
+                  <button class="btn" @click="${this._wizardBack}">◀ Back</button>
+                  <button class="btn btn-primary" @click="${this._dismiss}">Close</button>
+                </div>
               </div>
             ` : this._renderWizardCard(order[idx], idx, order.length)}
           </div>

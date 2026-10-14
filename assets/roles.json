@@ -623,6 +623,7 @@
     "name": "Cannibal",
     "edition": "carousel",
     "team": "townsfolk",
+    "otherNightReminder": "If a good player was executed today, the Cannibal gains their ability; wake the Cannibal if that character would act tonight. If an evil player was executed, mark the Cannibal POISONED and pretend to prompt them.",
     "reminders": ["Poisoned", "Lunch"],
     "setup": false,
     "ability": "You have the ability of the recently killed executee. If they are evil, you are poisoned until a good player dies by execution.",

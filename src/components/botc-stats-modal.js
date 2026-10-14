@@ -177,8 +177,23 @@ export class BotcStatsModal extends LitElement {
       const trueRole = s.trueRole.trim();
       return claimsOf(s).filter(r => r !== trueRole);
     });
-    const demons  = seats.filter(s => s.trueRole && this._catOf(s.trueRole.trim()) === 'demon').map(s => s.trueRole.trim());
-    const minions = seats.filter(s => s.trueRole && this._catOf(s.trueRole.trim()) === 'minion').map(s => s.trueRole.trim());
+    // A seat's role can change mid-game (starpass, Scarlet Woman catching,
+    // Legion duplicating across many seats, etc.) — `trueRole` only reflects
+    // the *current* role. For the "most common demon/minion" stats we want
+    // the role the seat *started* the game as, traced back through the
+    // earliest changeLog entry, and deduped per game so e.g. Legion sitting
+    // in 8 seats (or a demon swap that still nets the same role) only counts
+    // once per game rather than once per seat.
+    const startingRoleOf = s => {
+      const roleChanges = (s.changeLog || []).filter(e => e.field === 'role');
+      if (!roleChanges.length) return s.trueRole ? s.trueRole.trim() : '';
+      const earliest = roleChanges.reduce((a, b) =>
+        phaseRoundToStep(b.phase, b.round) < phaseRoundToStep(a.phase, a.round) ? b : a);
+      return earliest.from ? earliest.from.trim() : '';
+    };
+    const startingRoles = seats.map(startingRoleOf).filter(Boolean);
+    const demons  = [...new Set(startingRoles.filter(r => this._catOf(r) === 'demon'))];
+    const minions = [...new Set(startingRoles.filter(r => this._catOf(r) === 'minion'))];
 
     const seatNames = seats
       .map(s => {
