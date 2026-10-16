@@ -1,7 +1,22 @@
-const VERSION = 'v116';
+const VERSION = 'v117';
 const CACHE = 'botc-' + VERSION;
 // Derive base path so this works at root (localhost) or a subpath (GitHub Pages)
 const BASE = self.location.pathname.replace(/\/sw\.js$/, '') || '';
+
+// Role icon PNGs: previously only cached lazily (cache-first on first view),
+// so a role never viewed while online (e.g. one only reachable via the
+// "Add character"/custom-script role picker, which lists every role) showed
+// a broken image the first time it was needed offline. Precache them all.
+const ROLE_ICON_FILES = {
+  'trouble-brewing': ['apprentice','barista','baron','beggar','bonecollector','bureaucrat','butcher','butler','chef','deviant','drunk','empath','fortuneteller','gangster','gunslinger','harlot','imp','investigator','judge','librarian','matron','mayor','monk','poisoner','ravenkeeper','recluse','saint','scapegoat','scarletwoman','slayer','soldier','spy','thief','undertaker','virgin','washerwoman'],
+  'bad-moon-rising': ['assassin','chambermaid','courtier','devilsadvocate','exorcist','fool','gambler','godfather','goon','gossip','grandmother','innkeeper','lunatic','mastermind','minstrel','moonchild','pacifist','po','professor','pukka','sailor','shabaloth','tealady','tinker','zombuul'],
+  'sects-and-violets': ['artist','barber','cerenovus','clockmaker','dreamer','eviltwin','fanggu','flowergirl','juggler','klutz','mathematician','mutant','nodashii','oracle','philosopher','pithag','sage','savant','seamstress','snakecharmer','sweetheart','towncrier','vigormortis','vortox','witch'],
+  'experimental': ['acrobat','alchemist','alhadikhia','alsaahir','amnesiac','angel','atheist','balloonist','banshee','big_wig','bishop','boffin','boomdandy','bootlegger','bountyhunter','buddhist','cacklejack','cannibal','choirboy','cultleader','damsel','deusexfiasco','djinn','doomsayer','duchess','engineer','farmer','fearmonger','ferryman','fibbin','fiddler','fisherman','gangster','gardener','general','gnome','goblin','godofug','golem','harpy','hatter','hellslibrarian','heretic','hermit','highpriestess','hindu','huntsman','kazali','king','knaves','knight','legion','leviathan','lilmonsta','lleech','lordoftyphon','lycanthrope','magician','marionette','mezepheles','nightwatchman','noble','ogre','ojo','organgrinder','pixie','plaguedoctor','politician','pope','poppygrower','preacher','princess','psychopath','puzzlemaster','revolutionary','riot','sentinel','shugenja','snitch','spiritofivory','steward','stormcatcher','summoner','tor','toymaker','ventriloquist','villageidiot','vizier','voudon','widow','wizard','wraith','xaan','yaggababble','zealot','zenomancer'],
+};
+const ROLE_ICON_ASSETS = Object.entries(ROLE_ICON_FILES).flatMap(([folder, names]) =>
+  names.map(n => BASE + '/assets/roles/' + folder + '/Icon_' + n + '.png')
+);
+
 const LOCAL_ASSETS = [
   BASE + '/',
   BASE + '/index.html',
@@ -39,6 +54,8 @@ const LOCAL_ASSETS = [
   BASE + '/src/components/botc-readme-modal.js',
   BASE + '/src/components/botc-nightguide-modal.js',
   BASE + '/src/components/botc-sign-modal.js',
+  BASE + '/src/components/botc-pdf-modal.js',
+  BASE + '/src/components/botc-reference-modal.js',
 ];
 
 // Install: pre-cache local assets
@@ -46,6 +63,10 @@ self.addEventListener('install', e => {
   e.waitUntil(
     caches.open(CACHE).then(cache =>
       cache.addAll(LOCAL_ASSETS.filter(u => !u.includes('roles_en'))) // skip large optional file
+        // Role icons are cached individually (not via addAll) since addAll
+        // aborts entirely if any single request 404s, and a few roles.json
+        // entries don't have an icon file on disk yet.
+        .then(() => Promise.allSettled(ROLE_ICON_ASSETS.map(u => cache.add(u))))
     ).then(() => self.skipWaiting())
   );
 });
