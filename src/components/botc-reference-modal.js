@@ -171,20 +171,11 @@ export class BotcReferenceModal extends LitElement {
       const known = new Set([...left, ...right]);
       const ordered = [];
 
-      if (cat === 'townsfolk') {
-        [...left, ...right].forEach(name => {
-          const role = byName.get(name);
-          if (role) ordered.push(role);
-        });
-      } else {
-        const rows = Math.max(left.length, right.length);
-        for (let i = 0; i < rows; i += 1) {
-          const l = byName.get(left[i]);
-          const r = byName.get(right[i]);
-          ordered.push(l || { __spacer: true, cat });
-          ordered.push(r || { __spacer: true, cat });
-        }
-      }
+      // Flatten left-then-right so the column-major grid fills the left column top-to-bottom first.
+      [...left, ...right].forEach(name => {
+        const role = byName.get(name);
+        if (role) ordered.push(role);
+      });
 
       roles.forEach(role => {
         if (!known.has(role.name)) ordered.push(role);
