@@ -77,6 +77,13 @@ export class BotcEditModal extends LitElement {
     this._isTravelerSeat = false;
   }
 
+  // Bundled/homebrew scripts register their roles into the catalog
+  // asynchronously after this (persistent) component is first constructed —
+  // rebuild the lookup on every update instead of caching it once.
+  willUpdate() {
+    this._roleByName = new Map(getAllRoles().map(r => [r.name, r]));
+  }
+
   updated(changed) {
     if (changed.has('open')) {
       const overlay = this.querySelector('#modal-edit');

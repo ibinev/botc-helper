@@ -95,13 +95,33 @@ function normalizeBundledEntry(raw, fallbackId) {
     const meta = raw.find(e => e && typeof e === 'object' && e.id === '_meta');
     const label = meta?.name || meta?.label || fallbackId;
     const roles = [];
+    // Fan scripts rarely appear in assets/nightsheet.json's canonical sequence,
+    // but script-tool exports give every acting role its own firstNight/
+    // otherNight position *within that script* — collect those to build a
+    // script-specific order instead (see buildNightOrderFromPositions below).
+    const nightOrder = { first: [], other: [] };
     raw.forEach(e => {
-      const rawId = typeof e === 'string' ? e : (e && typeof e === 'object' && e.id !== '_meta' ? e.id : null);
+      const isInlineRole = e && typeof e === 'object' && e.id !== '_meta';
+      const rawId = typeof e === 'string' ? e : (isInlineRole ? e.id : null);
       if (!rawId) return;
-      const role = ROLE_BY_ID.get(String(rawId).toLowerCase());
-      if (role) roles.push(role.name);
+      const id = String(rawId).toLowerCase();
+      // Fan-made/homebrew scripts often inline full role data instead of just
+      // referencing an id from the catalog — register those as homebrew roles
+      // (using their own image link as the icon) instead of dropping them.
+      const role = ROLE_BY_ID.get(id)
+        || (isInlineRole && e.name && e.team ? registerHomebrewRole(id, e) : null);
+      if (!role) return;
+      roles.push(role.name);
+      if (isInlineRole) {
+        if (typeof e.firstNight === 'number' && e.firstNight > 0) {
+          nightOrder.first.push({ num: e.firstNight, name: role.name, hint: e.firstNightReminder || role.firstNightReminder || '' });
+        }
+        if (typeof e.otherNight === 'number' && e.otherNight > 0) {
+          nightOrder.other.push({ num: e.otherNight, name: role.name, hint: e.otherNightReminder || role.otherNightReminder || '' });
+        }
+      }
     });
-    return { id: slugifyScriptId(fallbackId) || slugifyScriptId(label), label, author: meta?.author || '', roles, layout: null };
+    return { id: slugifyScriptId(fallbackId) || slugifyScriptId(label), label, author: meta?.author || '', roles, layout: null, nightOrder };
   }
   if (raw && typeof raw === 'object') {
     const roles = Array.isArray(raw.roles) ? raw.roles.filter(Boolean) : [];
@@ -111,10 +131,12 @@ function normalizeBundledEntry(raw, fallbackId) {
       author: String(raw.author || ''),
       roles,
       layout: raw.layout || null,
+      nightOrder: null,
     };
   }
   return null;
 }
+
 
 // Loads built-in scripts bundled with the app from assets/scripts/.
 // Add a script for every user by dropping a JSON file in that folder and
@@ -198,6 +220,34 @@ function indexRoleCatalog(roles) {
   ROLE_BY_ID = byId;
   ROLE_BY_NAME = byName;
   EXPERIMENTAL_ROLE_NAMES = experimental;
+}
+
+// Registers a fan-made role inlined in a bundled script (rather than referenced
+// by id from assets/roles.json) so it behaves like any other catalog role —
+// shows up in pickers/reference/circle, etc. Its icon comes straight from the
+// script's own image link(s) instead of a local asset.
+function registerHomebrewRole(id, entry) {
+  const cat = entry.team === 'traveller' ? 'traveler' : entry.team;
+  const role = {
+    id,
+    name: entry.name,
+    team: entry.team,
+    edition: 'homebrew',
+    ability: entry.ability || '',
+    reminders: Array.isArray(entry.reminders) ? entry.reminders : [],
+    firstNightReminder: entry.firstNightReminder || '',
+    otherNightReminder: entry.otherNightReminder || '',
+    setup: !!entry.setup,
+    cat,
+    align: TEAM_ALIGN[cat] || 'unknown',
+    experimental: true,
+  };
+  ROLE_BY_ID.set(id, role);
+  if (!ROLE_BY_NAME.has(role.name)) ROLE_BY_NAME.set(role.name, role);
+  EXPERIMENTAL_ROLE_NAMES.add(role.name);
+  const icon = Array.isArray(entry.image) ? entry.image[0] : entry.image;
+  if (icon && !ROLE_ICONS[role.name]) ROLE_ICONS[role.name] = icon;
+  return role;
 }
 
 // ── Core script role data ──────────────────────────────
@@ -708,9 +758,36 @@ function buildNightOrderForRoles(roles) {
   };
 }
 
+// Builds { first, other } rows for a homebrew script from the per-role
+// firstNight/otherNight positions collected in normalizeBundledEntry, since
+// such roles have no entry in the canonical assets/nightsheet.json sequence.
+// Minion/Demon info are placed up front (their exact slot isn't known without
+// a canonical sheet) and Dawn always closes out each side, same as official scripts.
+function buildNightOrderFromPositions(nightOrder, roles) {
+  const hasMinion = roles.some(r => r.cat === 'minion');
+  const hasDemon = roles.some(r => r.cat === 'demon');
+
+  function buildSide(entries) {
+    const rows = [];
+    if (hasMinion) rows.push({ name: 'Minion info', st: true, minPlayers: 7, hint: 'If 7+ players: Minions learn each other and who the Demon is.' });
+    if (hasDemon) rows.push({ name: 'Demon info', st: true, minPlayers: 7, hint: 'If 7+ players: Demon learns Minions and receives bluffs/setup info.' });
+    [...entries].sort((a, b) => a.num - b.num).forEach(e => {
+      rows.push({ name: e.name, hint: e.hint || `${e.name} acts.`, cond: false, st: false });
+    });
+    rows.push({ name: 'Dawn', st: true, hint: 'Call for eyes open and announce deaths' });
+    return rows;
+  }
+
+  return { first: buildSide(nightOrder.first), other: buildSide(nightOrder.other) };
+}
+
 export function getNightOrder(script = 'tb') {
   const roles = getRoles(script);
   if (!roles.length) return EMPTY_NIGHT_ORDER;
+  const custom = getCustomScript(script);
+  if (custom?.nightOrder && (custom.nightOrder.first.length || custom.nightOrder.other.length)) {
+    return buildNightOrderFromPositions(custom.nightOrder, roles);
+  }
   return buildNightOrderForRoles(roles);
 }
 

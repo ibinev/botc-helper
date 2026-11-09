@@ -16,8 +16,8 @@
   --text-primary:   #e8dcc6;
   --text-secondary: #c2a878;
   --text-muted:     #b89b72;
-  --good-bg:        rgba(74,124,138,0.25);
-  --good-text:      #7fc2d1;
+  --good-bg:        rgba(58,138,74,0.25);
+  --good-text:      #7fd08a;
   --evil-bg:        rgba(155,34,38,0.3);
   --evil-text:      #e06060;
   --info-bg:        rgba(24,95,165,0.25);
@@ -367,7 +367,7 @@ botc-circle { display: block; position: absolute; inset: 0; }
 .game-end-banner { display: flex; align-items: center; justify-content: center; gap: clamp(8px, 2.5vw, 16px); white-space: nowrap; animation: game-end-fadein 0.4s ease-out both, game-end-zoom 2.6s ease-in-out 0.4s 1 both; }
 .game-end-banner-icon { font-size: clamp(28px, 7.3vw, 56px); line-height: 1; filter: drop-shadow(0 2px 8px rgba(0,0,0,0.85)); }
 .game-end-banner-text { font-size: clamp(22px, 6vw, 46px); font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase; }
-.game-end-banner.good .game-end-banner-text { color: var(--good-text); text-shadow: 0 0 16px rgba(74,124,138,0.9), 0 0 34px rgba(74,124,138,0.55), 0 2px 6px rgba(0,0,0,0.9); }
+.game-end-banner.good .game-end-banner-text { color: var(--good-text); text-shadow: 0 0 16px rgba(58,138,74,0.9), 0 0 34px rgba(58,138,74,0.55), 0 2px 6px rgba(0,0,0,0.9); }
 .game-end-banner.evil .game-end-banner-text { color: var(--evil-text); text-shadow: 0 0 16px rgba(192,57,43,0.9), 0 0 34px rgba(192,57,43,0.55), 0 2px 6px rgba(0,0,0,0.9); }
 @keyframes game-end-fadein {
   from { opacity: 0; transform: scale(0.5); }
@@ -452,8 +452,8 @@ body.hide-dead #circle-inner.nom-votes-mode .seat.dead { display: block; }
 
 .seat.suspicious .seat-inner { box-shadow: 0 0 0 3px #9b4dca, 0 2px 12px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08); }
 .seat.dead.suspicious .seat-inner { box-shadow: 0 0 0 3px #9b4dca, 0 2px 8px rgba(0,0,0,0.4); }
-.seat.align-good .seat-inner { box-shadow: 0 0 0 3px #4a7c8a, 0 2px 12px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08); }
-.seat.dead.align-good .seat-inner { box-shadow: 0 0 0 3px #4a7c8a, 0 2px 8px rgba(0,0,0,0.4); }
+.seat.align-good .seat-inner { box-shadow: 0 0 0 3px #3a8a4a, 0 2px 12px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08); }
+.seat.dead.align-good .seat-inner { box-shadow: 0 0 0 3px #3a8a4a, 0 2px 8px rgba(0,0,0,0.4); }
 .seat.align-evil .seat-inner { box-shadow: 0 0 0 3px #c0392b, 0 2px 12px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08); }
 .seat.align-evil.dead .seat-inner { box-shadow: 0 0 0 3px #c0392b, 0 2px 8px rgba(0,0,0,0.4); }
 
@@ -668,7 +668,7 @@ body.hide-role .town-reminder-strip { display: none; }
 .seat.nom-unavailable .seat-inner { opacity: 0.32; filter: grayscale(0.7); }
 .seat.nom-unavailable { cursor: not-allowed; }
 .seat.nom-voted .seat-inner { border-color: #5a9e2f !important; box-shadow: 0 0 0 4px #5a9e2f, 0 4px 28px rgba(90,158,47,0.75), inset 0 0 28px rgba(90,158,47,0.18) !important; }
-.seat.nom-voted.align-good .seat-inner { background: rgba(74,124,138,0.28) !important; }
+.seat.nom-voted.align-good .seat-inner { background: rgba(58,138,74,0.28) !important; }
 .seat.nom-voted.align-evil .seat-inner { background: rgba(192,57,43,0.35) !important; }
 .seat.nom-voted.suspicious .seat-inner { background: rgba(155,77,202,0.3) !important; }
 .seat.nom-current .seat-inner { border-color: #ffd76a !important; box-shadow: 0 0 0 4px #ffd76a, 0 4px 28px rgba(255,215,106,0.8) !important; animation: nom-current-pulse 1.1s ease-in-out infinite; }
@@ -974,7 +974,7 @@ body.hide-role .town-reminder-strip { display: none; }
 .endgame-label { display: block; font-size: 12px; color: var(--text-secondary); margin: 8px 0 6px; }
 .endgame-align-btns { display: flex; gap: 8px; margin-bottom: 4px; }
 .endgame-align-btn { flex: 1; padding: 10px 8px; border-radius: 10px; border: 0.5px solid var(--border); background: var(--bg-input); color: var(--text-secondary); font-size: 14px; font-family: var(--font-sans); cursor: pointer; transition: background var(--duration-fast) var(--ease-standard), color var(--duration-fast) var(--ease-standard), border-color var(--duration-fast) var(--ease-standard); }
-.endgame-align-btn.align-good.active { background: var(--good-bg); color: var(--good-text); border-color: #4a7c8a; }
+.endgame-align-btn.align-good.active { background: var(--good-bg); color: var(--good-text); border-color: #3a8a4a; }
 .endgame-align-btn.align-evil.active { background: var(--evil-bg); color: var(--evil-text); border-color: var(--blood); }
 .endgame-reason { width: 100%; min-height: 80px; resize: vertical; background: var(--bg-input); border: 0.5px solid var(--border); border-radius: var(--radius-sm); color: var(--text-primary); font-family: var(--font-sans); font-size: 14px; padding: 8px 10px; margin-top: 4px; }
 .cycle-endgame-btn { font-size: 16px; border-left: 1px solid var(--border); }
@@ -1017,7 +1017,7 @@ body.hide-role .town-reminder-strip { display: none; }
 .nom-arrow  { color: var(--gold); font-size: 15px; flex-shrink: 0; }
 .nom-player { font-size: 13px; color: var(--text-primary); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-flex; align-items: center; gap: 4px; }
 .nom-player-icon { width: 20px; height: 20px; object-fit: contain; border-radius: 4px; flex-shrink: 0; vertical-align: middle; }
-.nom-player.align-good { color: #7fc2d1; }
+.nom-player.align-good { color: #7fd08a; }
 .nom-player.align-evil { color: #e06060; }
 .nom-player.align-susp { color: #d08ef0; }
 .nom-del    { background: none; border: none; cursor: pointer; color: var(--text-muted); font-size: 16px; padding: 0 4px; flex-shrink: 0; -webkit-tap-highlight-color: transparent; line-height: 1; }
@@ -1027,7 +1027,7 @@ body.hide-role .town-reminder-strip { display: none; }
 .nom-voters-row { display: flex; flex-wrap: wrap; gap: 4px; }
 .nom-voter-chip { font-size: 11px; padding: 2px 8px; border-radius: 999px; background: rgba(90,158,47,0.18); color: #8fca4b; border: 0.5px solid rgba(90,158,47,0.3); }
 .nom-ghost-icon { font-size: 10px; margin-left: 2px; opacity: 0.9; }
-.nom-voter-chip.align-good { background: rgba(74,124,138,0.18); color: #7fc2d1; border-color: rgba(74,124,138,0.3); }
+.nom-voter-chip.align-good { background: rgba(58,138,74,0.18); color: #7fd08a; border-color: rgba(58,138,74,0.3); }
 .nom-voter-chip.align-evil { background: rgba(192,57,43,0.18); color: #e06060; border-color: rgba(192,57,43,0.3); }
 .nom-voter-chip.align-susp { background: rgba(155,77,202,0.18); color: #d08ef0; border-color: rgba(155,77,202,0.3); }
 .nom-voter-chip.align-none { background: rgba(160,136,102,0.15); color: var(--text-secondary); border-color: var(--border); }
@@ -1042,7 +1042,7 @@ body.hide-role .town-reminder-strip { display: none; }
 .nom-notvoted-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--text-muted); display: block; margin-bottom: 5px; }
 .nom-notvoted-chips { display: flex; flex-wrap: wrap; gap: 4px; }
 .nom-notvoted-chip { font-size: 11px; padding: 2px 8px; border-radius: 999px; background: rgba(192,57,43,0.13); color: #e06060; border: 0.5px solid rgba(192,57,43,0.28); }
-.nom-notvoted-chip.align-good { background: rgba(74,124,138,0.12); color: #7fc2d1; border-color: rgba(74,124,138,0.25); }
+.nom-notvoted-chip.align-good { background: rgba(58,138,74,0.12); color: #7fd08a; border-color: rgba(58,138,74,0.25); }
 .nom-notvoted-chip.align-evil { background: rgba(192,57,43,0.18); color: #e06060; border-color: rgba(192,57,43,0.35); }
 .nom-notvoted-chip.align-susp { background: rgba(155,77,202,0.15); color: #d08ef0; border-color: rgba(155,77,202,0.28); }
 .nom-notvoted-chip.align-none { background: rgba(160,136,102,0.12); color: var(--text-secondary); border-color: var(--border); }
@@ -1383,7 +1383,7 @@ body.hide-role .town-reminder-strip { display: none; }
 .va-table th:first-child, .va-table td.va-name { text-align: left; }
 .va-table tbody tr + tr td { border-top: 0.5px solid var(--border); }
 .va-rate-low { color: #ff8080; font-weight: 700; }
-.va-name.align-good { color: #7fc2d1; }
+.va-name.align-good { color: #7fd08a; }
 .va-name.align-evil { color: #e06060; }
 .va-name.align-susp { color: #d08ef0; }
 .va-pair-names { flex: 1; }
