@@ -172,13 +172,14 @@ botc-app::before, #app::before {
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  /* Day: warm near-black vignette with a faint amber glow at center ("candlelit"). */
+  /* TEMP (testing): fog/vignette tint disabled to compare raw background.png coloring — restore the block below. */
+  /*
   background:
     radial-gradient(ellipse 100% 80% at 50% 50%, rgba(201,164,92,0.05) 0%, rgba(18,12,7,0.24) 70%, rgba(18,12,7,0.34) 100%),
     linear-gradient(to bottom, rgba(18,12,7,0.16) 0%, rgba(18,12,7,0.06) 40%, rgba(18,12,7,0.2) 100%);
+  */
 }
 body.night-cycle botc-app::before, body.night-cycle #app::before {
-  /* Night: deeper, cooler blue-black vignette instead of a plain darker version of day. */
   background:
     radial-gradient(ellipse 110% 88% at 50% 50%, rgba(6,9,18,0.44) 0%, rgba(6,9,18,0.64) 100%),
     linear-gradient(to bottom, rgba(6,9,18,0.48) 0%, rgba(6,9,18,0.26) 40%, rgba(6,9,18,0.56) 100%);
@@ -426,7 +427,8 @@ botc-circle { display: block; position: absolute; inset: 0; }
 }
 .seat:active .seat-inner { border-color: rgba(255,255,255,0.45); box-shadow: 0 0 0 2px var(--gold), 0 4px 18px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.12); transform: scale(1.06); }
 @media (hover: hover) and (pointer: fine) {
-  .seat:hover .seat-inner { border-color: rgba(255,255,255,0.45); box-shadow: 0 0 0 2px var(--gold), 0 4px 18px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.12); transform: scale(1.06); }
+  /* TEMP (testing): hover border/glow disabled, zoom kept — restore border-color/box-shadow above if needed. */
+  .seat:hover .seat-inner { transform: scale(1.06); }
 }
 .seat.selected .seat-inner { border-color: rgba(255,255,255,0.7); box-shadow: 0 0 0 3px var(--gold-light), 0 4px 20px rgba(201,151,58,0.3), inset 0 0 20px rgba(201,151,58,0.08); animation: candle-flicker 2.4s ease-in-out infinite; }
 @keyframes candle-flicker {
