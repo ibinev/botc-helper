@@ -43,7 +43,9 @@ export class BotcScriptBrowserModal extends LitElement {
   updated(changed) {
     if (changed.has('open')) {
       this.querySelector('#modal-script-browser')?.classList.toggle('visible', this.open);
-      if (this.open) {
+      // Auto-focus only on desktop — on mobile this forces the keyboard open and the
+      // viewport to scroll the input into view every time the modal opens, which felt buggy.
+      if (this.open && matchMedia('(hover: hover) and (pointer: fine)').matches) {
         requestAnimationFrame(() => this.querySelector('.script-browser-search')?.focus());
       }
     }
@@ -62,7 +64,8 @@ export class BotcScriptBrowserModal extends LitElement {
 
     overlay.addEventListener('touchstart', e => {
       const onControl = e.target.closest('button, a, input, select, textarea');
-      startedNearTop = !onControl && (dragbar.contains(e.target) || (inner && inner.scrollTop <= 4));
+      const searchFocused = this.querySelector('.script-browser-search') === document.activeElement;
+      startedNearTop = !onControl && !searchFocused && (dragbar.contains(e.target) || (inner && inner.scrollTop <= 4));
       ty0 = e.touches[0].clientY;
       dragging = false;
     }, { passive: true });

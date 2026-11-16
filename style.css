@@ -304,14 +304,14 @@ body.no-bg-fog.night-cycle botc-app::before, body.no-bg-fog.night-cycle #app::be
 /* ── Side menu (left edge, hidden until opened) ──────────────────────── */
 #side-menu-backdrop {
   position: fixed; inset: 0; z-index: 88; background: rgba(var(--scrim-rgb), 0.55);
-  opacity: 0; pointer-events: none; transition: opacity var(--duration-base) var(--ease-standard);
+  opacity: 0; pointer-events: none; transition: opacity var(--duration-fast) var(--ease-standard);
 }
 #side-menu-backdrop.visible { opacity: 1; pointer-events: all; }
 #side-menu {
   position: fixed; top: 0; bottom: 0; left: 0; width: 220px; max-width: 80vw; z-index: 89;
   background: var(--chrome-surface); border-right: 1px solid var(--chrome-border);
   box-shadow: var(--shadow-xl); display: flex; flex-direction: column;
-  transform: translateX(-100%); transition: transform 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+  transform: translateX(-100%); transition: transform 0.18s cubic-bezier(0.32, 0.72, 0, 1);
   padding-top: max(10px, env(safe-area-inset-top, 10px));
   padding-bottom: max(10px, env(safe-area-inset-bottom, 10px));
 }
@@ -425,12 +425,12 @@ botc-circle { display: block; position: absolute; inset: 0; }
   transition: border-color var(--duration-fast) var(--ease-standard), transform var(--duration-fast) var(--ease-standard), box-shadow var(--duration-fast) var(--ease-standard);
   position: relative; overflow: hidden;
 }
-.seat:active .seat-inner { border-color: rgba(255,255,255,0.45); box-shadow: 0 0 0 2px var(--gold), 0 4px 18px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.12); transform: scale(1.06); }
+.seat:active .seat-inner { box-shadow: 0 0 0 2px var(--gold), 0 4px 18px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.12); transform: scale(1.06); }
 @media (hover: hover) and (pointer: fine) {
   /* TEMP (testing): hover border/glow disabled, zoom kept — restore border-color/box-shadow above if needed. */
   .seat:hover .seat-inner { transform: scale(1.06); }
 }
-.seat.selected .seat-inner { border-color: rgba(255,255,255,0.7); box-shadow: 0 0 0 3px var(--gold-light), 0 4px 20px rgba(201,151,58,0.3), inset 0 0 20px rgba(201,151,58,0.08); animation: candle-flicker 2.4s ease-in-out infinite; }
+.seat.selected .seat-inner { box-shadow: 0 0 0 3px var(--gold-light), 0 4px 20px rgba(201,151,58,0.3), inset 0 0 20px rgba(201,151,58,0.08); animation: candle-flicker 2.4s ease-in-out infinite; }
 @keyframes candle-flicker {
   0%, 100% { box-shadow: 0 0 0 3px var(--gold-light), 0 4px 20px rgba(201,151,58,0.3), inset 0 0 20px rgba(201,151,58,0.08); }
   50%      { box-shadow: 0 0 0 3px var(--gold-light), 0 4px 26px rgba(201,151,58,0.5), inset 0 0 26px rgba(201,151,58,0.14); }
@@ -730,7 +730,7 @@ body.hide-role .town-reminder-strip { display: none; }
   background: rgba(var(--scrim-rgb), 0.7); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
   display: flex; align-items: flex-end; justify-content: center;
   padding-bottom: 0;
-  opacity: 0; pointer-events: none; transition: opacity var(--duration-base) var(--ease-standard);
+  opacity: 0; pointer-events: none; transition: opacity var(--duration-fast) var(--ease-standard);
   contain: paint;
 }
 .modal-overlay:not(.modal-overlay--fullscreen) { padding-bottom: var(--keyboard-inset); }
@@ -742,7 +742,7 @@ body.hide-role .town-reminder-strip { display: none; }
   box-shadow: var(--shadow-xl);
   display: flex; flex-direction: column;
   transform: translateY(40px);
-  transition: transform 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+  transition: transform 0.18s cubic-bezier(0.32, 0.72, 0, 1);
   overflow: hidden;
   backface-visibility: hidden;
   will-change: transform;
