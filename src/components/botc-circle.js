@@ -49,6 +49,7 @@ export class BotcCircle extends LitElement {
     storyView:     { type: Boolean },
     script:        { type: String  },
     seatScale:     { type: Number  },
+    seatLayout:    { type: String  },
     showGameEnd:      { type: Boolean },
     winningAlignment: { type: String  },
     townReminders:    { type: Array   },
@@ -77,6 +78,7 @@ export class BotcCircle extends LitElement {
     this.storyView     = false;
     this.script        = 'tb';
     this.seatScale     = 1;
+    this.seatLayout    = 'table';
     this.showGameEnd      = false;
     this.winningAlignment = '';
     this.townReminders    = [];
@@ -125,7 +127,7 @@ export class BotcCircle extends LitElement {
     if (this.seatPositions[i]) return this.seatPositions[i];
     // Use stored _w/_h (updated by rAF + ResizeObserver).
     // When they change, Lit re-renders and seats move to correct positions.
-    return defaultPos(i, this.seats.length, this._w, this._h, this.seatScale);
+    return defaultPos(i, this.seats.length, this._w, this._h, this.seatScale, this.seatLayout);
   }
 
   // Exact unit vector from this seat toward the circle's center (sun/moon),

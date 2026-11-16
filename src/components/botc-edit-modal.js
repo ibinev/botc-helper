@@ -433,7 +433,7 @@ export class BotcEditModal extends LitElement {
                           @input="${e => { this._poolManageName = e.target.value; }}"
                           @click="${e => e.stopPropagation()}"
                           @keydown="${e => {
-                            if (e.key === 'Enter') this._addToPool();
+                            if (e.key === 'Enter') { e.stopPropagation(); this._addToPool(); }
                             else if (e.key === 'Escape') { this._poolManageAdding = false; this._poolManageName = ''; }
                           }}">
                         <button class="pool-confirm" @click="${e => { e.stopPropagation(); this._addToPool(); }}">✓</button>
@@ -446,7 +446,7 @@ export class BotcEditModal extends LitElement {
                 ` : nothing}
                 <div class="player-name-control ${this._poolOpen ? 'open' : ''}">
                   <input type="text" id="f-name" placeholder="e.g. Alice" autocomplete="off"
-                    @keydown="${e => { if (e.key === 'Enter') this._onSave(); }}"
+                    @keydown="${e => { if (e.key === 'Enter') { e.stopPropagation(); this._onSave(); } }}"
                     @focus="${() => { this._poolOpen = false; this._poolManageOpen = false; }}">
                   ${this.fullPool?.length ? html`
                     <button class="pool-toggle-btn" type="button" aria-label="Open player names"

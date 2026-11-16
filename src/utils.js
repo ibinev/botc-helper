@@ -40,13 +40,18 @@ export function hapticTick(ms = 10) {
 }
 
 /**
- * Compute the default (x, y) position for seat i out of n
- * within a container of width W and height H.
- *
- * Layout uses a U-shape (left side, bottom side, right side),
- * leaving the top side empty for the storyteller.
+ * Compute the default (x, y) position for seat i out of n within a
+ * container of width W and height H. `layout` selects the arrangement:
+ *   'table' (default) – U-shape (left/bottom/right sides), top left open for the storyteller
+ *   'clock'            – full circle, evenly spaced like the hours on a clock face (12 at top, clockwise)
  */
-export function defaultPos(i, n, W, H, seatScale = 1) {
+export function defaultPos(i, n, W, H, seatScale = 1, layout = 'table') {
+  return layout === 'clock'
+    ? defaultPosClock(i, n, W, H, seatScale)
+    : defaultPosTable(i, n, W, H, seatScale);
+}
+
+function defaultPosTable(i, n, W, H, seatScale = 1) {
   const count = Math.max(1, n || 1);
 
   // Approximate rendered seat diameter from responsive CSS breakpoints
@@ -98,6 +103,33 @@ export function defaultPos(i, n, W, H, seatScale = 1) {
 
   const p = (d - sideLen - bottomLen) / sideLen;
   return { x: leftX, y: bottomY - p * sideLen };
+}
+
+function defaultPosClock(i, n, W, H, seatScale = 1) {
+  const count = Math.max(1, n || 1);
+
+  const seatW = (W <= 479 ? 75 : (W >= 520 ? 106 : 99)) * seatScale;
+  const halfSeat = seatW * 0.5;
+  const iconOverhang = W <= 479 ? 14 : 16;
+  const safePadX = halfSeat + iconOverhang + 2;
+  const safePadY = halfSeat + 6;
+
+  const cx = W / 2, cy = H / 2;
+  const maxRx = Math.max(1, W / 2 - safePadX);
+  const maxRy = Math.max(1, H / 2 - safePadY);
+  // Use a true circle (not an ellipse stretched to the container's edges) so
+  // it actually reads as a clock face, pulled in a bit on narrow portrait
+  // screens where the available width is much smaller than the height.
+  const maxR = Math.min(maxRx, maxRy);
+  const desiredR = maxR * (W < H ? 0.88 : 0.92);
+  // Never let adjacent seats get closer than their own width apart, even if
+  // that means pushing out past desiredR (capped at the available space).
+  const minGapR = (seatW + 10) / (2 * Math.sin(Math.PI / count));
+  const r = Math.min(maxR, Math.max(desiredR, minGapR));
+
+  // Start at 12 o'clock and go clockwise, same as the hours on a clock face.
+  const angle = -Math.PI / 2 + (i / count) * Math.PI * 2;
+  return { x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle) };
 }
 
 /** Convert a 0-based cycle step to { phase, round }. Cycle order: Night 1, Day 1, Night 2, Day 2, … */

@@ -1,4 +1,4 @@
-const VERSION = 'v117';
+const VERSION = 'v123';
 const CACHE = 'botc-' + VERSION;
 // Derive base path so this works at root (localhost) or a subpath (GitHub Pages)
 const BASE = self.location.pathname.replace(/\/sw\.js$/, '') || '';
@@ -28,13 +28,13 @@ const LOCAL_ASSETS = [
   BASE + '/assets/background.png',
   BASE + '/assets/roles_en.png',
   BASE + '/assets/roles.json',
+  BASE + '/assets/hints.json',
   BASE + '/assets/jinxes.json',
   BASE + '/assets/nightsheet.json',
   BASE + '/assets/scripts/index.json',
   BASE + '/assets/scripts/trouble-brewing.json',
   BASE + '/assets/scripts/bad-moon-rising.json',
   BASE + '/assets/scripts/sects-and-violets.json',
-  BASE + '/assets/scripts/pavels-brewing.json',
   BASE + '/src/app.js',
   BASE + '/src/data.js',
   BASE + '/src/utils.js',
@@ -51,11 +51,14 @@ const LOCAL_ASSETS = [
   BASE + '/src/components/botc-nominations-modal.js',
   BASE + '/src/components/botc-settings-modal.js',
   BASE + '/src/components/botc-charcount-modal.js',
+  BASE + '/src/components/botc-stats-modal.js',
+  BASE + '/src/components/botc-voting-analysis-modal.js',
   BASE + '/src/components/botc-readme-modal.js',
   BASE + '/src/components/botc-nightguide-modal.js',
   BASE + '/src/components/botc-sign-modal.js',
   BASE + '/src/components/botc-pdf-modal.js',
   BASE + '/src/components/botc-reference-modal.js',
+  BASE + '/src/components/botc-script-browser-modal.js',
 ];
 
 // Install: pre-cache local assets

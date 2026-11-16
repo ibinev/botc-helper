@@ -17,6 +17,7 @@ import './botc-sign-modal.js';
 import './botc-readme-modal.js';
 import './botc-role-picker-popup.js';
 import './botc-endgame-modal.js';
+import './botc-script-browser-modal.js';
 
 const LS_KEY = 'botc_town_square_v1';
 
@@ -40,6 +41,7 @@ export class BotcApp extends LitElement {
     gameNotes:         { type: Object  },
     storyView:         { type: Boolean },
     seatSizePct:       { type: Number  },
+    seatLayout:        { type: String  },
     fastVoting:        { type: Boolean },
     hideRole:          { type: Boolean },
     hideDeadPlayers:   { type: Boolean },
@@ -83,6 +85,7 @@ export class BotcApp extends LitElement {
     _nightGuideOpen:     { state: true },
     _signModalOpen:      { state: true },
     _sideMenuOpen:       { state: true },
+    _scriptBrowserOpen:  { state: true },
     townReminders:       { type: Array },
     demonBluffs:         { type: Array },
     customSigns:         { type: Array },
@@ -110,6 +113,7 @@ export class BotcApp extends LitElement {
     this.gameNotes         = {};
     this.storyView         = false;
     this.seatSizePct       = 100;
+    this.seatLayout        = 'table';
     this.fastVoting        = false;
     this.hideRole          = false;
     this.hideDeadPlayers   = false;
@@ -136,6 +140,7 @@ export class BotcApp extends LitElement {
     this._pdfOpen          = false;
     this._referenceOpen    = false;
     this._readmeOpen       = false;
+    this._scriptBrowserOpen = false;
     this._confirmOpen      = false;
     this._confirmSoftOpen  = false;
     this._poolManageOpen   = false;
@@ -187,6 +192,64 @@ export class BotcApp extends LitElement {
     });
     window.addEventListener('pagehide', this._onPageHide = () => this._flushPersistence());
     this._bindSideMenuEdgeSwipe();
+    document.addEventListener('keydown', this._onGlobalKeydown = (e) => this._handleGlobalKeydown(e));
+  }
+
+  // ── Desktop keyboard shortcuts ────────────────────────────────────────
+  // Space/Enter with nothing focused advances the day/night cycle; Enter
+  // while any popup is open instead clicks that popup's primary action
+  // (Save/Show/Confirm/etc, identified by its shared `.btn-primary` /
+  // `.btn-confirm-*` class) instead of advancing the cycle; Left/Right
+  // steps the Night Guide wizard back/forward.
+  _handleGlobalKeydown(e) {
+    if (e.defaultPrevented || e.isComposing || e.metaKey || e.ctrlKey || e.altKey) return;
+    const target = e.target;
+    const tag = target?.tagName;
+    const isButton = tag === 'BUTTON' || tag === 'A';
+    const isTextarea = tag === 'TEXTAREA';
+    const isTyping = isTextarea
+      || (tag === 'INPUT' && !['button', 'submit', 'checkbox', 'radio', 'range', 'color', 'file'].includes(target.type))
+      || tag === 'SELECT' || target?.isContentEditable;
+
+    if (e.key === 'Enter') {
+      if (isButton || isTextarea) return; // native click, or allow a newline
+      const overlay = this._topmostOverlay();
+      if (overlay) {
+        const btn = overlay.querySelector('.btn-primary, .btn-confirm-danger, .btn-confirm-primary');
+        if (btn && !btn.disabled) { e.preventDefault(); btn.click(); }
+        return;
+      }
+      if (!isTyping) { e.preventDefault(); this.advanceCycle(1); }
+      return;
+    }
+
+    if (e.key === ' ') {
+      if (isTyping || isButton || this._topmostOverlay()) return;
+      e.preventDefault();
+      this.advanceCycle(1);
+      return;
+    }
+
+    if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && this._nightGuideOpen && !isTyping) {
+      const ng = this.querySelector('botc-nightguide-modal');
+      if (ng) {
+        e.preventDefault();
+        if (e.key === 'ArrowRight') ng._wizardNext();
+        else ng._wizardBack();
+      }
+    }
+  }
+
+  // Topmost currently-visible popup/dialog across the app, used to decide
+  // whether Enter should submit it instead of advancing the day/night cycle.
+  _topmostOverlay() {
+    const sel = '.modal-overlay.visible, .nightguide-backdrop, .bluff-reveal-backdrop, '
+      + '.role-pick-backdrop, .mini-modal-backdrop, .pool-manage-overlay, '
+      + '.settings-script-overlay, .settings-script-slot-popup-overlay';
+    const nodes = Array.from(document.querySelectorAll(sel)).filter(el => el.getClientRects().length > 0);
+    if (!nodes.length) return null;
+    nodes.sort((a, b) => (parseInt(getComputedStyle(b).zIndex) || 0) - (parseInt(getComputedStyle(a).zIndex) || 0));
+    return nodes[0];
   }
 
   // Dragging a finger rightwards starting from the screen's left edge opens
@@ -306,6 +369,7 @@ export class BotcApp extends LitElement {
     document.removeEventListener('touchstart', this._onEdgeTouchStart);
     document.removeEventListener('touchmove', this._onEdgeTouchMove);
     document.removeEventListener('touchend', this._onEdgeTouchEnd);
+    document.removeEventListener('keydown', this._onGlobalKeydown);
     this._unbindVisualViewport();
   }
 
@@ -383,6 +447,7 @@ export class BotcApp extends LitElement {
     this._loadCollapsePrefs();
     this._loadStoryView();
     this._loadSeatSizePct();
+    this._loadSeatLayout();
     this._loadFastVoting();
     this._loadHideRole();
     this._loadHideDeadPlayers();
@@ -399,6 +464,7 @@ export class BotcApp extends LitElement {
     this._applyPhaseCycle();
     this._applyStoryView();
     this._applySeatSizePct();
+    this._applySeatLayout();
     this._applyHideRole();
     this._applyHideDeadPlayers();
     this._applyBgImage();
@@ -529,6 +595,11 @@ export class BotcApp extends LitElement {
   _loadSeatSizePct() {
     const stored = parseInt(localStorage.getItem('botc_seat_size_pct'), 10);
     this.seatSizePct = Number.isFinite(stored) ? Math.min(200, Math.max(55, stored)) : 100;
+  }
+
+  _loadSeatLayout() {
+    const stored = localStorage.getItem('botc_seat_layout');
+    this.seatLayout = stored === 'clock' ? 'clock' : 'table';
   }
 
   _loadFastVoting() {
@@ -802,61 +873,67 @@ export class BotcApp extends LitElement {
       const text = await file.text();
       let arr;
       try { arr = JSON.parse(text); } catch { throw new Error('Invalid JSON.'); }
-      if (!Array.isArray(arr)) throw new Error('Not a valid BotC script file.');
-
-      // Extract _meta entry
-      const meta = arr.find(e => typeof e === 'object' && e !== null && e.id === '_meta');
-      const label = String(meta?.name || meta?.label || 'Imported Script').trim();
-      const author = meta?.author || '';
-
-      // Build id→name map
-      const idMap = this._buildRoleIdMap();
-
-      // Collect role names from remaining entries
-      const roles = [];
-      arr.forEach(e => {
-        if (typeof e === 'string' && e !== '_meta') {
-          const name = idMap.get(e.toLowerCase());
-          if (name) roles.push(name);
-        } else if (typeof e === 'object' && e !== null && e.id && e.id !== '_meta') {
-          const name = idMap.get(e.id.toLowerCase());
-          if (name) roles.push(name);
-        }
-      });
-
-      if (!roles.length) throw new Error('No recognised roles found in script file.');
-
-      // Dedupe by exact name (trimmed, case-insensitive) against BOTH locally-saved
-      // custom scripts AND built-in/bundled scripts — an id-based check alone missed
-      // re-importing a script that already exists under a different id (e.g. a
-      // built-in script's JSON re-imported creates a "custom-" duplicate of it).
-      const norm = str => String(str || '').trim().toLowerCase();
-      const existingCustom   = this.customScripts.find(c => norm(c.label) === norm(label));
-      const existingBuiltIn  = getScriptOptions().find(o => norm(o.label) === norm(label));
-      const existing = existingCustom || existingBuiltIn;
-      if (existing) {
-        this.script = existing.id;
-        this._saveScript();
-        this.requestUpdate();
-        window.alert(`"${label}" already exists — switched to it instead of importing a duplicate.`);
-        return;
+      const result = this._importScriptArray(arr);
+      if (result.switched) {
+        window.alert(`"${result.label}" already exists — switched to it instead of importing a duplicate.`);
+      } else {
+        window.alert(`Script "${result.label}" imported successfully (${result.roleCount} roles).`);
       }
-
-      const base = label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/, '') || 'custom-script';
-      let id = 'custom-' + base;
-      let suffix = 2;
-      while (this.customScripts.some(c => c.id === id)) id = `custom-${base}-${suffix++}`;
-
-      this.customScripts = [...this.customScripts, { id, label, author, roles, layout: {} }];
-      this._saveCustomScripts();
-      this.script = id;
-      this._saveScript();
-      this.requestUpdate();
-      window.alert(`Script "${label}" imported successfully (${roles.length} roles).`);
     } catch (e) {
       if (e?.name === 'AbortError') return;
       window.alert('Script import failed: ' + (e?.message || 'Please choose a valid BotC script JSON file.'));
     }
+  }
+
+  // Shared by the file-picker JSON import and the "Search online" browser —
+  // both deal in the standard script-tool array format ([_meta, {id}, ...]).
+  _importScriptArray(arr) {
+    if (!Array.isArray(arr)) throw new Error('Not a valid BotC script file.');
+
+    const meta = arr.find(e => typeof e === 'object' && e !== null && e.id === '_meta');
+    const label = String(meta?.name || meta?.label || 'Imported Script').trim();
+    const author = meta?.author || '';
+
+    const idMap = this._buildRoleIdMap();
+    const roles = [];
+    arr.forEach(e => {
+      if (typeof e === 'string' && e !== '_meta') {
+        const name = idMap.get(e.toLowerCase());
+        if (name) roles.push(name);
+      } else if (typeof e === 'object' && e !== null && e.id && e.id !== '_meta') {
+        const name = idMap.get(e.id.toLowerCase());
+        if (name) roles.push(name);
+      }
+    });
+
+    if (!roles.length) throw new Error('No recognised roles found in script file.');
+
+    // Dedupe by exact name (trimmed, case-insensitive) against BOTH locally-saved
+    // custom scripts AND built-in/bundled scripts — an id-based check alone missed
+    // re-importing a script that already exists under a different id (e.g. a
+    // built-in script's JSON re-imported creates a "custom-" duplicate of it).
+    const norm = str => String(str || '').trim().toLowerCase();
+    const existingCustom   = this.customScripts.find(c => norm(c.label) === norm(label));
+    const existingBuiltIn  = getScriptOptions().find(o => norm(o.label) === norm(label));
+    const existing = existingCustom || existingBuiltIn;
+    if (existing) {
+      this.script = existing.id;
+      this._saveScript();
+      this.requestUpdate();
+      return { switched: true, label, roleCount: roles.length };
+    }
+
+    const base = label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/, '') || 'custom-script';
+    let id = 'custom-' + base;
+    let suffix = 2;
+    while (this.customScripts.some(c => c.id === id)) id = `custom-${base}-${suffix++}`;
+
+    this.customScripts = [...this.customScripts, { id, label, author, roles, layout: {} }];
+    this._saveCustomScripts();
+    this.script = id;
+    this._saveScript();
+    this.requestUpdate();
+    return { switched: false, label, roleCount: roles.length };
   }
 
   _backupPayload() {
@@ -884,6 +961,7 @@ export class BotcApp extends LitElement {
         poisonedCollapsed: this.poisonedCollapsed,
         storyView: this.storyView,
         seatSizePct: this.seatSizePct,
+        seatLayout: this.seatLayout,
         hideRole: this.hideRole,
         hideDeadPlayers: this.hideDeadPlayers,
       },
@@ -1070,6 +1148,7 @@ export class BotcApp extends LitElement {
     this.seatSizePct = typeof app.seatSizePct === 'number'
       ? Math.min(200, Math.max(55, app.seatSizePct))
       : (app.compactMode ? 55 : 100);
+    this.seatLayout = app.seatLayout === 'clock' ? 'clock' : 'table';
     this.hideRole = !!app.hideRole;
     this.hideDeadPlayers = !!app.hideDeadPlayers;
 
@@ -1088,6 +1167,7 @@ export class BotcApp extends LitElement {
 
     this._applyStoryView();
     this._applySeatSizePct();
+    this._applySeatLayout();
     this._applyHideRole();
     this._applyHideDeadPlayers();
 
@@ -1131,6 +1211,12 @@ export class BotcApp extends LitElement {
     document.documentElement.style.setProperty('--seat-scale', String(this.seatSizePct / 100));
     try {
       localStorage.setItem('botc_seat_size_pct', String(this.seatSizePct));
+    } catch(e) {}
+  }
+
+  _applySeatLayout() {
+    try {
+      localStorage.setItem('botc_seat_layout', this.seatLayout);
     } catch(e) {}
   }
 
@@ -2074,6 +2160,7 @@ export class BotcApp extends LitElement {
           .atMaxSeats="${this.seatCount >= MAX}"
           .storyView="${this.storyView}"
           .seatScale="${this.seatSizePct / 100}"
+          .seatLayout="${this.seatLayout}"
           .nomMode="${this.nomMode}"
           .nomFrom="${this.nomFrom}"
           .nominations="${this.nominations}"
@@ -2278,6 +2365,29 @@ export class BotcApp extends LitElement {
         }}"
       ></botc-list-modal>
 
+      <!-- Script browser modal -->
+      <botc-script-browser-modal
+        .open="${this._scriptBrowserOpen}"
+        @import-online-script="${e => {
+          try {
+            const result = this._importScriptArray(e.detail.content);
+            this._scriptBrowserOpen = false;
+            this.requestUpdate();
+            if (result.switched) {
+              window.alert(`"${result.label}" already exists — switched to it instead of importing a duplicate.`);
+            } else {
+              window.alert(`Script "${result.label}" imported successfully (${result.roleCount} roles).`);
+            }
+          } catch (err) {
+            window.alert('Script import failed: ' + (err?.message || 'Please try a different script.'));
+          }
+        }}"
+        @modal-close="${() => {
+          this._scriptBrowserOpen = false;
+          this.requestUpdate();
+        }}"
+      ></botc-script-browser-modal>
+
       <!-- Notes modal -->
       <botc-notes-modal
         .open="${this._notesOpen}"
@@ -2335,8 +2445,10 @@ export class BotcApp extends LitElement {
         .selectedScriptLayout="${getScriptRoleLayout(this.script)}"
         .allRoles="${getAllRoles()}"
         .selectedCustomScript="${this.customScripts.find(s => s.id === this.script) || null}"
+        .customScripts="${this.customScripts}"
         .storyView="${this.storyView}"
         .seatSizePct="${this.seatSizePct}"
+        .seatLayout="${this.seatLayout}"
         .fastVoting="${this.fastVoting}"
         .hasBgImage="${this.hasBgImage}"
         .bgFog="${this.bgFog}"
@@ -2378,6 +2490,11 @@ export class BotcApp extends LitElement {
           this._applySeatSizePct();
           this.requestUpdate();
         }}"
+        @seat-layout-change="${e => {
+          this.seatLayout = e.detail.layout;
+          this._applySeatLayout();
+          this.requestUpdate();
+        }}"
         @fast-voting-toggle="${() => {
           this.fastVoting = !this.fastVoting;
           try { localStorage.setItem('botc_fast_voting', this.fastVoting ? 'on' : 'off'); } catch(e) {}
@@ -2414,6 +2531,11 @@ export class BotcApp extends LitElement {
           this._settingsOpen = false;
           this.requestUpdate();
           this._importScriptBackup();
+        }}"
+        @browse-scripts="${() => {
+          this._settingsOpen = false;
+          this._scriptBrowserOpen = true;
+          this.requestUpdate();
         }}"
         @clear-table="${() => {
           this._settingsOpen    = false;

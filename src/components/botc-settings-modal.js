@@ -1,7 +1,7 @@
 import { LitElement, html, nothing } from 'lit';
 import { MIN, MAX } from '../utils.js';
 import { APP_VERSION } from '../version.js';
-import { SCRIPT_OPTIONS, CAT_LABELS, CAT_ORDER, ROLE_ICONS, isExperimentalRole, compareRoleNamesForScriptOrder } from '../data.js';
+import { SCRIPT_OPTIONS, CAT_LABELS, CAT_ORDER, ROLE_ICONS, isExperimentalRole, compareRoleNamesForScriptOrder, getRoles, getScriptRoleLayout, getScriptMeta } from '../data.js';
 
 const SLOT_TEMPLATE_ORDER = ['townsfolk', 'outsider', 'minion', 'demon', 'traveler', 'loric', 'fabled'];
 
@@ -23,6 +23,7 @@ const SLOT_TEMPLATE_ORDER = ['townsfolk', 'outsider', 'minion', 'demon', 'travel
  *   import-game        – (no detail)
  *   export-script      – { detail: { id, label, roles, layout } }
  *   import-script      – (no detail)
+ *   browse-scripts     – (no detail)
  *   clear-table        – (no detail)
  *   clear-player-pool  – (no detail)
  *   reset              – (no detail)
@@ -43,8 +44,10 @@ export class BotcSettingsModal extends LitElement {
     selectedScriptLayout: { type: Object },
     allRoles:   { type: Array },
     selectedCustomScript: { type: Object },
+    customScripts: { type: Array },
     storyView:  { type: Boolean },
     seatSizePct:{ type: Number  },
+    seatLayout: { type: String  },
     fastVoting: { type: Boolean },
     hasBgImage: { type: Boolean },
     bgFog:      { type: Boolean },
@@ -54,9 +57,12 @@ export class BotcSettingsModal extends LitElement {
     _customQuery:{ state: true },
     _customSelected:{ state: true },
     _customLayout:{ state: true },
+    _customEditingId:{ state: true },
     _showExperimental:{ state: true },
     _slotTargetCat:{ state: true },
-    _scriptMenuOpen:{ state: true },
+    _scriptPickerOpen:{ state: true },
+    _scriptPickerQuery:{ state: true },
+    _scriptPickerPending:{ state: true },
   };
 
   createRenderRoot() { return this; }
@@ -72,8 +78,10 @@ export class BotcSettingsModal extends LitElement {
     this.selectedScriptLayout = null;
     this.allRoles   = [];
     this.selectedCustomScript = null;
+    this.customScripts = [];
     this.storyView  = false;
     this.seatSizePct= 100;
+    this.seatLayout = 'table';
     this.fastVoting = false;
     this.hasBgImage = false;
     this.bgFog      = true;
@@ -84,14 +92,23 @@ export class BotcSettingsModal extends LitElement {
     this._customSelected = [];
     this._customLayout = {};
     this._customMode = 'create';
+    this._customEditingId = null;
     this._showExperimental = true;
     this._slotTargetCat = null;
-    this._scriptMenuOpen = false;
+    this._scriptPickerOpen = false;
+    this._scriptPickerQuery = '';
+    this._scriptPickerPending = null;
   }
 
   updated(changed) {
     if (changed.has('open')) {
       this.querySelector('#modal-settings')?.classList.toggle('visible', this.open);
+    }
+    // Creating/editing a custom script switches the active script immediately
+    // (no Submit needed) — keep the picker's pending selection in sync so the
+    // Submit button doesn't appear to offer a no-op switch.
+    if (changed.has('script') && this._scriptPickerOpen) {
+      this._scriptPickerPending = this.script;
     }
   }
 
@@ -136,9 +153,13 @@ export class BotcSettingsModal extends LitElement {
     overlay.addEventListener('click', e => { if (e.target === overlay) this._onClose(); });
 
     this._onDocumentPointerDown = e => {
-      if (!this._scriptMenuOpen) return;
-      const scriptControl = this.querySelector('.settings-control--script');
-      if (scriptControl && !scriptControl.contains(e.target)) this._closeScriptMenu();
+      if (!this._scriptPickerOpen) return;
+      // Ignore clicks inside any script-related overlay (the picker itself, or
+      // one stacked on top of it like the custom script editor / character
+      // slot picker) — each of those manages its own backdrop-click-to-close.
+      if (e.target.closest('.settings-script-overlay')) return;
+      const trigger = this.querySelector('.script-picker-trigger');
+      if (trigger && !trigger.contains(e.target)) this._closeScriptPicker();
     };
     document.addEventListener('pointerdown', this._onDocumentPointerDown);
   }
@@ -151,20 +172,74 @@ export class BotcSettingsModal extends LitElement {
   }
 
   _onClose() {
-    this._closeScriptMenu();
+    this._closeScriptPicker();
     this.dispatchEvent(new CustomEvent('modal-close', { bubbles: true, composed: true }));
   }
 
-  _toggleScriptMenu() {
-    this._scriptMenuOpen = !this._scriptMenuOpen;
+  _openScriptPicker() {
+    this._scriptPickerOpen = true;
+    this._scriptPickerQuery = '';
+    this._scriptPickerPending = this.script;
   }
 
-  _closeScriptMenu() {
-    this._scriptMenuOpen = false;
+  _closeScriptPicker() {
+    this._scriptPickerOpen = false;
+  }
+
+  _isCustomScriptId(id) {
+    return (this.customScripts || []).some(s => s.id === id);
+  }
+
+  _pickScriptRow(id) {
+    this._scriptPickerPending = id;
+  }
+
+  _submitScriptPick() {
+    const id = this._scriptPickerPending;
+    this._closeScriptPicker();
+    if (id && id !== this.script) this._fire('script-change', { script: id });
+  }
+
+  // Data for whichever script is currently highlighted in the picker (may differ from the active `this.script`).
+  _pendingScriptData() {
+    const id = this._scriptPickerPending;
+    if (!id) return null;
+    const meta = getScriptMeta(id);
+    return {
+      id,
+      label: meta.label,
+      author: meta.author,
+      roles: getRoles(id).map(r => r.name),
+      layout: getScriptRoleLayout(id) || {},
+      isCustom: this._isCustomScriptId(id),
+    };
+  }
+
+  _scriptPickerGroups() {
+    const q = this._scriptPickerQuery.trim().toLowerCase();
+    const all = (this.scriptOptions || SCRIPT_OPTIONS).filter(s => !q || s.label.toLowerCase().includes(q));
+    const builtin = all.filter(s => !this._isCustomScriptId(s.id));
+    const custom = all.filter(s => this._isCustomScriptId(s.id));
+    return { builtin, custom };
+  }
+
+  _scriptPickerRow(s, isCustom) {
+    const selected = this._scriptPickerPending === s.id;
+    const author = isCustom ? (this.customScripts || []).find(c => c.id === s.id)?.author : '';
+    return html`
+      <button class="script-picker-row ${selected ? 'selected' : ''}" type="button" role="option" aria-selected="${selected ? 'true' : 'false'}"
+        @click="${() => this._pickScriptRow(s.id)}">
+        <span class="script-picker-row-icon">${isCustom ? '✍️' : '📜'}</span>
+        <span class="script-picker-row-info">
+          <span class="script-picker-row-name">${s.label}</span>
+          ${author ? html`<span class="script-picker-row-sub">by ${author}</span>` : nothing}
+        </span>
+        ${selected ? html`<span class="script-picker-row-check">✓</span>` : nothing}
+      </button>
+    `;
   }
 
   _openCustomScriptPicker() {
-    this._closeScriptMenu();
     this._customMode = 'create';
     this._customOpen = true;
     this._customName = '';
@@ -204,17 +279,17 @@ export class BotcSettingsModal extends LitElement {
   }
 
   _openDuplicateScriptPicker() {
-    const roles = Array.isArray(this.selectedScriptRoles) ? [...new Set(this.selectedScriptRoles.filter(Boolean))] : [];
+    const s = this._pendingScriptData();
+    const roles = s ? [...new Set((s.roles || []).filter(Boolean))] : [];
     if (!roles.length) return;
 
-    this._closeScriptMenu();
     this._customMode = 'create';
     this._customOpen = true;
-    this._customName = `${this.selectedScriptLabel || 'Script'} Copy`;
-    this._customAuthor = this.selectedCustomScript?.author || '';
+    this._customName = `${s.label || 'Script'} Copy`;
+    this._customAuthor = s.author || '';
     this._customQuery = '';
     this._customSelected = roles;
-    this._customLayout = this._buildLayoutFromRoles(roles, this.selectedScriptLayout);
+    this._customLayout = this._buildLayoutFromRoles(roles, s.layout);
     this._slotTargetCat = null;
     // Close settings while opening the detached custom-script popup.
     this.dispatchEvent(new CustomEvent('modal-close', { bubbles: true, composed: true }));
@@ -222,11 +297,11 @@ export class BotcSettingsModal extends LitElement {
   }
 
   _openEditCustomScriptPicker() {
-    const s = this.selectedCustomScript;
-    if (!s?.id) return;
-    this._closeScriptMenu();
+    const s = this._pendingScriptData();
+    if (!s?.id || !s.isCustom) return;
     this._customMode = 'edit';
     this._customOpen = true;
+    this._customEditingId = s.id;
     this._customName = s.label || '';
     this._customAuthor = s.author || '';
     this._customQuery = '';
@@ -260,6 +335,7 @@ export class BotcSettingsModal extends LitElement {
   _closeCustomScriptPicker() {
     this._customOpen = false;
     this._customMode = 'create';
+    this._customEditingId = null;
     this._customName = '';
     this._customAuthor = '';
     this._customQuery = '';
@@ -356,8 +432,8 @@ export class BotcSettingsModal extends LitElement {
     });
     if (!roles.length) return;
 
-    if (this._customMode === 'edit' && this.selectedCustomScript?.id) {
-      this._fire('custom-script-edit', { id: this.selectedCustomScript.id, name, author, roles, layout });
+    if (this._customMode === 'edit' && this._customEditingId) {
+      this._fire('custom-script-edit', { id: this._customEditingId, name, author, roles, layout });
     } else {
       this._fire('custom-script-create', { name, author, roles, layout });
     }
@@ -365,12 +441,12 @@ export class BotcSettingsModal extends LitElement {
   }
 
   _deleteSelectedCustomScript() {
-    if (!this.selectedCustomScript?.id) return;
-    const name = this.selectedCustomScript.label || 'this custom script';
-    const ok = window.confirm(`Delete "${name}"? This cannot be undone.`);
+    const s = this._pendingScriptData();
+    if (!s?.id || !s.isCustom) return;
+    const ok = window.confirm(`Delete "${s.label || 'this custom script'}"? This cannot be undone.`);
     if (!ok) return;
-    this._closeScriptMenu();
-    this._fire('custom-script-delete', { id: this.selectedCustomScript.id });
+    if (this._scriptPickerPending === s.id) this._scriptPickerPending = this.script;
+    this._fire('custom-script-delete', { id: s.id });
   }
 
   _confirmClearPlayerPool() {
@@ -452,46 +528,11 @@ export class BotcSettingsModal extends LitElement {
                 <div class="settings-sub">Select script-specific roles and references</div>
               </div>
               <div class="settings-control settings-control--script">
-                <select class="btn-sm settings-script-select"
-                  @change="${e => { this._closeScriptMenu(); this._fire('script-change', { script: e.target.value }); }}">
-                  ${(this.scriptOptions || SCRIPT_OPTIONS).map(s => html`
-                    <option value="${s.id}" ?selected="${this.script === s.id}">${s.label}</option>
-                  `)}
-                </select>
-                <button class="btn-sm settings-script-menu-btn ${this._scriptMenuOpen ? 'active' : ''}" type="button" title="Custom script actions"
-                  aria-haspopup="menu" aria-expanded="${this._scriptMenuOpen ? 'true' : 'false'}"
-                  @click="${e => { e.stopPropagation(); this._toggleScriptMenu(); }}">⋯</button>
-                ${this._scriptMenuOpen ? html`
-                  <div class="settings-script-menu" role="menu" @click="${e => e.stopPropagation()}">
-                    <button class="settings-script-menu-item" type="button" role="menuitem" title="Add custom script"
-                      @click="${() => this._openCustomScriptPicker()}"><span class="settings-script-menu-icon">➕</span><span class="settings-script-menu-label">Add</span></button>
-                    <button class="settings-script-menu-item" type="button" role="menuitem" title="Copy selected script"
-                      @click="${() => this._openDuplicateScriptPicker()}"><span class="settings-script-menu-icon">📄</span><span class="settings-script-menu-label">Duplicate</span></button>
-                    ${this.selectedCustomScript ? html`
-                      <button class="settings-script-menu-item" type="button" role="menuitem" title="Edit custom script"
-                        @click="${() => this._openEditCustomScriptPicker()}"><span class="settings-script-menu-icon">✏️</span><span class="settings-script-menu-label">Edit</span></button>
-                      <button class="settings-script-menu-item settings-script-menu-item--danger" type="button" role="menuitem" title="Delete custom script"
-                        @click="${() => this._deleteSelectedCustomScript()}"><span class="settings-script-menu-icon">🗑️</span><span class="settings-script-menu-label">Delete</span></button>
-                    ` : nothing}
-                    ${this.selectedCustomScript ? html`
-                      <div class="settings-script-menu-divider"></div>
-                      <button class="settings-script-menu-item" type="button" role="menuitem" title="Export selected script as JSON"
-                        @click="${() => {
-                          this._closeScriptMenu();
-                          this._fire('export-script', {
-                            id: this.script,
-                            label: this.selectedScriptLabel || this.script,
-                            author: this.selectedCustomScript?.author || '',
-                            roles: Array.isArray(this.selectedScriptRoles) ? [...this.selectedScriptRoles] : [],
-                            layout: this.selectedScriptLayout || {},
-                          });
-                        }}"><span class="settings-script-menu-icon">⤓</span><span class="settings-script-menu-label">Export JSON</span></button>
-                    ` : nothing}
-                    <div class="settings-script-menu-divider"></div>
-                    <button class="settings-script-menu-item" type="button" role="menuitem" title="Import a script from JSON"
-                      @click="${() => { this._closeScriptMenu(); this._fire('import-script', {}); }}"><span class="settings-script-menu-icon">⤒</span><span class="settings-script-menu-label">Import JSON</span></button>
-                  </div>
-                ` : nothing}
+                <button class="script-picker-trigger" type="button"
+                  @click="${() => this._openScriptPicker()}">
+                  <span class="script-picker-trigger-icon">${this.selectedCustomScript ? '✍️' : '📜'}</span>
+                  <span class="script-picker-trigger-label">${this.selectedScriptLabel || 'Select script'}</span>
+                </button>
               </div>
             </div>
 
@@ -522,6 +563,19 @@ export class BotcSettingsModal extends LitElement {
                   @input="${e => this._fire('seat-size-change', { pct: Number(e.target.value) })}"
                 />
                 <span class="seatsize-value">${this.seatSizePct}%</span>
+              </div>
+            </div>
+
+            <div class="settings-row">
+              <div>
+                <div class="settings-label">Seat layout</div>
+                <div class="settings-sub">How seats are arranged by default: around a table (gap at top for the Storyteller) or evenly spaced in a full circle, like a clock face</div>
+              </div>
+              <div class="settings-control">
+                <button class="btn btn-sm btn-hints ${this.seatLayout === 'table' ? 'active' : ''}"
+                  @click="${() => this._fire('seat-layout-change', { layout: 'table' })}">Table</button>
+                <button class="btn btn-sm btn-hints ${this.seatLayout === 'clock' ? 'active' : ''}"
+                  @click="${() => this._fire('seat-layout-change', { layout: 'clock' })}">Clock</button>
               </div>
             </div>
 
@@ -615,6 +669,78 @@ export class BotcSettingsModal extends LitElement {
         </div>
       </div>
 
+      ${this._scriptPickerOpen ? html`
+        <div class="settings-script-overlay"
+          @click="${e => { if (e.target.classList.contains('settings-script-overlay')) this._closeScriptPicker(); }}">
+          <div class="settings-script-sheet script-picker-card">
+            <div class="settings-script-header">
+              <div class="settings-script-title">📜 Choose a script</div>
+              <div class="settings-script-header-actions">
+                <button class="btn-sm script-picker-submit-btn" type="button" title="Apply the highlighted script"
+                  ?disabled="${this._scriptPickerPending === this.script}"
+                  @click="${() => this._submitScriptPick()}">✓</button>
+                <button class="btn-sm" type="button" title="Close" @click="${() => this._closeScriptPicker()}">✕</button>
+              </div>
+            </div>
+            <div class="settings-script-form-row">
+              <input type="text" class="settings-script-input" placeholder="Filter scripts…"
+                .value="${this._scriptPickerQuery}"
+                @input="${e => { this._scriptPickerQuery = e.target.value; }}">
+            </div>
+            <div class="script-picker-list">
+              ${(() => {
+                const { builtin, custom } = this._scriptPickerGroups();
+                return html`
+                  ${builtin.length ? html`
+                    <div class="script-picker-group-label">Built-in</div>
+                    ${builtin.map(s => this._scriptPickerRow(s, false))}
+                  ` : nothing}
+                  ${custom.length ? html`
+                    <div class="script-picker-group-label">My scripts</div>
+                    ${custom.map(s => this._scriptPickerRow(s, true))}
+                  ` : nothing}
+                  ${!builtin.length && !custom.length ? html`
+                    <div class="script-picker-empty">No scripts match "${this._scriptPickerQuery}".</div>
+                  ` : nothing}
+                `;
+              })()}
+            </div>
+            <div class="script-picker-footer">
+              ${(() => {
+                const pending = this._pendingScriptData();
+                return html`
+                  <button class="btn btn-sm" type="button" title="Add a custom script"
+                    @click="${() => this._openCustomScriptPicker()}">➕ Add</button>
+                  <button class="btn btn-sm" type="button" title="Duplicate the highlighted script"
+                    @click="${() => this._openDuplicateScriptPicker()}">📄 Duplicate</button>
+                  <button class="btn btn-sm" type="button" title="Search botcscripts.com and import a script"
+                    @click="${() => { this._closeScriptPicker(); this._fire('browse-scripts', {}); }}">🔍 Search online</button>
+                  <button class="btn btn-sm" type="button" title="Import a script from JSON"
+                    @click="${() => { this._closeScriptPicker(); this._fire('import-script', {}); }}">⤒ Import JSON</button>
+                  ${pending?.isCustom ? html`
+                    <button class="btn btn-sm" type="button" title="Edit the highlighted custom script"
+                      @click="${() => this._openEditCustomScriptPicker()}">✏️ Edit</button>
+                    <button class="btn btn-sm" type="button" title="Export the highlighted script as JSON"
+                      @click="${() => {
+                        this._closeScriptPicker();
+                        this._fire('export-script', {
+                          id: pending.id,
+                          label: pending.label,
+                          author: pending.author,
+                          roles: [...pending.roles],
+                          layout: pending.layout,
+                        });
+                      }}">⤓ Export</button>
+                    <button class="btn btn-sm settings-script-menu-item--danger" type="button" title="Delete the highlighted custom script"
+                      @click="${() => this._deleteSelectedCustomScript()}">🗑️ Delete</button>
+                  ` : nothing}
+                `;
+              })()}
+            </div>
+          </div>
+        </div>
+      ` : nothing}
+
       ${this._customOpen ? html`
         <div class="settings-script-overlay"
           @touchstart="${e => { this._csOverlayTouchY = e.touches[0].clientY; this._csOverlayScrolled = false; }}"
@@ -632,14 +758,14 @@ export class BotcSettingsModal extends LitElement {
                       <input id="custom-script-name" class="settings-script-input" type="text" .value="${this._customName}"
                         placeholder="e.g. BMR + SNV Mix"
                         @input="${e => { this._customName = e.target.value; }}"
-                        @keydown="${e => { if (e.key === 'Enter') this._submitCustomScript(); }}">
+                        @keydown="${e => { if (e.key === 'Enter') { e.stopPropagation(); this._submitCustomScript(); } }}">
                     </div>
                     <div style="flex:1 1 0;min-width:0;">
                       <label for="custom-script-author" class="settings-script-label">Author</label>
                       <input id="custom-script-author" class="settings-script-input" type="text" .value="${this._customAuthor}"
                         placeholder="e.g. Your name"
                         @input="${e => { this._customAuthor = e.target.value; }}"
-                        @keydown="${e => { if (e.key === 'Enter') this._submitCustomScript(); }}">
+                        @keydown="${e => { if (e.key === 'Enter') { e.stopPropagation(); this._submitCustomScript(); } }}">
                     </div>
                   </div>
 
